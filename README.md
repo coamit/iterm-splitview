@@ -1,6 +1,6 @@
 # iterm-splitview
 
-Side-by-side viewing and editing in iTerm2 — for Claude Code, Cursor, and terminal workflows.
+Side-by-side viewing and editing in iTerm2 — for Claude Code and terminal workflows.
 
 **fileview** renders markdown as styled HTML in a browser split pane. **fileedit** opens files in a terminal editor split pane.
 
@@ -25,7 +25,7 @@ https://github.com/user-attachments/assets/ecc7991d-fb5a-4e77-8dfa-ff2a2666c683
 - **Mermaid diagrams** — flowcharts, sequence diagrams, Gantt charts, ERD
 - **Code blocks** — syntax-friendly backgrounds
 - **Session isolation** — each iTerm tab gets its own independent split pane
-- **AI integration** — Claude Code and Cursor use these tools autonomously
+- **AI integration** — Claude Code uses these tools autonomously
 
 ## Install
 
@@ -92,16 +92,6 @@ The installer automatically copies the skill to `~/.claude/skills/iterm-splitvie
 mkdir -p ~/.claude/skills/iterm-splitview
 cp claude-code/SKILL.md ~/.claude/skills/iterm-splitview/SKILL.md
 ```
-
-## Cursor Integration
-
-Copy the rules file to your project root:
-
-```bash
-cp cursor/.cursorrules /path/to/project/.cursorrules
-```
-
-Or append to an existing `.cursorrules` file. Cursor will pick up the rules and use fileview/fileedit proactively.
 
 ## License
 
