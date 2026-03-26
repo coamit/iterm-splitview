@@ -1,0 +1,22 @@
+#!/bin/bash
+# fileview-plan — Open this session's active plan file in fileview
+_FV_SESSION_ID="${ITERM_SESSION_ID%%:*}"
+_FV_DIR="/tmp/fileview/${_FV_SESSION_ID:-default}"
+PLAN=$(cat "$_FV_DIR/plan" 2>/dev/null)
+
+if [ -n "$PLAN" ] && [ -f "$PLAN" ]; then
+  fileview close && fileview open "$PLAN"
+  echo "Opened: $(basename "$PLAN")"
+  exit 0
+fi
+
+# Fallback: most recently modified plan file (excluding agent sub-plans)
+LATEST=$(ls -t "$HOME/.claude/plans"/*.md 2>/dev/null | grep -v -- '-agent-' | head -1)
+if [ -n "$LATEST" ]; then
+  fileview close && fileview open "$LATEST"
+  echo "Opened: $(basename "$LATEST") (fallback)"
+  exit 0
+fi
+
+echo "No plan files found"
+exit 1

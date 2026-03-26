@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: Run ShellCheck on scripts
+        run: shellcheck scripts/*
+
+      - name: Verify scripts are executable
+        run: |
+          for script in scripts/*; do
+            if [ ! -x "$script" ]; then
+              echo "ERROR: $script is not executable"
+              exit 1
+            fi
+          done
+          echo "All scripts are executable"
+
+      - name: Verify shebangs
+        run: |
+          for script in scripts/*; do
+            head -1 "$script" | grep -q '^#!/bin/bash' || {
+              echo "ERROR: $script missing #!/bin/bash shebang"
+              exit 1
+            }
+          done
+          echo "All scripts have correct shebang"

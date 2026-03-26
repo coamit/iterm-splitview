@@ -1,0 +1,34 @@
+# iterm-splitview Rules
+
+When `fileview` and `fileedit` are available on PATH, use them proactively.
+
+## fileview — Styled HTML Viewer (use proactively)
+
+Use for ANY response with tables, multi-section content, reports, or rich formatting:
+1. Write content to `/tmp/claude-response-<short-descriptor>.md`
+2. Run: `fileview close && fileview open <path>`
+3. Keep terminal output to a 1-3 sentence summary
+
+Commands:
+- `fileview open <file>` — render as HTML in iTerm2 browser split pane
+- `fileview close` — close the browser split pane
+- `fileview-plan` — reopen the active plan file
+- Refresh: `fileview close && fileview open <path>` (browser doesn't auto-reload)
+
+## fileedit — Terminal Editor (use proactively)
+
+Use when the response involves a file the user may want to edit:
+- Open files in `fresh` editor in a split pane automatically
+- Config files, source code, notes — anything the user might modify
+
+Commands:
+- `fileedit open <file>` — open in fresh editor in split pane
+- `fileedit close` — close the editor split pane
+
+## Key Rules
+
+- Be proactive — don't wait for the user to ask
+- fileview = read-only styled HTML (markdown, tables, reports)
+- fileedit = editable terminal editor (code, config, notes)
+- Both require iTerm2 (not Terminal.app)
+- Only one split pane at a time — close one before opening the other

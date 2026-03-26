@@ -1,0 +1,124 @@
+#!/bin/bash
+# fileedit — Open a file for editing (fresh) in an iTerm2 split pane.
+#
+# Usage:
+#   fileedit open <file>  — Split pane + open file in fresh
+#   fileedit close        — Close the split pane
+
+_FE_SESSION_ID="${ITERM_SESSION_ID%%:*}"
+_FE_SESSION_DIR="/tmp/fileedit/${_FE_SESSION_ID:-default}"
+mkdir -p "$_FE_SESSION_DIR"
+PANE_SESSION_ID_FILE="$_FE_SESSION_DIR/pane_session_id"
+
+cmd_open() {
+  local src_file="$1"
+  if [ -z "$src_file" ]; then
+    echo "Usage: fileedit open <file>" >&2
+    return 1
+  fi
+
+  local abs_path
+  abs_path="$(cd "$(dirname "$src_file")" && pwd)/$(basename "$src_file")"
+  local session_uuid="${ITERM_SESSION_ID#*:}"
+
+  # Check if our tracked edit pane still exists
+  local target_pane_id=""
+  if [ -f "$PANE_SESSION_ID_FILE" ]; then
+    local tracked_pane_id
+    tracked_pane_id=$(cat "$PANE_SESSION_ID_FILE")
+    if [ -n "$tracked_pane_id" ]; then
+      local pane_exists
+      pane_exists=$(osascript <<APPLESCRIPT
+        tell application "iTerm2"
+          repeat with w in windows
+            repeat with t in tabs of w
+              repeat with s in sessions of t
+                if unique ID of s is "$tracked_pane_id" then return "yes"
+              end repeat
+            end repeat
+          end repeat
+          return "no"
+        end tell
+APPLESCRIPT
+      )
+      if [ "$pane_exists" = "yes" ]; then
+        target_pane_id="$tracked_pane_id"
+      else
+        rm -f "$PANE_SESSION_ID_FILE"
+      fi
+    fi
+  fi
+
+  # Create split if needed
+  if [ -z "$target_pane_id" ]; then
+    target_pane_id=$(osascript <<APPLESCRIPT
+      tell application "iTerm2"
+        repeat with w in windows
+          repeat with t in tabs of w
+            repeat with s in sessions of t
+              if unique ID of s is "$session_uuid" then
+                tell s
+                  set newSession to (split vertically with default profile)
+                end tell
+                return unique ID of newSession
+              end if
+            end repeat
+          end repeat
+        end repeat
+      end tell
+APPLESCRIPT
+    )
+    echo "$target_pane_id" > "$PANE_SESSION_ID_FILE"
+  fi
+
+  # Send fresh command to the tracked pane
+  osascript <<APPLESCRIPT
+    tell application "iTerm2"
+      repeat with w in windows
+        repeat with t in tabs of w
+          repeat with s in sessions of t
+            if unique ID of s is "$target_pane_id" then
+              tell s
+                write text "fresh \"$abs_path\""
+              end tell
+              return
+            end if
+          end repeat
+        end repeat
+      end repeat
+    end tell
+APPLESCRIPT
+}
+
+cmd_close() {
+  if [ ! -f "$PANE_SESSION_ID_FILE" ]; then
+    return 0
+  fi
+  local pane_id
+  pane_id=$(cat "$PANE_SESSION_ID_FILE")
+  if [ -z "$pane_id" ]; then
+    rm -f "$PANE_SESSION_ID_FILE"
+    return 0
+  fi
+  osascript <<APPLESCRIPT
+    tell application "iTerm2"
+      repeat with w in windows
+        repeat with t in tabs of w
+          repeat with s in sessions of t
+            if unique ID of s is "$pane_id" then
+              tell s to close
+              return
+            end if
+          end repeat
+        end repeat
+      end repeat
+    end tell
+APPLESCRIPT
+  rm -f "$PANE_SESSION_ID_FILE"
+}
+
+case "$1" in
+  open)  cmd_open "$2" ;;
+  close) cmd_close ;;
+  *)     echo "Usage: fileedit {open|close} [file]" >&2; exit 1 ;;
+esac
