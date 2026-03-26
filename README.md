@@ -4,6 +4,8 @@ Side-by-side viewing and editing in iTerm2 — for Claude Code, Cursor, and term
 
 **fileview** renders markdown as styled HTML in a browser split pane. **fileedit** opens files in a terminal editor split pane.
 
+<img width="1579" height="1006" alt="image" src="https://github.com/user-attachments/assets/82cb59a0-6095-4fb8-a3e7-ae909f4f836f" />
+
 ## Demo
 
 ### fileview — Styled HTML Viewer
