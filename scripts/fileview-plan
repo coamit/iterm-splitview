@@ -11,6 +11,7 @@ if [ -n "$PLAN" ] && [ -f "$PLAN" ]; then
 fi
 
 # Fallback: most recently modified plan file (excluding agent sub-plans)
+# shellcheck disable=SC2010
 LATEST=$(ls -t "$HOME/.claude/plans"/*.md 2>/dev/null | grep -v -- '-agent-' | head -1)
 if [ -n "$LATEST" ]; then
   fileview close && fileview open "$LATEST"
