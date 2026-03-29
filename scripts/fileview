@@ -28,6 +28,7 @@ cat > "$VIEW_TEMPLATE" << 'TMPL'
 <html>
 <head>
 <meta charset="utf-8" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" id="hljs-dark-theme">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; }
@@ -39,9 +40,29 @@ body {
 }
 h1, h2, h3 { color: #e8ecf0; border-bottom: 1px solid #353b4a; padding-bottom: 4px; margin-top: 16px; margin-bottom: 8px; }
 h1 { font-size: 1.35em; } h2 { font-size: 1.15em; } h3 { font-size: 1em; }
-code { background: #2a3040; padding: 1px 5px; border-radius: 3px; font-size: 0.9em; color: #ffcc66; }
-pre { background: #2a3040; padding: 10px; border-radius: 5px; overflow-x: auto; margin: 8px 0; }
-pre code { padding: 0; background: none; }
+code { background: #2a3040; padding: 1px 5px; border-radius: 3px; font-size: 0.9em; color: #ffcc66; font-family: "JetBrains Mono", "Fira Code", "SF Mono", Menlo, monospace; }
+pre { background: #282c34; border-radius: 6px; overflow-x: auto; margin: 8px 0; border: 1px solid #353b4a; padding: 0 !important; }
+pre code { padding: 0 !important; background: none !important; font-size: 0.88em; font-family: "JetBrains Mono", "Fira Code", "SF Mono", Menlo, monospace; }
+/* pandoc sourceCode wrapper */
+div.sourceCode { margin: 8px 0; }
+/* Line numbers — custom implementation, no hljs-line-numbers.js */
+.code-lines { display: table; width: 100%; border-collapse: collapse; padding: 6px 0; }
+.code-line { display: table-row; }
+.code-line:hover { background: rgba(255,255,255,0.03); }
+.ln { display: table-cell; width: 1px; user-select: none; text-align: right; color: #4b5263; border-right: 1px solid #353b4a; padding: 0 12px 0 16px; vertical-align: top; white-space: nowrap; font-size: 0.88em; font-family: "JetBrains Mono","Fira Code","SF Mono",Menlo,monospace; line-height: 1.6; }
+.lc { display: table-cell; padding: 0 16px 0 20px; white-space: pre; vertical-align: top; font-size: 0.88em; font-family: "JetBrains Mono","Fira Code","SF Mono",Menlo,monospace; line-height: 1.6; }
+@media (prefers-color-scheme: light) {
+  .ln { color: #bbb; border-right-color: #e1e4e8; }
+  .code-line:hover { background: rgba(0,0,0,0.02); }
+}
+/* IDE-style code block wrapper */
+.code-file-wrapper { border-radius: 8px; overflow: hidden; border: 1px solid #353b4a; margin: 0; }
+.code-file-header { background: #2a2f3d; padding: 8px 14px; font-size: 11px; color: #8a90a0; font-family: -apple-system, sans-serif; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #353b4a; }
+.code-file-header .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.dot-red { background: #ff5f57; } .dot-yellow { background: #febc2e; } .dot-green { background: #28c840; }
+.code-file-header .filename { color: #ccd0d4; font-weight: 500; margin-left: 4px; }
+.code-file-header .lang-badge { margin-left: auto; background: #353b4a; padding: 2px 8px; border-radius: 4px; font-size: 10px; color: #8a90a0; text-transform: uppercase; letter-spacing: 0.5px; }
+.code-file-wrapper pre { border: none; border-radius: 0; margin: 0; }
 blockquote { border-left: 3px solid #87d96c; padding-left: 10px; color: #8a90a0; margin: 6px 0; }
 ul, ol { padding-left: 20px; margin: 6px 0; } li { margin-bottom: 2px; }
 a { color: #73b8f0; } hr { border: none; border-top: 1px solid #353b4a; margin: 10px 0; }
@@ -56,7 +77,7 @@ tr:hover { background: #2a3040; }
   body { color: #24292e; background: #ffffff; }
   h1, h2, h3 { color: #1a1a1a; border-bottom-color: #e1e4e8; }
   code { background: #f0f2f5; color: #c45100; }
-  pre { background: #f6f8fa; }
+  pre { background: #fafafa; border-color: #e1e4e8; }
   blockquote { border-left-color: #3fb950; color: #6a737d; }
   a { color: #0366d6; }
   hr { border-top-color: #e1e4e8; }
@@ -65,14 +86,54 @@ tr:hover { background: #2a3040; }
   th { background: #f6f8fa; border-color: #d0d7de; }
   td { border-color: #d0d7de; }
   tr:hover { background: #f6f8fa; }
+  .code-file-wrapper { border-color: #e1e4e8; }
+  .code-file-header { background: #f6f8fa; border-bottom-color: #e1e4e8; }
+  .code-file-header .filename { color: #24292e; }
+  .code-file-header .lang-badge { background: #e1e4e8; color: #6a737d; }
 }
 </style>
 </head>
 <body>
 $body$
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <script>
 (function(){
+  var isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+  // Switch hljs theme for light mode
+  if (!isDark) {
+    document.getElementById('hljs-dark-theme').href =
+      'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css';
+  }
+
+  // Highlight + add line numbers manually (no hljs-line-numbers plugin)
+  document.querySelectorAll('pre code').forEach(function(block) {
+    if (block.closest('pre.mermaid') || block.classList.contains('mermaid')) return;
+    // Get plain text first (works for both hljs and pandoc pre-highlighted code)
+    var plainText = block.textContent;
+    // Re-highlight from plain text so the output is clean hljs spans (not pandoc spans)
+    var lang = (block.className.match(/language-(\S+)/) || block.className.match(/sourceCode\s+(\S+)/)  || [])[1] || '';
+    var highlighted = lang && hljs.getLanguage(lang)
+      ? hljs.highlight(plainText, { language: lang }).value
+      : hljs.highlightAuto(plainText).value;
+    // Split highlighted HTML by newline — hljs output uses bare \n between lines
+    var lines = highlighted.split('\n');
+    if (lines[lines.length - 1] === '') lines.pop();
+    var html = lines.map(function(line, i) {
+      return '<div class="code-line"><span class="ln">' + (i + 1) + '</span><span class="lc">' + (line || '\u00a0') + '</span></div>';
+    }).join('');
+    var wrapper = document.createElement('div');
+    wrapper.className = 'code-lines';
+    wrapper.innerHTML = html;
+    block.innerHTML = '';
+    block.style.padding = '0';
+    block.style.background = 'none';
+    block.parentElement.style.padding = '0';
+    block.appendChild(wrapper);
+  });
+
+  // Mermaid
   document.querySelectorAll('pre.mermaid').forEach(function(pre){
     var div = document.createElement('div');
     div.className = 'mermaid';
@@ -81,7 +142,7 @@ $body$
   });
   mermaid.initialize({
     startOnLoad: true,
-    theme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default'
+    theme: isDark ? 'dark' : 'default'
   });
 })();
 </script>
@@ -89,13 +150,126 @@ $body$
 </html>
 TMPL
 
+_is_code_file() {
+  local ext="${1##*.}"
+  case "$ext" in
+    ts|tsx|js|jsx|mjs|cjs|\
+    py|rb|go|rs|java|kt|swift|\
+    c|cc|cpp|h|hpp|\
+    cs|fs|fsx|\
+    sh|bash|zsh|\
+    yaml|yml|toml|json|jsonc|\
+    sql|graphql|gql|\
+    html|css|scss|sass|less|\
+    lua|php|r|m|ex|exs|\
+    tf|hcl|dockerfile|makefile|\
+    vue|svelte)
+      return 0 ;;
+    *)
+      # Also treat files with no extension but a known shebang / named Dockerfile/Makefile
+      local basename
+      basename=$(basename "$1")
+      case "$basename" in
+        Dockerfile|Makefile|Vagrantfile|Procfile|Brewfile) return 0 ;;
+      esac
+      return 1 ;;
+  esac
+}
+
+_lang_from_ext() {
+  local ext="${1##*.}"
+  local base
+  base=$(basename "$1")
+  case "$ext" in
+    ts|tsx)       echo "typescript" ;;
+    js|jsx|mjs|cjs) echo "javascript" ;;
+    py)           echo "python" ;;
+    rb)           echo "ruby" ;;
+    go)           echo "go" ;;
+    rs)           echo "rust" ;;
+    java)         echo "java" ;;
+    kt)           echo "kotlin" ;;
+    swift)        echo "swift" ;;
+    c|h)          echo "c" ;;
+    cc|cpp|hpp)   echo "cpp" ;;
+    cs)           echo "csharp" ;;
+    sh|bash|zsh)  echo "bash" ;;
+    yaml|yml)     echo "yaml" ;;
+    toml)         echo "toml" ;;
+    json|jsonc)   echo "json" ;;
+    sql)          echo "sql" ;;
+    graphql|gql)  echo "graphql" ;;
+    html)         echo "html" ;;
+    css)          echo "css" ;;
+    scss|sass)    echo "scss" ;;
+    lua)          echo "lua" ;;
+    php)          echo "php" ;;
+    r)            echo "r" ;;
+    ex|exs)       echo "elixir" ;;
+    tf|hcl)       echo "hcl" ;;
+    vue)          echo "xml" ;;
+    svelte)       echo "xml" ;;
+    *)
+      case "$base" in
+        Dockerfile) echo "dockerfile" ;;
+        Makefile)   echo "makefile" ;;
+        *)          echo "" ;;
+      esac ;;
+  esac
+}
+
 generate_html() {
   local src_file="$1"
-  if ! pandoc "$src_file" -o "$VIEW_HTML" --template="$VIEW_TEMPLATE"; then
-    echo "fileview: pandoc failed to convert $src_file" >&2
-    return 1
+  local ext="${src_file##*.}"
+
+  if _is_code_file "$src_file"; then
+    # Render as IDE-style syntax-highlighted code view
+    local lang
+    lang=$(_lang_from_ext "$src_file")
+    local filename
+    filename=$(basename "$src_file")
+    local lang_display="${lang:-${ext}}"
+
+    # Escape HTML entities in the source
+    local escaped_code
+    escaped_code=$(sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g' "$src_file")
+
+    # Build the body HTML
+    local body_html
+    body_html=$(cat << BODYEOF
+<div class="code-file-wrapper">
+  <div class="code-file-header">
+    <span class="dot dot-red"></span>
+    <span class="dot dot-yellow"></span>
+    <span class="dot dot-green"></span>
+    <span class="filename">${filename}</span>
+    <span class="lang-badge">${lang_display}</span>
+  </div>
+  <pre><code class="language-${lang}">${escaped_code}</code></pre>
+</div>
+BODYEOF
+)
+
+    # Write final HTML: write body to temp file, substitute via python3
+    local body_tmp
+    body_tmp=$(mktemp)
+    printf '%s' "$body_html" > "$body_tmp"
+    python3 - "$VIEW_TEMPLATE" "$VIEW_HTML" "$body_tmp" << 'PYEOF'
+import sys
+template_path, out_path, body_path = sys.argv[1], sys.argv[2], sys.argv[3]
+with open(template_path) as f:
+    tmpl = f.read()
+with open(body_path) as f:
+    body = f.read()
+with open(out_path, 'w') as f:
+    f.write(tmpl.replace('$body$', body))
+PYEOF
+    rm -f "$body_tmp"
+  else
+    # Markdown and other prose files — use pandoc
+    pandoc "$src_file" -o "$VIEW_HTML" --template="$VIEW_TEMPLATE" 2>/dev/null
+    sed -i '' '/<colgroup>/,/<\/colgroup>/d' "$VIEW_HTML" 2>/dev/null
   fi
-  sed -i '' '/<colgroup>/,/<\/colgroup>/d' "$VIEW_HTML" 2>/dev/null
 }
 
 stop_watcher() {
