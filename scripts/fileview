@@ -116,7 +116,7 @@ $body$
     var lang = (block.className.match(/language-(\S+)/) || block.className.match(/sourceCode\s+(\S+)/)  || [])[1] || '';
     var highlighted = lang && hljs.getLanguage(lang)
       ? hljs.highlight(plainText, { language: lang }).value
-      : plainText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      : hljs.highlightAuto(plainText).value;
     // Split highlighted HTML by newline — hljs output uses bare \n between lines
     var lines = highlighted.split('\n');
     if (lines[lines.length - 1] === '') lines.pop();
