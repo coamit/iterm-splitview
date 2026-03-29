@@ -94,6 +94,31 @@ mkdir -p ~/.claude/skills/iterm-splitview
 cp claude-code/SKILL.md ~/.claude/skills/iterm-splitview/SKILL.md
 ```
 
+## Changelog
+
+### 2026-03-29 — Syntax Highlighting & Code File Rendering
+
+- highlight.js integration with `atom-one-dark` / `atom-one-light` themes (auto-switches with system dark/light mode)
+- IDE-style rendering for code files (`.ts`, `.js`, `.py`, `.go`, `.sh`, and more): macOS window dots, filename header, language badge
+- Custom line numbers with table-based layout
+
+<!-- To add a screenshot: -->
+<!-- <img width="800" alt="syntax highlighting" src="https://github.com/user-attachments/assets/ASSET_ID" /> -->
+
+### 2026-03-29 — Installer Appends Claude Instructions
+
+- `install.sh` now appends fileview usage instructions to `~/.claude/CLAUDE.md`
+- Idempotency guard — safe to re-run without duplicating content
+
+### 2026-03-26 — Initial Release
+
+- **fileview** — render markdown as styled HTML in a browser split pane
+- **fileedit** — open files in `fresh` terminal editor in a split pane
+- **fileview-plan** — shortcut to reopen the active Claude plan file
+- Dark/light mode, styled tables, Mermaid diagram support
+- Per-session isolation (each iTerm tab is independent)
+- Claude Code skill auto-install
+
 ## License
 
 [MIT](LICENSE)
