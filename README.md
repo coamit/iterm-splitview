@@ -2,6 +2,8 @@
 
 Side-by-side viewing and editing in iTerm2 — for Claude Code and terminal workflows.
 
+[Demo](#demo) · [Features](#features) · [Install](#install) · [Quick Start](#quick-start) · [How It Works](#how-it-works) · [Claude Code Integration](#claude-code-integration) · [Changelog](#changelog)
+
 **fileview** renders markdown as styled HTML in a browser split pane. **fileedit** opens files in a terminal editor split pane.
 
 <img width="1832" height="1196" alt="Screenshot 2026-03-29 at 11 27 52" src="https://github.com/user-attachments/assets/cfd50e4d-9543-43a1-88b3-f7adb774d407" />
