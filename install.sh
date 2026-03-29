@@ -6,8 +6,39 @@ REPO_URL="https://github.com/coamit/iterm-splitview.git"
 INSTALL_DIR="$HOME/.local/share/iterm-splitview"
 BIN_DIR="$HOME/.local/bin"
 SKILL_DIR="$HOME/.claude/skills/iterm-splitview"
+CLAUDE_MD="$HOME/.claude/CLAUDE.md"
 
 echo "==> Installing iterm-splitview..."
+
+# 0. Migrate from old iterm-fileview plugin (agentic-builders-hub)
+OLD_SKILL_DIR="$HOME/.claude/skills/iterm-fileview"
+OLD_CLAUDE_MARKER="# iterm-fileview Plugin — Claude Instructions"
+MIGRATED=false
+
+if [ -d "$OLD_SKILL_DIR" ]; then
+  rm -rf "$OLD_SKILL_DIR"
+  echo "    Migrated: removed old skill directory ($OLD_SKILL_DIR)"
+  MIGRATED=true
+fi
+
+if [ -f "$CLAUDE_MD" ] && grep -qF "$OLD_CLAUDE_MARKER" "$CLAUDE_MD" 2>/dev/null; then
+  # Remove old block: from marker to the next top-level heading (# ) or EOF
+  python3 -c '
+import re, sys
+text = open(sys.argv[1]).read()
+marker = sys.argv[2]
+pattern = r"\n*" + re.escape(marker) + r".*?(?=\n# |\Z)"
+text = re.sub(pattern, "", text, flags=re.DOTALL)
+text = text.rstrip("\n") + "\n"
+open(sys.argv[1], "w").write(text)
+' "$CLAUDE_MD" "$OLD_CLAUDE_MARKER"
+  echo "    Migrated: removed old iterm-fileview block from $CLAUDE_MD"
+  MIGRATED=true
+fi
+
+if [ "$MIGRATED" = true ]; then
+  echo "    Migration from iterm-fileview plugin complete."
+fi
 
 # 1. Clone or update
 if [ -d "$INSTALL_DIR/.git" ]; then
@@ -52,7 +83,6 @@ if [ -d "$HOME/.claude" ]; then
 fi
 
 # 5. Append Claude instructions to global CLAUDE.md (if ~/.claude exists)
-CLAUDE_MD="$HOME/.claude/CLAUDE.md"
 MARKER="# iterm-splitview — Claude Instructions"
 
 if [ -d "$HOME/.claude" ]; then
