@@ -51,7 +51,21 @@ if [ -d "$HOME/.claude" ]; then
   echo "    Installed Claude Code skill → $SKILL_DIR/"
 fi
 
-# 5. Check dependencies
+# 5. Append Claude instructions to global CLAUDE.md (if ~/.claude exists)
+CLAUDE_MD="$HOME/.claude/CLAUDE.md"
+MARKER="# iterm-splitview — Claude Instructions"
+
+if [ -d "$HOME/.claude" ]; then
+  if ! grep -qF "$MARKER" "$CLAUDE_MD" 2>/dev/null; then
+    echo "" >> "$CLAUDE_MD"
+    cat "$INSTALL_DIR/CLAUDE.md" >> "$CLAUDE_MD"
+    echo "    Appended Claude instructions → $CLAUDE_MD"
+  else
+    echo "    Claude instructions already present in $CLAUDE_MD"
+  fi
+fi
+
+# 6. Check dependencies
 echo ""
 echo "==> Checking dependencies..."
 MISSING=""
@@ -75,7 +89,7 @@ else
   echo "    All dependencies found."
 fi
 
-# 6. Done
+# 7. Done
 echo ""
 echo "==> Installation complete!"
 echo ""
