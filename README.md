@@ -23,7 +23,8 @@ https://github.com/user-attachments/assets/ecc7991d-fb5a-4e77-8dfa-ff2a2666c683
 - **Dark/light mode** — adapts automatically to macOS system preference
 - **Tables** — styled borders, dynamic column widths, hover effects
 - **Mermaid diagrams** — flowcharts, sequence diagrams, Gantt charts, ERD
-- **Code blocks** — syntax-friendly backgrounds
+- **Syntax highlighting** — highlight.js with `atom-one-dark` / `atom-one-light` themes, auto-switching with system dark/light mode
+- **Code files** — IDE-style rendering for `.ts`, `.js`, `.py`, `.go`, `.sh`, and [more](scripts/fileview): macOS window dots, filename header, language badge, and line numbers
 - **Session isolation** — each iTerm tab gets its own independent split pane
 - **AI integration** — Claude Code uses these tools autonomously
 
