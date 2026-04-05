@@ -8,8 +8,32 @@ These instructions apply when `fileview` is available on PATH.
 
 | Tool | Purpose | Mode |
 |---|---|---|
-| `fileview` | Render markdown as styled HTML in browser split pane | Read-only |
+| `fileview` | Render files as styled HTML in browser split pane (supports tabs) | Read-only |
 | `fileview-plan` | Shortcut to reopen active plan file in fileview | Read-only |
+
+---
+
+## Commands
+
+```bash
+# Single file (backward-compatible)
+fileview open <file>              # Open file in browser split pane
+fileview close && fileview open <file>  # Refresh / replace current view
+
+# Multiple files (tabs)
+fileview open <f1> <f2> <f3>      # Open multiple files as tabs (last = active)
+fileview open <new-file>          # Add a tab to existing pane (no close needed)
+fileview close <file>             # Remove a specific tab
+fileview list                     # Show current tabs (* = active)
+
+# Close
+fileview close                    # Close pane + clear all tabs
+```
+
+**Tab behavior:**
+- Opening a file already in tabs just activates it (no duplicate)
+- Closing the active tab activates the last remaining tab
+- Closing the last tab closes the pane
 
 ---
 
@@ -25,13 +49,10 @@ Use fileview **autonomously** for ANY response containing:
 2. Display: `fileview close && fileview open <path>`
 3. Keep terminal output to a **1-3 sentence summary** — the user reads the split pane
 
-**Refresh:** `fileview close && fileview open <path>` (browser doesn't auto-reload)
-
-**Close:** `fileview close` when the response doesn't need the split pane
-
 ---
 
 ## Key Rules
 
 - **Be proactive** — don't wait for the user to ask for split pane display
+- **Auto-reload** — a local HTTP server enables live updates; when a displayed file changes, the browser auto-reloads within ~1.5s
 - Requires **iTerm2** (not Terminal.app) and uses per-session isolation

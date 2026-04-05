@@ -1,10 +1,12 @@
 #!/bin/bash
-# fileview — Open/refresh any file as styled HTML in an iTerm2 browser split pane.
+# fileview — Open/refresh files as styled HTML in an iTerm2 browser split pane.
+# Supports multiple files as tabs within the same pane.
 #
 # Usage:
-#   fileview open <file>    — Generate HTML + open browser split
-#   fileview refresh <file> — Regenerate HTML from the file
-#   fileview close          — Close the browser split pane
+#   fileview open <file> [file2] ...  — Add file(s) as tabs, open/reuse browser split
+#   fileview close                    — Close the browser split pane + clear all tabs
+#   fileview close <file>             — Remove a specific tab
+#   fileview list                     — List current tabs
 
 # Derive per-session directory from iTerm session ID
 _FV_SESSION_ID="${ITERM_SESSION_ID%%:*}"
@@ -13,8 +15,11 @@ mkdir -p "$_FV_SESSION_DIR"
 
 VIEW_HTML="$_FV_SESSION_DIR/index.html"
 VIEW_TEMPLATE="/tmp/fileview/template.html"
-SOURCE_FILE="$_FV_SESSION_DIR/source"
+TABS_FILE="$_FV_SESSION_DIR/tabs"
+ACTIVE_FILE="$_FV_SESSION_DIR/active"
 WATCHER_PID="$_FV_SESSION_DIR/watcher.pid"
+SERVER_PID_FILE="$_FV_SESSION_DIR/server.pid"
+SERVER_PORT_FILE="$_FV_SESSION_DIR/server_port"
 PANE_SESSION_ID_FILE="$_FV_SESSION_DIR/pane_session_id"
 mkdir -p /tmp/fileview
 
@@ -34,18 +39,62 @@ cat > "$VIEW_TEMPLATE" << 'TMPL'
 html, body { width: 100%; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-  padding: 14px 18px;
+  padding: 0;
   font-size: 13px; line-height: 1.5;
   color: #ccd0d4; background: #1f2430;
 }
+/* Tab bar */
+.fv-tab-bar {
+  display: flex;
+  align-items: stretch;
+  background: #171b24;
+  border-bottom: 1px solid #353b4a;
+  overflow-x: auto;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.fv-tab-bar::-webkit-scrollbar { display: none; }
+.fv-tab {
+  padding: 8px 16px;
+  font-size: 12px;
+  font-family: -apple-system, sans-serif;
+  color: #6a7080;
+  cursor: pointer;
+  border-right: 1px solid #252a35;
+  white-space: nowrap;
+  user-select: none;
+  position: relative;
+  flex-shrink: 0;
+}
+.fv-tab:hover { color: #ccd0d4; background: #1f2430; }
+.fv-tab.active { color: #e8ecf0; background: #1f2430; }
+.fv-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 2px;
+  background: #73b8f0;
+}
+.fv-tab-spacer { flex: 1; }
+.fv-tab-ts {
+  padding: 8px 12px;
+  font-size: 10px;
+  color: #4b5263;
+  align-self: center;
+  white-space: nowrap;
+  user-select: none;
+  flex-shrink: 0;
+}
+.fv-tab-content { display: none; padding: 14px 18px; }
+.fv-tab-content.active { display: block; }
+/* Content styles */
 h1, h2, h3 { color: #e8ecf0; border-bottom: 1px solid #353b4a; padding-bottom: 4px; margin-top: 16px; margin-bottom: 8px; }
 h1 { font-size: 1.35em; } h2 { font-size: 1.15em; } h3 { font-size: 1em; }
 code { background: #2a3040; padding: 1px 5px; border-radius: 3px; font-size: 0.9em; color: #ffcc66; font-family: "JetBrains Mono", "Fira Code", "SF Mono", Menlo, monospace; }
 pre { background: #282c34; border-radius: 6px; overflow-x: auto; margin: 8px 0; border: 1px solid #353b4a; padding: 0 !important; }
 pre code { padding: 0 !important; background: none !important; font-size: 0.88em; font-family: "JetBrains Mono", "Fira Code", "SF Mono", Menlo, monospace; }
-/* pandoc sourceCode wrapper */
 div.sourceCode { margin: 8px 0; }
-/* Line numbers — custom implementation, no hljs-line-numbers.js */
 .code-lines { display: table; width: 100%; border-collapse: collapse; margin: 8px 0; }
 .code-line { display: table-row; }
 .code-line:hover { background: rgba(255,255,255,0.03); }
@@ -55,7 +104,6 @@ div.sourceCode { margin: 8px 0; }
   .ln { color: #bbb; border-right-color: #e1e4e8; }
   .code-line:hover { background: rgba(0,0,0,0.02); }
 }
-/* IDE-style code block wrapper */
 .code-file-wrapper { border-radius: 8px; overflow: hidden; border: 1px solid #353b4a; margin: 0; }
 .code-file-header { background: #2a2f3d; padding: 8px 14px; font-size: 11px; color: #8a90a0; font-family: -apple-system, sans-serif; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #353b4a; }
 .code-file-header .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
@@ -75,6 +123,12 @@ tr:hover { background: #2a3040; }
 
 @media (prefers-color-scheme: light) {
   body { color: #24292e; background: #ffffff; }
+  .fv-tab-bar { background: #eaecef; border-bottom-color: #d0d7de; }
+  .fv-tab { color: #6a737d; border-right-color: #d0d7de; }
+  .fv-tab:hover { color: #24292e; background: #ffffff; }
+  .fv-tab.active { color: #24292e; background: #ffffff; }
+  .fv-tab.active::after { background: #0366d6; }
+  .fv-tab-ts { color: #9ca3af; }
   h1, h2, h3 { color: #1a1a1a; border-bottom-color: #e1e4e8; }
   code { background: #f0f2f5; color: #c45100; }
   pre { background: #fafafa; border-color: #e1e4e8; }
@@ -90,16 +144,6 @@ tr:hover { background: #2a3040; }
   .code-file-header { background: #f6f8fa; border-bottom-color: #e1e4e8; }
   .code-file-header .filename { color: #24292e; }
   .code-file-header .lang-badge { background: #e1e4e8; color: #6a737d; }
-  .fv-updated { color: #9ca3af; }
-}
-.fv-updated {
-  font-size: 11px;
-  color: #6a7080;
-  text-align: right;
-  padding: 0 4px 0 0;
-  margin-bottom: -10px;
-  font-family: -apple-system, sans-serif;
-  user-select: none;
 }
 </style>
 </head>
@@ -117,17 +161,37 @@ $body$
       'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css';
   }
 
-  // Highlight + add line numbers manually (no hljs-line-numbers plugin)
+  // Tab switching
+  function activateTab(tabId) {
+    document.querySelectorAll('.fv-tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.fv-tab-content').forEach(function(c) { c.classList.remove('active'); });
+    var tab = document.querySelector('[data-tab="' + tabId + '"]');
+    if (tab) {
+      tab.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+    }
+  }
+  document.querySelectorAll('.fv-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      var tabId = tab.getAttribute('data-tab');
+      activateTab(tabId);
+      history.replaceState(null, '', '#' + tabId);
+    });
+  });
+  // Restore active tab from URL hash (survives auto-reload)
+  var hash = window.location.hash.substring(1);
+  if (hash && document.getElementById(hash) && document.querySelector('[data-tab="' + hash + '"]')) {
+    activateTab(hash);
+  }
+
+  // Highlight + add line numbers
   document.querySelectorAll('pre code').forEach(function(block) {
     if (block.closest('pre.mermaid') || block.classList.contains('mermaid')) return;
-    // Get plain text first (works for both hljs and pandoc pre-highlighted code)
     var plainText = block.textContent;
-    // Re-highlight from plain text so the output is clean hljs spans (not pandoc spans)
-    var lang = (block.className.match(/language-(\S+)/) || block.className.match(/sourceCode\s+(\S+)/)  || [])[1] || '';
+    var lang = (block.className.match(/language-(\S+)/) || block.className.match(/sourceCode\s+(\S+)/) || [])[1] || '';
     var highlighted = lang && hljs.getLanguage(lang)
       ? hljs.highlight(plainText, { language: lang }).value
       : plainText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    // Split highlighted HTML by newline — hljs output uses bare \n between lines
     var lines = highlighted.split('\n');
     if (lines[lines.length - 1] === '') lines.pop();
     var html = lines.map(function(line, i) {
@@ -150,33 +214,65 @@ $body$
     div.textContent = pre.textContent;
     pre.replaceWith(div);
   });
-  mermaid.initialize({
-    startOnLoad: true,
-    theme: isDark ? 'dark' : 'default'
-  });
-})();
-</script>
-<script>
-(function(){
-  var el = document.getElementById('fv-ts');
-  if (!el) return;
-  var gen = parseInt(el.getAttribute('data-generated'), 10);
-  function update() {
-    var diff = Math.floor(Date.now()/1000) - gen;
-    var text;
-    if (diff < 60) text = diff + 's ago';
-    else if (diff < 3600) text = Math.floor(diff/60) + 'm ago';
-    else if (diff < 86400) text = Math.floor(diff/3600) + 'h ago';
-    else text = Math.floor(diff/86400) + 'd ago';
-    el.textContent = 'Updated ' + text;
+  mermaid.initialize({ startOnLoad: true, theme: isDark ? 'dark' : 'default' });
+
+  // Auto-reload: poll for HTML regeneration
+  var marker = document.querySelector('[data-fv-gen]');
+  if (marker) {
+    var genTime = marker.getAttribute('data-fv-gen');
+    var tabCount = parseInt(marker.getAttribute('data-fv-tabs') || '0', 10);
+    setInterval(function() {
+      try {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', window.location.pathname + '?t=' + Date.now(), true);
+        xhr.onload = function() {
+          var gm = xhr.responseText.match(/data-fv-gen="(\d+)"/);
+          if (gm && gm[1] !== genTime) {
+            var tm = xhr.responseText.match(/data-fv-tabs="(\d+)"/);
+            if (tm && parseInt(tm[1], 10) !== tabCount) {
+              history.replaceState(null, '', window.location.pathname);
+            }
+            window.location.reload();
+          }
+        };
+        xhr.send();
+      } catch(e) {}
+    }, 1500);
   }
-  update();
-  setInterval(update, 1000);
+
+  // Updated timestamp
+  var tsEl = document.getElementById('fv-ts');
+  if (tsEl) {
+    var gen = parseInt(tsEl.getAttribute('data-generated'), 10);
+    function updateTs() {
+      var diff = Math.floor(Date.now()/1000) - gen;
+      var text;
+      if (diff < 60) text = diff + 's ago';
+      else if (diff < 3600) text = Math.floor(diff/60) + 'm ago';
+      else if (diff < 86400) text = Math.floor(diff/3600) + 'h ago';
+      else text = Math.floor(diff/86400) + 'd ago';
+      tsEl.textContent = 'Updated ' + text;
+    }
+    updateTs();
+    setInterval(updateTs, 1000);
+  }
 })();
 </script>
 </body>
 </html>
 TMPL
+
+_resolve_path() {
+  local p="$1"
+  if [[ "$p" != /* ]]; then
+    local dir
+    dir=$(cd "$(dirname "$p")" 2>/dev/null && pwd)
+    if [ -n "$dir" ]; then
+      p="$dir/$(basename "$p")"
+    fi
+  fi
+  echo "$p"
+}
 
 _is_code_file() {
   local ext="${1##*.}"
@@ -194,7 +290,6 @@ _is_code_file() {
     vue|svelte)
       return 0 ;;
     *)
-      # Also treat files with no extension but a known shebang / named Dockerfile/Makefile
       local basename
       basename=$(basename "$1")
       case "$basename" in
@@ -270,46 +365,121 @@ _lang_from_ext() {
   esac
 }
 
-generate_html() {
+# Generate body HTML for a single file (output to stdout, no template wrapper)
+generate_file_body() {
   local src_file="$1"
-  local ext="${src_file##*.}"
 
   if _is_code_file "$src_file"; then
-    # Render as IDE-style syntax-highlighted code view
     local lang
     lang=$(_lang_from_ext "$src_file")
     local filename
     filename=$(basename "$src_file")
-    local lang_display="${lang:-${ext}}"
+    local lang_display="${lang:-${src_file##*.}}"
 
-    # Escape HTML entities in the source
-    local escaped_code
-    escaped_code=$(sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g' "$src_file")
+    printf '<div class="code-file-wrapper">\n'
+    printf '  <div class="code-file-header">\n'
+    printf '    <span class="dot dot-red"></span>\n'
+    printf '    <span class="dot dot-yellow"></span>\n'
+    printf '    <span class="dot dot-green"></span>\n'
+    printf '    <span class="filename">%s</span>\n' "$filename"
+    printf '    <span class="lang-badge">%s</span>\n' "$lang_display"
+    printf '  </div>\n'
+    printf '  <pre><code class="language-%s">' "$lang"
+    sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g' "$src_file"
+    printf '</code></pre>\n'
+    printf '</div>\n'
+  else
+    pandoc "$src_file" 2>/dev/null | sed '/<colgroup>/,/<\/colgroup>/d'
+  fi
+}
 
-    # Build the body HTML
-    local gen_epoch
-    gen_epoch=$(date +%s)
-    local body_html
-    body_html=$(cat << BODYEOF
-<div class="fv-updated" id="fv-ts" data-generated="${gen_epoch}"></div>
-<div class="code-file-wrapper">
-  <div class="code-file-header">
-    <span class="dot dot-red"></span>
-    <span class="dot dot-yellow"></span>
-    <span class="dot dot-green"></span>
-    <span class="filename">${filename}</span>
-    <span class="lang-badge">${lang_display}</span>
-  </div>
-  <pre><code class="language-${lang}">${escaped_code}</code></pre>
-</div>
-BODYEOF
-)
+# Generate the full tabbed HTML page from all files in TABS_FILE
+generate_tabbed_html() {
+  if [ ! -f "$TABS_FILE" ] || [ ! -s "$TABS_FILE" ]; then
+    return 1
+  fi
 
-    # Write final HTML: write body to temp file, substitute via python3
-    local body_tmp
-    body_tmp=$(mktemp)
-    printf '%s' "$body_html" > "$body_tmp"
-    python3 - "$VIEW_TEMPLATE" "$VIEW_HTML" "$body_tmp" << 'PYEOF'
+  local active_file=""
+  if [ -f "$ACTIVE_FILE" ]; then
+    active_file=$(cat "$ACTIVE_FILE")
+  fi
+
+  # Ensure active file is valid (exists in tabs and on disk)
+  local has_active=false
+  while IFS= read -r fp; do
+    [ -z "$fp" ] && continue
+    [ ! -f "$fp" ] && continue
+    if [ "$fp" = "$active_file" ]; then
+      has_active=true
+      break
+    fi
+  done < "$TABS_FILE"
+  if [ "$has_active" = false ]; then
+    while IFS= read -r fp; do
+      [ -z "$fp" ] && continue
+      [ ! -f "$fp" ] && continue
+      active_file="$fp"
+      break
+    done < "$TABS_FILE"
+    echo "$active_file" > "$ACTIVE_FILE"
+  fi
+
+  # Count valid tabs
+  local tab_count=0
+  while IFS= read -r fp; do
+    [ -z "$fp" ] && continue
+    [ ! -f "$fp" ] && continue
+    tab_count=$((tab_count + 1))
+  done < "$TABS_FILE"
+
+  local gen_epoch
+  gen_epoch=$(date +%s)
+  local body_tmp
+  body_tmp=$(mktemp)
+
+  # Hidden marker for auto-reload
+  printf '<div data-fv-gen="%s" data-fv-tabs="%s" style="display:none"></div>\n' "$gen_epoch" "$tab_count" > "$body_tmp"
+
+  # Tab bar
+  {
+    printf '<div class="fv-tab-bar">\n'
+    local idx=0
+    while IFS= read -r fp; do
+      [ -z "$fp" ] && continue
+      [ ! -f "$fp" ] && continue
+      local fname
+      fname=$(basename "$fp")
+      local active_class=""
+      if [ "$fp" = "$active_file" ]; then
+        active_class=" active"
+      fi
+      printf '<div class="fv-tab%s" data-tab="fv-tab-%d" title="%s">%s</div>\n' "$active_class" "$idx" "$fp" "$fname"
+      idx=$((idx + 1))
+    done < "$TABS_FILE"
+    printf '<div class="fv-tab-spacer"></div>\n'
+    printf '<div class="fv-tab-ts" id="fv-ts" data-generated="%s"></div>\n' "$gen_epoch"
+    printf '</div>\n'
+  } >> "$body_tmp"
+
+  # Tab content panels
+  idx=0
+  while IFS= read -r fp; do
+    [ -z "$fp" ] && continue
+    [ ! -f "$fp" ] && continue
+    local active_class=""
+    if [ "$fp" = "$active_file" ]; then
+      active_class=" active"
+    fi
+    {
+      printf '<div class="fv-tab-content%s" id="fv-tab-%d">\n' "$active_class" "$idx"
+      generate_file_body "$fp"
+      printf '</div>\n'
+    } >> "$body_tmp"
+    idx=$((idx + 1))
+  done < "$TABS_FILE"
+
+  # Substitute body into template
+  python3 - "$VIEW_TEMPLATE" "$VIEW_HTML" "$body_tmp" << 'PYEOF'
 import sys
 template_path, out_path, body_path = sys.argv[1], sys.argv[2], sys.argv[3]
 with open(template_path) as f:
@@ -319,15 +489,7 @@ with open(body_path) as f:
 with open(out_path, 'w') as f:
     f.write(tmpl.replace('$body$', body))
 PYEOF
-    rm -f "$body_tmp"
-  else
-    # Markdown and other prose files — use pandoc
-    pandoc "$src_file" -o "$VIEW_HTML" --template="$VIEW_TEMPLATE" 2>/dev/null
-    sed -i '' '/<colgroup>/,/<\/colgroup>/d' "$VIEW_HTML" 2>/dev/null
-    local gen_epoch
-    gen_epoch=$(date +%s)
-    sed -i '' "s|<body>|<body><div class=\"fv-updated\" id=\"fv-ts\" data-generated=\"${gen_epoch}\"></div>|" "$VIEW_HTML" 2>/dev/null
-  fi
+  rm -f "$body_tmp"
 }
 
 stop_watcher() {
@@ -337,6 +499,63 @@ stop_watcher() {
     kill "$pid" 2>/dev/null
     rm -f "$WATCHER_PID"
   fi
+}
+
+stop_server() {
+  if [ -f "$SERVER_PID_FILE" ]; then
+    local pid
+    pid=$(cat "$SERVER_PID_FILE")
+    kill "$pid" 2>/dev/null
+    rm -f "$SERVER_PID_FILE" "$SERVER_PORT_FILE"
+  fi
+}
+
+start_server() {
+  # Reuse existing server if it's still running
+  if [ -f "$SERVER_PID_FILE" ] && [ -f "$SERVER_PORT_FILE" ]; then
+    local pid
+    pid=$(cat "$SERVER_PID_FILE")
+    if kill -0 "$pid" 2>/dev/null; then
+      return 0
+    fi
+  fi
+  stop_server
+  local port
+  port=$(python3 -c "import socket; s=socket.socket(); s.bind(('',0)); print(s.getsockname()[1]); s.close()")
+  echo "$port" > "$SERVER_PORT_FILE"
+  python3 -m http.server "$port" --directory "$_FV_SESSION_DIR" &>/dev/null &
+  echo $! > "$SERVER_PID_FILE"
+  # Brief pause for server to bind
+  sleep 0.3
+}
+
+# Watch all files in TABS_FILE for changes, regenerate HTML when any file changes
+start_watcher() {
+  stop_watcher
+  if [ ! -f "$TABS_FILE" ] || [ ! -s "$TABS_FILE" ]; then
+    return 0
+  fi
+  (
+    last_mtimes=""
+    while IFS= read -r fp; do
+      [ -z "$fp" ] && continue
+      last_mtimes="${last_mtimes}$(stat -f %m "$fp" 2>/dev/null || echo 0):"
+    done < "$TABS_FILE"
+
+    while true; do
+      sleep 2
+      cur_mtimes=""
+      while IFS= read -r fp; do
+        [ -z "$fp" ] && continue
+        cur_mtimes="${cur_mtimes}$(stat -f %m "$fp" 2>/dev/null || echo 0):"
+      done < "$TABS_FILE"
+      if [ "$cur_mtimes" != "$last_mtimes" ]; then
+        last_mtimes="$cur_mtimes"
+        generate_tabbed_html
+      fi
+    done
+  ) &
+  echo $! > "$WATCHER_PID"
 }
 
 _close_fileview_pane() {
@@ -366,9 +585,16 @@ APPLESCRIPT
   rm -f "$PANE_SESSION_ID_FILE"
 }
 
-
 _ensure_dynamic_profile() {
   mkdir -p "$_DYNAMIC_PROFILES_DIR"
+  local url
+  if [ -f "$SERVER_PORT_FILE" ]; then
+    local port
+    port=$(cat "$SERVER_PORT_FILE")
+    url="http://localhost:${port}/index.html"
+  else
+    url="file://$VIEW_HTML"
+  fi
   cat > "$_PROFILE_FILE" << PROFILE
 {
   "Profiles": [{
@@ -376,56 +602,14 @@ _ensure_dynamic_profile() {
     "Guid": "FILEVIEW-$_FV_SESSION_ID",
     "Dynamic Profile Parent Name": "Web Browser",
     "Custom Command": "Browser",
-    "Initial URL": "file://$VIEW_HTML"
+    "Initial URL": "$url"
   }]
 }
 PROFILE
-  # Wait for iTerm to detect the new DynamicProfile
   sleep 0.5
 }
 
-start_watcher() {
-  local src_file="$1"
-  stop_watcher
-  echo "$src_file" > "$SOURCE_FILE"
-  (
-    local last_mtime
-    last_mtime=$(stat -f %m "$src_file" 2>/dev/null || echo 0)
-    while true; do
-      sleep 2
-      local cur_mtime
-      cur_mtime=$(stat -f %m "$src_file" 2>/dev/null || echo 0)
-      if [ "$cur_mtime" != "$last_mtime" ]; then
-        last_mtime="$cur_mtime"
-        generate_html "$src_file"
-      fi
-    done
-  ) &
-  echo $! > "$WATCHER_PID"
-}
-
-cmd_open() {
-  local src_file="$1"
-  if [ -z "$src_file" ]; then
-    echo "Usage: fileview open <file>" >&2
-    return 1
-  fi
-  if [ ! -f "$src_file" ]; then
-    echo "fileview: file not found: $src_file" >&2
-    return 1
-  fi
-
-  if ! generate_html "$src_file"; then
-    return 1
-  fi
-  start_watcher "$src_file"
-
-  # Track plan files per-session for fileview-plan shortcut
-  case "$src_file" in
-    */.claude/plans/*.md) echo "$src_file" > "$_FV_SESSION_DIR/plan" ;;
-  esac
-
-  # Check if our tracked browser pane still exists
+_open_or_reuse_pane() {
   local session_uuid="${ITERM_SESSION_ID#*:}"
   local need_split=true
   if [ -f "$PANE_SESSION_ID_FILE" ]; then
@@ -454,7 +638,6 @@ APPLESCRIPT
     fi
   fi
 
-  # Create split only if our pane doesn't exist
   if [ "$need_split" = true ]; then
     _ensure_dynamic_profile
     local new_pane_id
@@ -476,32 +659,118 @@ APPLESCRIPT
 APPLESCRIPT
     )
     echo "$new_pane_id" > "$PANE_SESSION_ID_FILE"
-    # Profile no longer needed — browser has already loaded the URL
     rm -f "$_PROFILE_FILE"
   fi
 }
 
-cmd_refresh() {
-  local src_file="$1"
-  if [ -z "$src_file" ]; then
-    echo "Usage: fileview refresh <file>" >&2
+cmd_open() {
+  if [ $# -eq 0 ]; then
+    echo "Usage: fileview open <file> [file2] ..." >&2
     return 1
   fi
-  if ! generate_html "$src_file"; then
+
+  touch "$TABS_FILE"
+
+  local last_file=""
+  for src_file in "$@"; do
+    local abs_path
+    abs_path=$(_resolve_path "$src_file")
+    if [ ! -f "$abs_path" ]; then
+      echo "fileview: file not found: $src_file" >&2
+      continue
+    fi
+    # Add to tabs if not already present
+    if ! grep -qxF "$abs_path" "$TABS_FILE" 2>/dev/null; then
+      echo "$abs_path" >> "$TABS_FILE"
+    fi
+    last_file="$abs_path"
+    # Track plan files per-session for fileview-plan shortcut
+    case "$abs_path" in
+      */.claude/plans/*.md) echo "$abs_path" > "$_FV_SESSION_DIR/plan" ;;
+    esac
+  done
+
+  if [ -z "$last_file" ]; then
     return 1
   fi
+
+  # Set the last file as active
+  echo "$last_file" > "$ACTIVE_FILE"
+
+  if ! generate_tabbed_html; then
+    return 1
+  fi
+  start_watcher
+  start_server
+  _open_or_reuse_pane
 }
 
 cmd_close() {
-  stop_watcher
-  rm -f "$SOURCE_FILE"
-  rm -f "$_FV_SESSION_DIR/plan"
-  _close_fileview_pane
+  if [ $# -eq 0 ]; then
+    stop_watcher
+    stop_server
+    rm -f "$TABS_FILE" "$ACTIVE_FILE"
+    rm -f "$_FV_SESSION_DIR/plan"
+    _close_fileview_pane
+    return 0
+  fi
+
+  # Remove a specific tab
+  local target
+  target=$(_resolve_path "$1")
+
+  if [ ! -f "$TABS_FILE" ]; then
+    return 0
+  fi
+
+  local tmp
+  tmp=$(mktemp)
+  grep -vxF "$target" "$TABS_FILE" > "$tmp"
+  mv "$tmp" "$TABS_FILE"
+
+  # If no tabs left, close everything
+  if [ ! -s "$TABS_FILE" ]; then
+    stop_watcher
+    stop_server
+    rm -f "$TABS_FILE" "$ACTIVE_FILE"
+    rm -f "$_FV_SESSION_DIR/plan"
+    _close_fileview_pane
+    return 0
+  fi
+
+  # If the closed tab was active, activate the last remaining tab
+  local current_active
+  current_active=$(cat "$ACTIVE_FILE" 2>/dev/null)
+  if [ "$current_active" = "$target" ]; then
+    tail -1 "$TABS_FILE" > "$ACTIVE_FILE"
+  fi
+
+  generate_tabbed_html
+  start_watcher
+}
+
+cmd_list() {
+  if [ ! -f "$TABS_FILE" ] || [ ! -s "$TABS_FILE" ]; then
+    echo "No tabs open."
+    return 0
+  fi
+  local active_file=""
+  if [ -f "$ACTIVE_FILE" ]; then
+    active_file=$(cat "$ACTIVE_FILE")
+  fi
+  while IFS= read -r fp; do
+    [ -z "$fp" ] && continue
+    if [ "$fp" = "$active_file" ]; then
+      echo "* $(basename "$fp")  ($fp)"
+    else
+      echo "  $(basename "$fp")  ($fp)"
+    fi
+  done < "$TABS_FILE"
 }
 
 case "$1" in
-  open)    cmd_open "$2" ;;
-  refresh) cmd_refresh "$2" ;;
-  close)   cmd_close ;;
-  *)       echo "Usage: fileview {open|refresh|close} [file]" >&2; exit 1 ;;
+  open)    shift; cmd_open "$@" ;;
+  close)   shift; cmd_close "$@" ;;
+  list)    cmd_list ;;
+  *)       echo "Usage: fileview {open|close|list} [file ...]" >&2; exit 1 ;;
 esac
