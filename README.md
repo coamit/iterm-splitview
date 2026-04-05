@@ -133,6 +133,8 @@ cp claude-code/SKILL.md ~/.claude/skills/iterm-splitview/SKILL.md
 - "Updated ago" timestamp moved into the tab bar
 - Backward compatible — `fileview close && fileview open <path>` still works
 
+https://github.com/user-attachments/assets/1ed1a873-68c8-459c-b895-157807d754df
+
 ### 2026-04-05 — Code Block UX Improvements
 
 - Removed line numbers from code blocks for a cleaner display
