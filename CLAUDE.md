@@ -54,4 +54,5 @@ Use fileview **autonomously** for ANY response containing:
 ## Key Rules
 
 - **Be proactive** — don't wait for the user to ask for split pane display
+- **Auto-reload** — a local HTTP server enables live updates; when a displayed file changes, the browser auto-reloads within ~1.5s
 - Requires **iTerm2** (not Terminal.app) and uses per-session isolation

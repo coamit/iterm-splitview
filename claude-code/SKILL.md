@@ -75,16 +75,17 @@ Use **autonomously** when:
 - Both require **iTerm2** (not Terminal.app) and use per-session isolation
 - Only one split pane tool at a time — close one before opening the other
 - **Duplicate prevention** — opening a file already in tabs just activates it
-- **Auto-reload** — browser polls for HTML changes and reloads automatically
+- **Auto-reload** — a local HTTP server enables live updates; browser polls every 1.5s and reloads when HTML is regenerated
 
 ## How fileview Works
 
 1. Each file is rendered (pandoc for markdown, syntax highlighting for code)
 2. All open files are assembled into a single tabbed HTML page
-3. Creates an iTerm2 DynamicProfile pointing to the rendered HTML
-4. Splits iTerm2 vertically with a browser pane on the right
-5. Background watcher monitors ALL open files, regenerates HTML when any changes
-6. Browser auto-reloads when it detects the HTML was regenerated
+3. A local HTTP server serves the session directory on a random port
+4. Creates an iTerm2 DynamicProfile pointing to `http://localhost:PORT/index.html`
+5. Splits iTerm2 vertically with a browser pane on the right
+6. Background watcher monitors ALL open files, regenerates HTML when any changes
+7. Browser auto-reloads via XHR polling (detects new generation timestamp)
 
 ## How fileedit Works
 
