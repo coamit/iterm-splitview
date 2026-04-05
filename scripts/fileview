@@ -18,6 +18,8 @@ VIEW_TEMPLATE="/tmp/fileview/template.html"
 TABS_FILE="$_FV_SESSION_DIR/tabs"
 ACTIVE_FILE="$_FV_SESSION_DIR/active"
 WATCHER_PID="$_FV_SESSION_DIR/watcher.pid"
+SERVER_PID_FILE="$_FV_SESSION_DIR/server.pid"
+SERVER_PORT_FILE="$_FV_SESSION_DIR/server_port"
 PANE_SESSION_ID_FILE="$_FV_SESSION_DIR/pane_session_id"
 mkdir -p /tmp/fileview
 
@@ -495,6 +497,34 @@ stop_watcher() {
   fi
 }
 
+stop_server() {
+  if [ -f "$SERVER_PID_FILE" ]; then
+    local pid
+    pid=$(cat "$SERVER_PID_FILE")
+    kill "$pid" 2>/dev/null
+    rm -f "$SERVER_PID_FILE" "$SERVER_PORT_FILE"
+  fi
+}
+
+start_server() {
+  # Reuse existing server if it's still running
+  if [ -f "$SERVER_PID_FILE" ] && [ -f "$SERVER_PORT_FILE" ]; then
+    local pid
+    pid=$(cat "$SERVER_PID_FILE")
+    if kill -0 "$pid" 2>/dev/null; then
+      return 0
+    fi
+  fi
+  stop_server
+  local port
+  port=$(python3 -c "import socket; s=socket.socket(); s.bind(('',0)); print(s.getsockname()[1]); s.close()")
+  echo "$port" > "$SERVER_PORT_FILE"
+  python3 -m http.server "$port" --directory "$_FV_SESSION_DIR" &>/dev/null &
+  echo $! > "$SERVER_PID_FILE"
+  # Brief pause for server to bind
+  sleep 0.3
+}
+
 # Watch all files in TABS_FILE for changes, regenerate HTML when any file changes
 start_watcher() {
   stop_watcher
@@ -553,6 +583,14 @@ APPLESCRIPT
 
 _ensure_dynamic_profile() {
   mkdir -p "$_DYNAMIC_PROFILES_DIR"
+  local url
+  if [ -f "$SERVER_PORT_FILE" ]; then
+    local port
+    port=$(cat "$SERVER_PORT_FILE")
+    url="http://localhost:${port}/index.html"
+  else
+    url="file://$VIEW_HTML"
+  fi
   cat > "$_PROFILE_FILE" << PROFILE
 {
   "Profiles": [{
@@ -560,7 +598,7 @@ _ensure_dynamic_profile() {
     "Guid": "FILEVIEW-$_FV_SESSION_ID",
     "Dynamic Profile Parent Name": "Web Browser",
     "Custom Command": "Browser",
-    "Initial URL": "file://$VIEW_HTML"
+    "Initial URL": "$url"
   }]
 }
 PROFILE
@@ -659,12 +697,14 @@ cmd_open() {
     return 1
   fi
   start_watcher
+  start_server
   _open_or_reuse_pane
 }
 
 cmd_close() {
   if [ $# -eq 0 ]; then
     stop_watcher
+    stop_server
     rm -f "$TABS_FILE" "$ACTIVE_FILE"
     rm -f "$_FV_SESSION_DIR/plan"
     _close_fileview_pane
@@ -687,6 +727,7 @@ cmd_close() {
   # If no tabs left, close everything
   if [ ! -s "$TABS_FILE" ]; then
     stop_watcher
+    stop_server
     rm -f "$TABS_FILE" "$ACTIVE_FILE"
     rm -f "$_FV_SESSION_DIR/plan"
     _close_fileview_pane
