@@ -94,7 +94,7 @@ code { background: #2a3040; padding: 1px 5px; border-radius: 3px; font-size: 0.9
 pre { background: #282c34; border-radius: 6px; overflow-x: auto; margin: 8px 0; border: 1px solid #353b4a; padding: 0 !important; }
 pre code { padding: 0 !important; background: none !important; font-size: 0.88em; font-family: "JetBrains Mono", "Fira Code", "SF Mono", Menlo, monospace; }
 div.sourceCode { margin: 8px 0; }
-.code-lines { display: table; width: 100%; border-collapse: collapse; padding: 10px 0; }
+.code-lines { display: table; width: 100%; border-collapse: collapse; margin: 8px 0; }
 .code-line { display: table-row; }
 .code-line:hover { background: rgba(255,255,255,0.03); }
 .ln { display: table-cell; width: 1px; user-select: none; text-align: right; color: #4b5263; border-right: 1px solid #353b4a; padding: 0 12px 0 16px; vertical-align: top; white-space: nowrap; font-size: 0.88em; font-family: "JetBrains Mono","Fira Code","SF Mono",Menlo,monospace; line-height: 1.6; }
