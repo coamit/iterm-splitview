@@ -25,7 +25,6 @@ fileview open <f1> <f2> <f3>      # Open multiple files as tabs (last = active)
 fileview open <new-file>          # Add a tab to existing pane (no close needed)
 fileview close <file>             # Remove a specific tab
 fileview list                     # Show current tabs (* = active)
-fileview refresh                  # Regenerate HTML for all tabs
 
 # Close
 fileview close                    # Close pane + clear all tabs

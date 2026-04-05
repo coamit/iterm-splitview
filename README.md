@@ -115,7 +115,7 @@ cp claude-code/SKILL.md ~/.claude/skills/iterm-splitview/SKILL.md
 ### 2026-04-05 — Multi-Tab Support
 
 - View multiple files in the same browser split pane with clickable tabs
-- New commands: `fileview open f1 f2 ...` (multi-file), `fileview close <file>` (remove tab), `fileview list`, `fileview refresh`
+- New commands: `fileview open f1 f2 ...` (multi-file), `fileview close <file>` (remove tab), `fileview list`
 - Tab bar with dark/light mode support, blue accent on active tab, hover effects
 - Client-side tab switching with URL hash persistence across reloads
 - Multi-file watcher monitors all open files and regenerates HTML when any changes

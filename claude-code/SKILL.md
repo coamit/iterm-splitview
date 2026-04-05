@@ -21,7 +21,6 @@ Two iTerm2 split-pane tools:
 fileview open <file> [file2] ...  # Add file(s) as tabs, open/reuse browser pane
 fileview close                    # Close pane + clear all tabs
 fileview close <file>             # Remove a specific tab
-fileview refresh                  # Regenerate HTML for all tabs
 fileview list                     # List current tabs (* = active)
 fileview-plan                     # Reopen the active plan file
 

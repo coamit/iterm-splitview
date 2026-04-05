@@ -6,7 +6,6 @@
 #   fileview open <file> [file2] ...  — Add file(s) as tabs, open/reuse browser split
 #   fileview close                    — Close the browser split pane + clear all tabs
 #   fileview close <file>             — Remove a specific tab
-#   fileview refresh                  — Regenerate HTML for all tabs
 #   fileview list                     — List current tabs
 
 # Derive per-session directory from iTerm session ID
@@ -94,7 +93,7 @@ code { background: #2a3040; padding: 1px 5px; border-radius: 3px; font-size: 0.9
 pre { background: #282c34; border-radius: 6px; overflow-x: auto; margin: 8px 0; border: 1px solid #353b4a; padding: 0 !important; }
 pre code { padding: 0 !important; background: none !important; font-size: 0.88em; font-family: "JetBrains Mono", "Fira Code", "SF Mono", Menlo, monospace; }
 div.sourceCode { margin: 8px 0; }
-.code-lines { display: table; width: 100%; border-collapse: collapse; padding: 10px 0; }
+.code-lines { display: table; width: 100%; border-collapse: collapse; margin: 8px 0; }
 .code-line { display: table-row; }
 .code-line:hover { background: rgba(255,255,255,0.03); }
 .ln { display: table-cell; width: 1px; user-select: none; text-align: right; color: #4b5263; border-right: 1px solid #353b4a; padding: 0 12px 0 16px; vertical-align: top; white-space: nowrap; font-size: 0.88em; font-family: "JetBrains Mono","Fira Code","SF Mono",Menlo,monospace; line-height: 1.6; }
@@ -705,14 +704,6 @@ cmd_close() {
   start_watcher
 }
 
-cmd_refresh() {
-  if [ ! -f "$TABS_FILE" ] || [ ! -s "$TABS_FILE" ]; then
-    echo "fileview: no tabs open" >&2
-    return 1
-  fi
-  generate_tabbed_html
-}
-
 cmd_list() {
   if [ ! -f "$TABS_FILE" ] || [ ! -s "$TABS_FILE" ]; then
     echo "No tabs open."
@@ -735,7 +726,6 @@ cmd_list() {
 case "$1" in
   open)    shift; cmd_open "$@" ;;
   close)   shift; cmd_close "$@" ;;
-  refresh) cmd_refresh ;;
   list)    cmd_list ;;
-  *)       echo "Usage: fileview {open|close|refresh|list} [file ...]" >&2; exit 1 ;;
+  *)       echo "Usage: fileview {open|close|list} [file ...]" >&2; exit 1 ;;
 esac
