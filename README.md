@@ -22,6 +22,7 @@ https://github.com/user-attachments/assets/ecc7991d-fb5a-4e77-8dfa-ff2a2666c683
 
 - **fileview** — read-only styled HTML rendering (markdown, tables, reports, plans)
 - **Multi-tab** — view multiple files in the same pane with browser-like tabs
+- **Live auto-reload** — files update in the browser automatically when edited (via local HTTP server + XHR polling)
 - **fileedit** — editable terminal editor in split pane (code, config, notes)
 - **Dark/light mode** — adapts automatically to macOS system preference
 - **Tables** — styled borders, dynamic column widths, hover effects
@@ -70,7 +71,8 @@ fileview list
 # Close all tabs and pane
 fileview close
 
-# Refresh after editing (universal pattern)
+# Files auto-reload when edited — no manual refresh needed!
+# For a clean reset (clear all tabs), use:
 fileview close && fileview open README.md
 
 # Reopen the active plan file
@@ -89,10 +91,12 @@ fileedit close
 
 1. Each file is rendered (pandoc for markdown, syntax highlighting for code)
 2. All open files are assembled into a single tabbed HTML page
-3. Creates an iTerm2 DynamicProfile pointing to the rendered HTML
-4. Splits iTerm2 vertically with a browser pane on the right
-5. Background watcher monitors all open files, regenerates HTML when any changes
-6. Click tabs in the browser to switch between files
+3. A local HTTP server starts on a random port, serving the session directory
+4. Creates an iTerm2 DynamicProfile pointing to `http://localhost:PORT/index.html`
+5. Splits iTerm2 vertically with a browser pane on the right
+6. Background watcher monitors all open files, regenerates HTML when any changes
+7. Browser auto-reloads via XHR polling (~1.5s) — no manual refresh needed
+8. Click tabs in the browser to switch between files
 
 ### fileedit
 
@@ -111,6 +115,13 @@ cp claude-code/SKILL.md ~/.claude/skills/iterm-splitview/SKILL.md
 ```
 
 ## Changelog
+
+### 2026-04-06 — Live Auto-Reload
+
+- Local HTTP server per session enables real-time browser updates
+- When any displayed file changes, the browser auto-reloads within ~1.5s via XHR polling
+- No manual `fileview close && fileview open` needed after edits
+- Server lifecycle tied to the fileview session — started on open, stopped on close
 
 ### 2026-04-05 — Multi-Tab Support
 
