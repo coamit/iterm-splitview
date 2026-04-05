@@ -441,23 +441,25 @@ generate_tabbed_html() {
   printf '<div data-fv-gen="%s" data-fv-tabs="%s" style="display:none"></div>\n' "$gen_epoch" "$tab_count" > "$body_tmp"
 
   # Tab bar
-  printf '<div class="fv-tab-bar">\n' >> "$body_tmp"
-  local idx=0
-  while IFS= read -r fp; do
-    [ -z "$fp" ] && continue
-    [ ! -f "$fp" ] && continue
-    local fname
-    fname=$(basename "$fp")
-    local active_class=""
-    if [ "$fp" = "$active_file" ]; then
-      active_class=" active"
-    fi
-    printf '<div class="fv-tab%s" data-tab="fv-tab-%d" title="%s">%s</div>\n' "$active_class" "$idx" "$fp" "$fname" >> "$body_tmp"
-    idx=$((idx + 1))
-  done < "$TABS_FILE"
-  printf '<div class="fv-tab-spacer"></div>\n' >> "$body_tmp"
-  printf '<div class="fv-tab-ts" id="fv-ts" data-generated="%s"></div>\n' "$gen_epoch" >> "$body_tmp"
-  printf '</div>\n' >> "$body_tmp"
+  {
+    printf '<div class="fv-tab-bar">\n'
+    local idx=0
+    while IFS= read -r fp; do
+      [ -z "$fp" ] && continue
+      [ ! -f "$fp" ] && continue
+      local fname
+      fname=$(basename "$fp")
+      local active_class=""
+      if [ "$fp" = "$active_file" ]; then
+        active_class=" active"
+      fi
+      printf '<div class="fv-tab%s" data-tab="fv-tab-%d" title="%s">%s</div>\n' "$active_class" "$idx" "$fp" "$fname"
+      idx=$((idx + 1))
+    done < "$TABS_FILE"
+    printf '<div class="fv-tab-spacer"></div>\n'
+    printf '<div class="fv-tab-ts" id="fv-ts" data-generated="%s"></div>\n' "$gen_epoch"
+    printf '</div>\n'
+  } >> "$body_tmp"
 
   # Tab content panels
   idx=0
@@ -468,9 +470,11 @@ generate_tabbed_html() {
     if [ "$fp" = "$active_file" ]; then
       active_class=" active"
     fi
-    printf '<div class="fv-tab-content%s" id="fv-tab-%d">\n' "$active_class" "$idx" >> "$body_tmp"
-    generate_file_body "$fp" >> "$body_tmp"
-    printf '</div>\n' >> "$body_tmp"
+    {
+      printf '<div class="fv-tab-content%s" id="fv-tab-%d">\n' "$active_class" "$idx"
+      generate_file_body "$fp"
+      printf '</div>\n'
+    } >> "$body_tmp"
     idx=$((idx + 1))
   done < "$TABS_FILE"
 
