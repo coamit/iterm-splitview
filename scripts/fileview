@@ -96,7 +96,8 @@ tr:hover { background: #2a3040; }
   font-size: 11px;
   color: #6a7080;
   text-align: right;
-  padding: 0 4px 6px 0;
+  padding: 0 4px 0 0;
+  margin-bottom: -10px;
   font-family: -apple-system, sans-serif;
   user-select: none;
 }
