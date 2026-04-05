@@ -13,6 +13,31 @@ These instructions apply when `fileview` is available on PATH.
 
 ---
 
+## Commands
+
+```bash
+# Single file (backward-compatible)
+fileview open <file>              # Open file in browser split pane
+fileview close && fileview open <file>  # Refresh / replace current view
+
+# Multiple files (tabs)
+fileview open <f1> <f2> <f3>      # Open multiple files as tabs (last = active)
+fileview open <new-file>          # Add a tab to existing pane (no close needed)
+fileview close <file>             # Remove a specific tab
+fileview list                     # Show current tabs (* = active)
+fileview refresh                  # Regenerate HTML for all tabs
+
+# Close
+fileview close                    # Close pane + clear all tabs
+```
+
+**Tab behavior:**
+- Opening a file already in tabs just activates it (no duplicate)
+- Closing the active tab activates the last remaining tab
+- Closing the last tab closes the pane
+
+---
+
 ## When to Use fileview (Use Proactively)
 
 Use fileview **autonomously** for ANY response containing:
@@ -24,10 +49,6 @@ Use fileview **autonomously** for ANY response containing:
 1. Write content to `/tmp/claude-response-<short-descriptor>.md`
 2. Display: `fileview close && fileview open <path>`
 3. Keep terminal output to a **1-3 sentence summary** — the user reads the split pane
-
-**Multi-tab:** `fileview open <file>` adds a tab to the existing pane (no close needed).
-
-**Close:** `fileview close` closes pane + all tabs. `fileview close <file>` removes one tab.
 
 ---
 
