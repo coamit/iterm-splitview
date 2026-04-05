@@ -8,7 +8,7 @@ These instructions apply when `fileview` is available on PATH.
 
 | Tool | Purpose | Mode |
 |---|---|---|
-| `fileview` | Render markdown as styled HTML in browser split pane | Read-only |
+| `fileview` | Render files as styled HTML in browser split pane (supports tabs) | Read-only |
 | `fileview-plan` | Shortcut to reopen active plan file in fileview | Read-only |
 
 ---
@@ -25,9 +25,9 @@ Use fileview **autonomously** for ANY response containing:
 2. Display: `fileview close && fileview open <path>`
 3. Keep terminal output to a **1-3 sentence summary** — the user reads the split pane
 
-**Refresh:** `fileview close && fileview open <path>` (browser doesn't auto-reload)
+**Multi-tab:** `fileview open <file>` adds a tab to the existing pane (no close needed).
 
-**Close:** `fileview close` when the response doesn't need the split pane
+**Close:** `fileview close` closes pane + all tabs. `fileview close <file>` removes one tab.
 
 ---
 
