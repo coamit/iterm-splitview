@@ -4,7 +4,7 @@ Side-by-side viewing and editing in iTerm2 — for Claude Code and terminal work
 
 [Demo](#demo) · [Features](#features) · [Install](#install) · [Quick Start](#quick-start) · [How It Works](#how-it-works) · [Claude Code Integration](#claude-code-integration) · [Changelog](#changelog)
 
-**fileview** renders markdown as styled HTML in a browser split pane. **fileedit** opens files in a terminal editor split pane.
+**fileview** renders files as styled HTML in a browser split pane with multi-tab support. **fileedit** opens files in a terminal editor split pane.
 
 <img width="1832" height="1196" alt="Screenshot 2026-03-29 at 11 27 52" src="https://github.com/user-attachments/assets/cfd50e4d-9543-43a1-88b3-f7adb774d407" />
 
@@ -21,6 +21,7 @@ https://github.com/user-attachments/assets/ecc7991d-fb5a-4e77-8dfa-ff2a2666c683
 ## Features
 
 - **fileview** — read-only styled HTML rendering (markdown, tables, reports, plans)
+- **Multi-tab** — view multiple files in the same pane with browser-like tabs
 - **fileedit** — editable terminal editor in split pane (code, config, notes)
 - **Dark/light mode** — adapts automatically to macOS system preference
 - **Tables** — styled borders, dynamic column widths, hover effects
@@ -54,7 +55,19 @@ This clones the repo, symlinks scripts to `~/.local/bin/`, and optionally instal
 # View a markdown file in styled HTML split pane
 fileview open README.md
 
-# Close the viewer
+# Open multiple files as tabs (last becomes active)
+fileview open file1.md file2.ts file3.py
+
+# Add a tab to existing pane (no close needed)
+fileview open additional-file.md
+
+# Remove a specific tab
+fileview close file2.ts
+
+# List current tabs (* = active)
+fileview list
+
+# Close all tabs and pane
 fileview close
 
 # Refresh after editing (universal pattern)
@@ -74,11 +87,12 @@ fileedit close
 
 ### fileview
 
-1. Converts markdown to HTML via pandoc with an embedded dark/light mode CSS template
-2. Creates an iTerm2 DynamicProfile pointing to the rendered HTML
-3. Splits iTerm2 vertically with a browser pane on the right
-4. Background watcher regenerates HTML when source file changes
-5. Use `fileview close && fileview open <path>` to refresh (browser doesn't auto-reload)
+1. Each file is rendered (pandoc for markdown, syntax highlighting for code)
+2. All open files are assembled into a single tabbed HTML page
+3. Creates an iTerm2 DynamicProfile pointing to the rendered HTML
+4. Splits iTerm2 vertically with a browser pane on the right
+5. Background watcher monitors all open files, regenerates HTML when any changes
+6. Click tabs in the browser to switch between files
 
 ### fileedit
 
@@ -97,6 +111,16 @@ cp claude-code/SKILL.md ~/.claude/skills/iterm-splitview/SKILL.md
 ```
 
 ## Changelog
+
+### 2026-04-05 — Multi-Tab Support
+
+- View multiple files in the same browser split pane with clickable tabs
+- New commands: `fileview open f1 f2 ...` (multi-file), `fileview close <file>` (remove tab), `fileview list`, `fileview refresh`
+- Tab bar with dark/light mode support, blue accent on active tab, hover effects
+- Client-side tab switching with URL hash persistence across reloads
+- Multi-file watcher monitors all open files and regenerates HTML when any changes
+- "Updated ago" timestamp moved into the tab bar
+- Backward compatible — `fileview close && fileview open <path>` still works
 
 ### 2026-04-05 — Live "Updated ago" Timestamp
 

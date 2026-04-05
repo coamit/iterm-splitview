@@ -2,7 +2,7 @@
 name: iterm-splitview
 description: >
   iTerm2 split-pane tools for viewing and editing files side-by-side.
-  fileview renders markdown as styled HTML in a browser split pane.
+  fileview renders files as styled HTML in a browser split pane with multi-tab support.
   fileedit opens files in fresh terminal editor in a split pane.
   Use proactively for rich responses, tables, reports, and file editing.
 user-invocable: false
@@ -11,16 +11,19 @@ user-invocable: false
 # iterm-splitview
 
 Two iTerm2 split-pane tools:
-- **fileview** — renders any file as styled HTML in a browser split pane (read-only)
+- **fileview** — renders files as styled HTML in a browser split pane with tabs (read-only)
 - **fileedit** — opens any file in `fresh` terminal editor in a split pane (editable)
 
 ## Commands
 
 ```bash
-# Fileview — styled HTML viewer
-fileview open <file-path>    # Render file as HTML in browser split pane
-fileview close               # Close the browser split pane
-fileview-plan                # Reopen the active plan file
+# Fileview — styled HTML viewer with tabs
+fileview open <file> [file2] ...  # Add file(s) as tabs, open/reuse browser pane
+fileview close                    # Close pane + clear all tabs
+fileview close <file>             # Remove a specific tab
+fileview refresh                  # Regenerate HTML for all tabs
+fileview list                     # List current tabs (* = active)
+fileview-plan                     # Reopen the active plan file
 
 # Fileedit — terminal editor
 fileedit open <file-path>    # Open file in fresh editor in split pane
@@ -30,6 +33,18 @@ fileedit close               # Close the editor split pane
 **Refresh pattern** (use after editing a displayed file):
 ```bash
 fileview close && fileview open <file-path>
+```
+
+**Multi-tab patterns:**
+```bash
+# Open multiple files at once (last becomes active)
+fileview open file1.md file2.ts file3.py
+
+# Add a tab to existing pane (no close needed)
+fileview open additional-file.md
+
+# Remove a specific tab without closing pane
+fileview close file2.ts
 ```
 
 ## When to Use
@@ -60,14 +75,17 @@ Use **autonomously** when:
 - **fileedit** = editable terminal editor (code, config, notes)
 - Both require **iTerm2** (not Terminal.app) and use per-session isolation
 - Only one split pane tool at a time — close one before opening the other
+- **Duplicate prevention** — opening a file already in tabs just activates it
+- **Auto-reload** — browser polls for HTML changes and reloads automatically
 
 ## How fileview Works
 
-1. Pandoc converts markdown to HTML using an embedded CSS template
-2. Creates an iTerm2 DynamicProfile pointing to the rendered HTML
-3. Splits iTerm2 vertically with a browser pane on the right
-4. Background watcher regenerates HTML when source file changes
-5. Browser doesn't auto-reload — use `fileview close && fileview open <path>` to refresh
+1. Each file is rendered (pandoc for markdown, syntax highlighting for code)
+2. All open files are assembled into a single tabbed HTML page
+3. Creates an iTerm2 DynamicProfile pointing to the rendered HTML
+4. Splits iTerm2 vertically with a browser pane on the right
+5. Background watcher monitors ALL open files, regenerates HTML when any changes
+6. Browser auto-reloads when it detects the HTML was regenerated
 
 ## How fileedit Works
 
@@ -75,6 +93,15 @@ Use **autonomously** when:
 2. Finds current iTerm session using `ITERM_SESSION_ID`
 3. Creates or reuses a vertical split pane
 4. Launches `fresh` editor with the file in the split pane
+
+## Tab Behavior
+
+- **Tab bar** — always visible at the top with clickable tabs
+- **Active tab** — highlighted with blue accent line, last opened file is active
+- **Tab switching** — click tabs in the browser to switch; URL hash preserves selection across reloads
+- **Adding tabs** — `fileview open <file>` adds to existing pane without closing
+- **Removing tabs** — `fileview close <file>` removes one tab; closes pane if last
+- **Close all** — `fileview close` (no args) clears everything
 
 ## Table Support
 
@@ -88,9 +115,11 @@ Use plain separators: `|---|---|---|` — avoid alignment modifiers.
 
 ## Features
 
+- **Multi-tab** — view multiple files in the same pane with browser-like tabs
+- **Auto-reload** — browser detects HTML regeneration and reloads automatically
 - **Dark/light mode** — adapts automatically via CSS `@media (prefers-color-scheme)`
 - **Mermaid diagrams** — loaded from CDN, renders in both themes
-- **Code blocks** — syntax-friendly backgrounds
+- **Code blocks** — syntax-friendly backgrounds with line numbers
 - **Session isolation** — each iTerm tab gets its own independent split pane
 
 ## Dependencies

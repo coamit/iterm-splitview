@@ -94,11 +94,11 @@ code { background: #2a3040; padding: 1px 5px; border-radius: 3px; font-size: 0.9
 pre { background: #282c34; border-radius: 6px; overflow-x: auto; margin: 8px 0; border: 1px solid #353b4a; padding: 0 !important; }
 pre code { padding: 0 !important; background: none !important; font-size: 0.88em; font-family: "JetBrains Mono", "Fira Code", "SF Mono", Menlo, monospace; }
 div.sourceCode { margin: 8px 0; }
-.code-lines { display: table; width: 100%; border-collapse: collapse; padding: 6px 0; }
+.code-lines { display: table; width: 100%; border-collapse: collapse; padding: 10px 0; }
 .code-line { display: table-row; }
 .code-line:hover { background: rgba(255,255,255,0.03); }
 .ln { display: table-cell; width: 1px; user-select: none; text-align: right; color: #4b5263; border-right: 1px solid #353b4a; padding: 0 12px 0 16px; vertical-align: top; white-space: nowrap; font-size: 0.88em; font-family: "JetBrains Mono","Fira Code","SF Mono",Menlo,monospace; line-height: 1.6; }
-.lc { display: table-cell; padding: 0 16px 0 20px; white-space: pre; vertical-align: top; font-size: 0.88em; font-family: "JetBrains Mono","Fira Code","SF Mono",Menlo,monospace; line-height: 1.6; }
+.lc { display: table-cell; padding: 0 16px; white-space: pre; vertical-align: top; font-size: 0.88em; font-family: "JetBrains Mono","Fira Code","SF Mono",Menlo,monospace; line-height: 1.6; }
 @media (prefers-color-scheme: light) {
   .ln { color: #bbb; border-right-color: #e1e4e8; }
   .code-line:hover { background: rgba(0,0,0,0.02); }
@@ -194,7 +194,7 @@ $body$
     var lines = highlighted.split('\n');
     if (lines[lines.length - 1] === '') lines.pop();
     var html = lines.map(function(line, i) {
-      return '<div class="code-line"><span class="ln">' + (i + 1) + '</span><span class="lc">' + (line || '\u00a0') + '</span></div>';
+      return '<div class="code-line"><span class="lc">' + (line || '\u00a0') + '</span></div>';
     }).join('');
     var wrapper = document.createElement('div');
     wrapper.className = 'code-lines';
@@ -294,6 +294,14 @@ _is_code_file() {
       case "$basename" in
         Dockerfile|Makefile|Vagrantfile|Procfile|Brewfile) return 0 ;;
       esac
+      # Check for shebang in extensionless files
+      if [ -f "$1" ]; then
+        local first_line
+        first_line=$(head -1 "$1" 2>/dev/null)
+        case "$first_line" in
+          '#!'*) return 0 ;;
+        esac
+      fi
       return 1 ;;
   esac
 }
@@ -335,7 +343,23 @@ _lang_from_ext() {
       case "$base" in
         Dockerfile) echo "dockerfile" ;;
         Makefile)   echo "makefile" ;;
-        *)          echo "" ;;
+        *)
+          # Detect language from shebang
+          if [ -f "$1" ]; then
+            local shebang
+            shebang=$(head -1 "$1" 2>/dev/null)
+            case "$shebang" in
+              *bash*|*'/bin/sh'*) echo "bash" ;;
+              *zsh*)   echo "bash" ;;
+              *python*) echo "python" ;;
+              *ruby*)  echo "ruby" ;;
+              *node*)  echo "javascript" ;;
+              *perl*)  echo "perl" ;;
+              *)       echo "" ;;
+            esac
+          else
+            echo ""
+          fi ;;
       esac ;;
   esac
 }
