@@ -27,7 +27,7 @@ https://github.com/user-attachments/assets/ecc7991d-fb5a-4e77-8dfa-ff2a2666c683
 - **Tables** — styled borders, dynamic column widths, hover effects
 - **Mermaid diagrams** — flowcharts, sequence diagrams, Gantt charts, ERD
 - **Syntax highlighting** — highlight.js with `atom-one-dark` / `atom-one-light` themes, auto-switching with system dark/light mode
-- **Code files** — IDE-style rendering for `.ts`, `.js`, `.py`, `.go`, `.sh`, and [more](scripts/fileview): macOS window dots, filename header, language badge, and line numbers
+- **Code files** — IDE-style rendering for `.ts`, `.js`, `.py`, `.go`, `.sh`, and [more](scripts/fileview): macOS window dots, filename header, language badge
 - **Session isolation** — each iTerm tab gets its own independent split pane
 - **AI integration** — Claude Code uses these tools autonomously
 
@@ -122,6 +122,12 @@ cp claude-code/SKILL.md ~/.claude/skills/iterm-splitview/SKILL.md
 - "Updated ago" timestamp moved into the tab bar
 - Backward compatible — `fileview close && fileview open <path>` still works
 
+### 2026-04-05 — Code Block UX Improvements
+
+- Removed line numbers from code blocks for a cleaner display
+- Added top/bottom spacing around code content
+- Extensionless scripts with a shebang (e.g. `#!/bin/bash`) now render as syntax-highlighted code
+
 ### 2026-04-05 — Live "Updated ago" Timestamp
 
 - Subtle right-aligned indicator at the top of rendered files showing how long ago the content was generated (e.g., "Updated 5s ago", "Updated 2m ago")
@@ -133,7 +139,7 @@ cp claude-code/SKILL.md ~/.claude/skills/iterm-splitview/SKILL.md
 
 - highlight.js integration with `atom-one-dark` / `atom-one-light` themes (auto-switches with system dark/light mode)
 - IDE-style rendering for code files (`.ts`, `.js`, `.py`, `.go`, `.sh`, and more): macOS window dots, filename header, language badge
-- Custom line numbers with table-based layout
+- Table-based code layout with hover highlights
 
 <!-- To add a screenshot: -->
 <!-- <img width="800" alt="syntax highlighting" src="https://github.com/user-attachments/assets/ASSET_ID" /> -->
