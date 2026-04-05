@@ -98,6 +98,13 @@ cp claude-code/SKILL.md ~/.claude/skills/iterm-splitview/SKILL.md
 
 ## Changelog
 
+### 2026-04-05 — Live "Updated ago" Timestamp
+
+- Subtle right-aligned indicator at the top of rendered files showing how long ago the content was generated (e.g., "Updated 5s ago", "Updated 2m ago")
+- Ticks every second via JavaScript — helps gauge content freshness since the browser pane doesn't auto-reload
+- Works for both code files and markdown/pandoc files
+- Adapts to dark and light mode
+
 ### 2026-03-29 — Syntax Highlighting & Code File Rendering
 
 - highlight.js integration with `atom-one-dark` / `atom-one-light` themes (auto-switches with system dark/light mode)

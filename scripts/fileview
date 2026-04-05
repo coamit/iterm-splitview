@@ -90,6 +90,16 @@ tr:hover { background: #2a3040; }
   .code-file-header { background: #f6f8fa; border-bottom-color: #e1e4e8; }
   .code-file-header .filename { color: #24292e; }
   .code-file-header .lang-badge { background: #e1e4e8; color: #6a737d; }
+  .fv-updated { color: #9ca3af; }
+}
+.fv-updated {
+  font-size: 11px;
+  color: #6a7080;
+  text-align: right;
+  padding: 0 4px 0 0;
+  margin-bottom: -10px;
+  font-family: -apple-system, sans-serif;
+  user-select: none;
 }
 </style>
 </head>
@@ -144,6 +154,24 @@ $body$
     startOnLoad: true,
     theme: isDark ? 'dark' : 'default'
   });
+})();
+</script>
+<script>
+(function(){
+  var el = document.getElementById('fv-ts');
+  if (!el) return;
+  var gen = parseInt(el.getAttribute('data-generated'), 10);
+  function update() {
+    var diff = Math.floor(Date.now()/1000) - gen;
+    var text;
+    if (diff < 60) text = diff + 's ago';
+    else if (diff < 3600) text = Math.floor(diff/60) + 'm ago';
+    else if (diff < 86400) text = Math.floor(diff/3600) + 'h ago';
+    else text = Math.floor(diff/86400) + 'd ago';
+    el.textContent = 'Updated ' + text;
+  }
+  update();
+  setInterval(update, 1000);
 })();
 </script>
 </body>
@@ -235,8 +263,11 @@ generate_html() {
     escaped_code=$(sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g' "$src_file")
 
     # Build the body HTML
+    local gen_epoch
+    gen_epoch=$(date +%s)
     local body_html
     body_html=$(cat << BODYEOF
+<div class="fv-updated" id="fv-ts" data-generated="${gen_epoch}"></div>
 <div class="code-file-wrapper">
   <div class="code-file-header">
     <span class="dot dot-red"></span>
@@ -269,6 +300,9 @@ PYEOF
     # Markdown and other prose files — use pandoc
     pandoc "$src_file" -o "$VIEW_HTML" --template="$VIEW_TEMPLATE" 2>/dev/null
     sed -i '' '/<colgroup>/,/<\/colgroup>/d' "$VIEW_HTML" 2>/dev/null
+    local gen_epoch
+    gen_epoch=$(date +%s)
+    sed -i '' "s|<body>|<body><div class=\"fv-updated\" id=\"fv-ts\" data-generated=\"${gen_epoch}\"></div>|" "$VIEW_HTML" 2>/dev/null
   fi
 }
 
