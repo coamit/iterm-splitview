@@ -76,15 +76,12 @@ body {
   height: 2px;
   background: #73b8f0;
 }
-.fv-tab-spacer { flex: 1; }
 .fv-tab-ts {
-  padding: 8px 12px;
   font-size: 10px;
   color: #4b5263;
-  align-self: center;
-  white-space: nowrap;
+  text-align: right;
+  padding: 4px 18px 0;
   user-select: none;
-  flex-shrink: 0;
 }
 .fv-tab-content { display: none; padding: 14px 18px; }
 .fv-tab-content.active { display: block; }
@@ -456,9 +453,8 @@ generate_tabbed_html() {
       printf '<div class="fv-tab%s" data-tab="fv-tab-%d" title="%s">%s</div>\n' "$active_class" "$idx" "$fp" "$fname"
       idx=$((idx + 1))
     done < "$TABS_FILE"
-    printf '<div class="fv-tab-spacer"></div>\n'
-    printf '<div class="fv-tab-ts" id="fv-ts" data-generated="%s"></div>\n' "$gen_epoch"
     printf '</div>\n'
+    printf '<div class="fv-tab-ts" id="fv-ts" data-generated="%s"></div>\n' "$gen_epoch"
   } >> "$body_tmp"
 
   # Tab content panels
