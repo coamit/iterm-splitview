@@ -80,7 +80,8 @@ body {
   font-size: 10px;
   color: #4b5263;
   text-align: right;
-  padding: 4px 18px 0;
+  padding: 2px 18px 0;
+  margin-bottom: -10px;
   user-select: none;
 }
 .fv-tab-content { display: none; padding: 14px 18px; }
