@@ -520,24 +520,53 @@ $body$
       // Add separators between non-adjacent context groups
       var visibleIndices = Object.keys(contextSet).map(Number).concat(diffIndices).sort(function(a,b){return a-b;});
       var unique = visibleIndices.filter(function(v, i, a) { return !i || v !== a[i-1]; });
+
+      function insertSeparator(beforeEl) {
+        var spacerA = document.createElement('div');
+        spacerA.className = 'code-line diff-spacer';
+        spacerA.innerHTML = '<span class="ln"></span><span class="lc"></span>';
+        var sep = document.createElement('div');
+        sep.className = 'code-line diff-separator';
+        sep.innerHTML = '<span class="ln"></span><span class="lc"></span>';
+        var spacerB = document.createElement('div');
+        spacerB.className = 'code-line diff-spacer';
+        spacerB.innerHTML = '<span class="ln"></span><span class="lc"></span>';
+        beforeEl.parentNode.insertBefore(spacerA, beforeEl);
+        beforeEl.parentNode.insertBefore(sep, beforeEl);
+        beforeEl.parentNode.insertBefore(spacerB, beforeEl);
+      }
+
+      function appendSeparator(afterEl) {
+        var spacerA = document.createElement('div');
+        spacerA.className = 'code-line diff-spacer';
+        spacerA.innerHTML = '<span class="ln"></span><span class="lc"></span>';
+        var sep = document.createElement('div');
+        sep.className = 'code-line diff-separator';
+        sep.innerHTML = '<span class="ln"></span><span class="lc"></span>';
+        var spacerB = document.createElement('div');
+        spacerB.className = 'code-line diff-spacer';
+        spacerB.innerHTML = '<span class="ln"></span><span class="lc"></span>';
+        afterEl.parentNode.appendChild(spacerA);
+        afterEl.parentNode.appendChild(sep);
+        afterEl.parentNode.appendChild(spacerB);
+      }
+
+      // Separator at top if first visible line isn't line 1
+      if (unique.length > 0 && unique[0] > 0) {
+        insertSeparator(lines[unique[0]]);
+      }
+
+      // Separators between non-adjacent groups
       for (var i = 1; i < unique.length; i++) {
         if (unique[i] - unique[i-1] > 1) {
-          var sepLine = lines[unique[i]];
-          if (sepLine) {
-            var spacerAbove = document.createElement('div');
-            spacerAbove.className = 'code-line diff-spacer';
-            spacerAbove.innerHTML = '<span class="ln"></span><span class="lc"></span>';
-            var sep = document.createElement('div');
-            sep.className = 'code-line diff-separator';
-            sep.innerHTML = '<span class="ln"></span><span class="lc"></span>';
-            var spacerBelow = document.createElement('div');
-            spacerBelow.className = 'code-line diff-spacer';
-            spacerBelow.innerHTML = '<span class="ln"></span><span class="lc"></span>';
-            sepLine.parentNode.insertBefore(spacerAbove, sepLine);
-            sepLine.parentNode.insertBefore(sep, sepLine);
-            sepLine.parentNode.insertBefore(spacerBelow, sepLine);
-          }
+          insertSeparator(lines[unique[i]]);
         }
+      }
+
+      // Separator at bottom if last visible line isn't the last line
+      if (unique.length > 0 && unique[unique.length - 1] < lines.length - 1) {
+        var lastVisible = lines[unique[unique.length - 1]];
+        appendSeparator(lastVisible);
       }
     });
   }
