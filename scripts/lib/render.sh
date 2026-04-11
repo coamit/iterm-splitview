@@ -175,8 +175,10 @@ _render_tab_group_tabs() {
     fname=$(basename "$fp")
     [ "$fp" = "$active_file" ] && active_class=" active"
     tab_icon=$(_tab_icon_for_file "$fp" "$icon_mode")
-    printf '<div class="fv-tab%s" data-tab="fv-tab-%s-%d" data-group="%s" title="%s">%s%s<span class="fv-tab-close" data-close-path="%s">&times;</span></div>\n' \
-      "$active_class" "$group_id" "$idx" "$group_id" "$fp" "$tab_icon" "$fname" "$fp"
+    local close_btn=""
+    [ "$group_id" != "git" ] && close_btn=$(printf '<span class="fv-tab-close" data-close-path="%s">&times;</span>' "$fp")
+    printf '<div class="fv-tab%s" data-tab="fv-tab-%s-%d" data-group="%s" title="%s">%s%s%s</div>\n' \
+      "$active_class" "$group_id" "$idx" "$group_id" "$fp" "$tab_icon" "$fname" "$close_btn"
     idx=$((idx + 1))
   done < "$tabs_src"
 }

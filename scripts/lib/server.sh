@@ -154,32 +154,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_response(204)
             self.end_headers()
             return
-        if parsed.path == '/_git-reload':
-            self._handle_git_reload()
-            return
-        if parsed.path == '/_git-changes':
-            git_root = self._get_git_root()
-            if not git_root:
-                return self._json_response({'files': [], 'error': 'Not a git repository'})
-            try:
-                changed = set()
-                for cmd in [['git','diff','--name-only'], ['git','diff','--name-only','--cached'], ['git','ls-files','--others','--exclude-standard']]:
-                    r = subprocess.run(cmd, cwd=git_root, capture_output=True, text=True, timeout=5)
-                    for l in r.stdout.splitlines():
-                        if l.strip(): changed.add(l.strip())
-                existing = set()
-                if os.path.exists(TABS_GIT):
-                    with open(TABS_GIT) as f:
-                        existing = set(l.strip() for l in f.readlines() if l.strip())
-                new_files = []
-                for cf in sorted(changed):
-                    abs_path = os.path.normpath(os.path.join(git_root, cf))
-                    if os.path.isfile(abs_path) and abs_path not in existing:
-                        new_files.append({'file': abs_path, 'fname': os.path.basename(abs_path)})
-                self._json_response({'files': new_files})
-            except Exception:
-                self._json_response({'files': [], 'error': 'Git command failed'})
-            return
         if parsed.path == '/_open-in-editor':
             qs = urllib.parse.parse_qs(parsed.query)
             fp = qs.get('path', [''])[0]
@@ -390,48 +364,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 if r.returncode == 0: return r.stdout.strip()
             except Exception: pass
         return None
-
-    def _get_git_changed_abs(self):
-        git_root = self._get_git_root()
-        if not git_root: return None, 'Not a git repository'
-        try:
-            changed = set()
-            for cmd in [['git','diff','--name-only'],['git','diff','--name-only','--cached'],['git','ls-files','--others','--exclude-standard']]:
-                r = subprocess.run(cmd, cwd=git_root, capture_output=True, text=True, timeout=5)
-                for l in r.stdout.splitlines():
-                    if l.strip():
-                        changed.add(os.path.normpath(os.path.join(git_root, l.strip())))
-            return changed, None
-        except Exception:
-            return None, 'Git command failed'
-
-    def _handle_git_reload(self):
-        changed, err = self._get_git_changed_abs()
-        if err:
-            return self._json_response({'error': err})
-        # Read existing git tabs
-        existing = set()
-        if os.path.exists(TABS_GIT):
-            with open(TABS_GIT) as f:
-                existing = set(l.strip() for l in f.readlines() if l.strip())
-        # Add new changed files
-        added = 0
-        for abs_path in sorted(changed):
-            if os.path.isfile(abs_path) and abs_path not in existing:
-                existing.add(abs_path)
-                added += 1
-        # Remove stale files (no longer changed)
-        removed = 0
-        stale = existing - changed
-        if stale:
-            existing -= stale
-            removed = len(stale)
-        # Write updated tabs
-        with open(TABS_GIT, 'w') as f:
-            f.write('\n'.join(sorted(existing)) + '\n' if existing else '')
-        if (added > 0 or removed > 0) and SCRIPT:
-            subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        self._json_response({'added': added, 'removed': removed, 'total': len(existing)})
 
 class ThreadedServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
     daemon_threads = True

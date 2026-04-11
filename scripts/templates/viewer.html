@@ -65,7 +65,6 @@ body {
 }
 .fv-tab-spacer { flex: 1; }
 .fv-tab-action { padding: 6px 4px; color: #4b5263; cursor: pointer; display: flex; align-items: center; position: sticky; right: 0; background: inherit; }
-#fv-git-reload { font-size: 16px; padding: 4px 6px; }
 .fv-tab-action:hover { color: #ccd0d4; }
 /* Group selector bar */
 .fv-group-bar { display: flex; align-items: center; background: #171b24; border-bottom: 1px solid #252a35; position: sticky; top: 0; z-index: 101; padding: 0 4px; }
@@ -515,74 +514,6 @@ $body$
   if (refreshBtn) {
     refreshBtn.addEventListener('click', function() {
       fetch('/_refresh');
-    });
-  }
-
-  // Create a loading placeholder tab in the tab bar
-  function createLoadingTabHeader(fname, filePath, group) {
-    var tabBar = document.querySelector('.fv-tab-bar');
-    var spacer = tabBar.querySelector('.fv-tab-spacer');
-    var tab = document.createElement('div');
-    tab.className = 'fv-tab loading';
-    tab.setAttribute('data-group', group);
-    tab.setAttribute('title', filePath);
-    tab.textContent = escHtml(fname);
-    // Insert in correct group position
-    var groupTabs = tabBar.querySelectorAll('.fv-tab[data-group="' + group + '"]');
-    if (groupTabs.length > 0) {
-      groupTabs[groupTabs.length - 1].insertAdjacentElement('afterend', tab);
-    } else if (group === 'git') {
-      tabBar.insertBefore(tab, spacer);
-    } else {
-      var gitTabs = tabBar.querySelectorAll('.fv-tab[data-group="git"]');
-      if (gitTabs.length > 0) gitTabs[0].insertAdjacentElement('beforebegin', tab);
-      else tabBar.insertBefore(tab, spacer);
-    }
-    return tab;
-  }
-
-  // Git reload button
-  var gitReloadBtn = document.getElementById('fv-git-reload');
-  if (gitReloadBtn) {
-    gitReloadBtn.addEventListener('click', function() {
-      // First, get the list of new files
-      fetch('/_git-changes')
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (data.error) { showToast(data.error); return; }
-          if (data.files.length === 0) {
-            // No new files, but still trigger reload to remove stale ones
-            fetch('/_git-reload')
-              .then(function(r) { return r.json(); })
-              .then(function(result) {
-                if (result.removed > 0) {
-                  showToast(result.removed + ' stale file' + (result.removed > 1 ? 's' : '') + ' removed \u2713');
-                  updateGroupCounts();
-                } else {
-                  showToast('All git changes already open');
-                }
-              });
-            return;
-          }
-          // Create loading tabs immediately
-          data.files.forEach(function(f) {
-            createLoadingTabHeader(f.fname, f.file, 'git');
-          });
-          updateGroupCounts();
-          showToast(data.files.length + ' file' + (data.files.length > 1 ? 's' : '') + ' loading\u2026');
-          // Then trigger the actual add + regen
-          lastOpenTriggered = Date.now();
-          fetch('/_git-reload')
-            .then(function(r) { return r.json(); })
-            .then(function(result) {
-              var parts = [];
-              if (result.added > 0) parts.push(result.added + ' added');
-              if (result.removed > 0) parts.push(result.removed + ' removed');
-              if (parts.length) showToast(parts.join(', ') + ' \u2713');
-              updateGroupCounts();
-            });
-        })
-        .catch(function() { showToast('Failed to reload git changes'); });
     });
   }
 
@@ -1562,7 +1493,7 @@ $body$
 
   function closeActiveTab() {
     var tab = document.querySelector('.fv-tab.active');
-    if (tab) {
+    if (tab && tab.getAttribute('data-group') !== 'git') {
       var closeBtn = tab.querySelector('.fv-tab-close');
       if (closeBtn) closeBtn.click();
     }
