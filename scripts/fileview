@@ -27,7 +27,8 @@ _DYNAMIC_PROFILES_DIR="$HOME/Library/Application Support/iTerm2/DynamicProfiles"
 _PROFILE_FILE="$_DYNAMIC_PROFILES_DIR/fileview-${_FV_SESSION_ID:-default}.json"
 _PROFILE_NAME="FileView-${_FV_SESSION_ID:-default}"
 
-# Static template with dark/light mode via prefers-color-scheme
+# Static template with dark/light mode via prefers-color-scheme (cached)
+if [ ! -f "$VIEW_TEMPLATE" ]; then
 cat > "$VIEW_TEMPLATE" << 'TMPL'
 <!DOCTYPE html>
 <html>
@@ -261,6 +262,7 @@ $body$
 </body>
 </html>
 TMPL
+fi
 
 _resolve_path() {
   local p="$1"
@@ -478,17 +480,15 @@ generate_tabbed_html() {
     idx=$((idx + 1))
   done < "$TABS_FILE"
 
-  # Substitute body into template
-  python3 - "$VIEW_TEMPLATE" "$VIEW_HTML" "$body_tmp" << 'PYEOF'
-import sys
-template_path, out_path, body_path = sys.argv[1], sys.argv[2], sys.argv[3]
-with open(template_path) as f:
-    tmpl = f.read()
-with open(body_path) as f:
-    body = f.read()
-with open(out_path, 'w') as f:
-    f.write(tmpl.replace('$body$', body))
-PYEOF
+  # Substitute body into template (awk, avoids python3 startup overhead)
+  awk -v bodyfile="$body_tmp" '
+    /\$body\$/ {
+      while ((getline line < bodyfile) > 0) print line
+      close(bodyfile)
+      next
+    }
+    { print }
+  ' "$VIEW_TEMPLATE" > "$VIEW_HTML"
   rm -f "$body_tmp"
 }
 
@@ -526,7 +526,7 @@ start_server() {
   python3 -m http.server "$port" --directory "$_FV_SESSION_DIR" &>/dev/null &
   echo $! > "$SERVER_PID_FILE"
   # Brief pause for server to bind
-  sleep 0.3
+  sleep 0.1
 }
 
 # Watch all files in TABS_FILE for changes, regenerate HTML when any file changes
@@ -606,7 +606,7 @@ _ensure_dynamic_profile() {
   }]
 }
 PROFILE
-  sleep 0.5
+  sleep 0.15
 }
 
 _open_or_reuse_pane() {
@@ -616,24 +616,37 @@ _open_or_reuse_pane() {
     local tracked_pane_id
     tracked_pane_id=$(cat "$PANE_SESSION_ID_FILE")
     if [ -n "$tracked_pane_id" ]; then
-      local pane_exists
-      pane_exists=$(osascript <<APPLESCRIPT
-        tell application "iTerm2"
-          repeat with w in windows
-            repeat with t in tabs of w
-              repeat with s in sessions of t
-                if unique ID of s is "$tracked_pane_id" then return "yes"
-              end repeat
-            end repeat
-          end repeat
-          return "no"
-        end tell
-APPLESCRIPT
-      )
-      if [ "$pane_exists" = "yes" ]; then
+      # Cache: skip AppleScript check if file was modified in the last 60s
+      local file_age=999
+      if command -v stat &>/dev/null; then
+        local file_mtime now_epoch
+        file_mtime=$(stat -f %m "$PANE_SESSION_ID_FILE" 2>/dev/null || echo 0)
+        now_epoch=$(date +%s)
+        file_age=$(( now_epoch - file_mtime ))
+      fi
+      if [ "$file_age" -lt 60 ]; then
         need_split=false
       else
-        rm -f "$PANE_SESSION_ID_FILE"
+        local pane_exists
+        pane_exists=$(osascript <<APPLESCRIPT
+          tell application "iTerm2"
+            repeat with w in windows
+              repeat with t in tabs of w
+                repeat with s in sessions of t
+                  if unique ID of s is "$tracked_pane_id" then return "yes"
+                end repeat
+              end repeat
+            end repeat
+            return "no"
+          end tell
+APPLESCRIPT
+        )
+        if [ "$pane_exists" = "yes" ]; then
+          need_split=false
+          touch "$PANE_SESSION_ID_FILE"  # refresh cache TTL
+        else
+          rm -f "$PANE_SESSION_ID_FILE"
+        fi
       fi
     fi
   fi
