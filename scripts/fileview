@@ -55,7 +55,10 @@ body {
   top: 0;
   z-index: 100;
 }
-.fv-tab-bar::-webkit-scrollbar { display: none; }
+.fv-tab-bar::-webkit-scrollbar { height: 3px; }
+.fv-tab-bar::-webkit-scrollbar-track { background: transparent; }
+.fv-tab-bar::-webkit-scrollbar-thumb { background: #353b4a; border-radius: 3px; }
+.fv-tab-bar::-webkit-scrollbar-thumb:hover { background: #4b5263; }
 .fv-tab {
   padding: 8px 16px;
   font-size: 12px;
@@ -92,13 +95,14 @@ body {
 }
 .fv-tab-spacer { flex: 1; }
 .fv-tab-ts {
-  padding: 8px 12px;
+  position: fixed;
+  bottom: 8px;
+  right: 12px;
   font-size: 10px;
   color: #4b5263;
-  align-self: center;
   white-space: nowrap;
   user-select: none;
-  flex-shrink: 0;
+  z-index: 150;
 }
 .fv-tab-content { display: none; padding: 14px 18px; }
 .fv-tab-content.active { display: block; }
@@ -112,11 +116,58 @@ div.sourceCode { margin: 8px 0; }
 .code-lines { display: table; width: 100%; border-collapse: collapse; margin: 8px 0; }
 .code-line { display: table-row; }
 .code-line:hover { background: rgba(255,255,255,0.03); }
+.code-line.diff-added { background: rgba(40, 200, 64, 0.22); }
+.code-line.diff-added .ln { color: #28c840; }
+.code-line.diff-removed { background: rgba(255, 95, 87, 0.22); }
+.code-line.diff-removed .ln { color: #ff5f57; }
+.code-line.diff-removed .lc { opacity: 0.6; text-decoration: line-through; }
+.code-line.diff-focus { outline: 1px solid rgba(115, 184, 240, 0.5); outline-offset: -1px; box-shadow: inset 3px 0 0 #73b8f0; }
+/* Diff navigation arrows */
+.diff-nav { position: fixed; right: 28px; top: 95px; display: none; flex-direction: column; gap: 6px; z-index: 200; }
+.diff-nav.visible { display: flex; }
+.diff-nav button { width: 36px; height: 36px; border: 1px solid #353b4a; border-radius: 6px; background: #1f2430; color: #ccd0d4; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0.85; }
+.diff-nav button:hover { background: #2a3040; opacity: 1; }
+.diff-nav .diff-counter { font-size: 10px; color: #6a7080; text-align: center; user-select: none; }
+/* Quick-open modal (Cmd+P) */
+.fv-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; }
+.fv-modal-overlay.visible { display: flex; justify-content: center; padding-top: 60px; }
+.fv-modal { width: 420px; max-height: 360px; background: #1f2430; border: 1px solid #353b4a; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); display: flex; flex-direction: column; overflow: hidden; }
+.fv-modal-input { background: #171b24; border: none; border-bottom: 1px solid #353b4a; padding: 12px 14px; font-size: 14px; color: #e8ecf0; outline: none; font-family: -apple-system, sans-serif; }
+.fv-modal-input::placeholder { color: #4b5263; }
+.fv-modal-list { list-style: none; overflow-y: auto; flex: 1; padding: 0; margin: 0; }
+.fv-modal-item { padding: 8px 10px 8px 8px; cursor: pointer; font-size: 13px; font-family: -apple-system, sans-serif; color: #ccd0d4; display: flex; align-items: center; gap: 8px; border-left: 2px solid transparent; }
+.fv-modal-item:hover, .fv-modal-item.selected { background: #2a3040; }
+.fv-modal-item.selected { border-left-color: #73b8f0; }
+.fv-modal-item .fv-modal-fname { color: #e8ecf0; }
+.fv-modal-item .fv-modal-fpath { color: #4b5263; font-size: 11px; margin-left: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; direction: rtl; text-align: right; }
+.fv-modal-item .fv-modal-line { color: #4b5263; font-size: 11px; font-family: "JetBrains Mono", monospace; }
+.fv-modal-item .fv-modal-content { color: #ccd0d4; font-size: 12px; font-family: "JetBrains Mono", monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fv-modal-item .fv-modal-content mark { background: #e2c46c33; color: #ffcc66; }
+.fv-modal-item.text-result { flex-direction: column; align-items: flex-start; gap: 2px; }
+.fv-modal-mode { padding: 6px 14px; font-size: 11px; color: #4b5263; border-bottom: 1px solid #353b4a; font-family: -apple-system, sans-serif; }
 .ln { display: table-cell; width: 1px; user-select: none; text-align: right; color: #4b5263; border-right: 1px solid #353b4a; padding: 0 12px 0 16px; vertical-align: top; white-space: nowrap; font-size: 0.88em; font-family: "JetBrains Mono","Fira Code","SF Mono",Menlo,monospace; line-height: 1.6; }
 .lc { display: table-cell; padding: 0 16px; white-space: pre; vertical-align: top; font-size: 0.88em; font-family: "JetBrains Mono","Fira Code","SF Mono",Menlo,monospace; line-height: 1.6; }
 @media (prefers-color-scheme: light) {
   .ln { color: #bbb; border-right-color: #e1e4e8; }
   .code-line:hover { background: rgba(0,0,0,0.02); }
+  .code-line.diff-added { background: rgba(40, 200, 64, 0.15); }
+  .code-line.diff-added .ln { color: #1a7f37; }
+  .code-line.diff-removed { background: rgba(255, 95, 87, 0.15); }
+  .code-line.diff-removed .ln { color: #d1242f; }
+  .diff-nav button { background: #ffffff; border-color: #d0d7de; color: #24292e; }
+  .diff-nav button:hover { background: #f6f8fa; }
+  .diff-nav .diff-counter { color: #6a737d; }
+  .fv-modal { background: #ffffff; border-color: #d0d7de; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
+  .fv-modal-input { background: #f6f8fa; border-bottom-color: #d0d7de; color: #24292e; }
+  .fv-modal-input::placeholder { color: #9ca3af; }
+  .fv-modal-item { color: #24292e; }
+  .fv-modal-item:hover, .fv-modal-item.selected { background: #f6f8fa; }
+  .fv-modal-item .fv-modal-fname { color: #24292e; }
+  .fv-modal-item .fv-modal-fpath { color: #6a737d; }
+  .fv-modal-overlay { background: rgba(0,0,0,0.2); }
+  .fv-modal-item .fv-modal-content { color: #24292e; }
+  .fv-modal-item .fv-modal-content mark { background: #fff3b0; color: #24292e; }
+  .fv-modal-mode { border-bottom-color: #d0d7de; color: #9ca3af; }
 }
 .code-file-wrapper { border-radius: 8px; overflow: hidden; border: 1px solid #353b4a; margin: 0; }
 .code-file-header { background: #2a2f3d; padding: 8px 14px; font-size: 11px; color: #8a90a0; font-family: -apple-system, sans-serif; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #353b4a; }
@@ -165,11 +216,25 @@ tr:hover { background: #2a3040; }
 </head>
 <body>
 $body$
+<div class="fv-modal-overlay" id="fv-modal-overlay">
+  <div class="fv-modal">
+    <input class="fv-modal-input" id="fv-modal-input" type="text" placeholder="Search files..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+    <div class="fv-modal-mode" id="fv-modal-mode">Files &middot; Ctrl+F for text search</div>
+    <ul class="fv-modal-list" id="fv-modal-list"></ul>
+  </div>
+</div>
+<div class="diff-nav" id="diff-nav">
+  <button id="diff-prev" title="Previous change">&#x25B2;</button>
+  <div class="diff-counter" id="diff-counter"></div>
+  <button id="diff-next" title="Next change">&#x25BC;</button>
+</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <script>
 (function(){
   var isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var pendingCloses = 0;
+  var lastCloseCompleted = 0;
 
   // Switch hljs theme for light mode
   if (!isDark) {
@@ -185,6 +250,7 @@ $body$
     if (tab) {
       tab.classList.add('active');
       document.getElementById(tabId).classList.add('active');
+      tab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
     }
   }
   document.querySelectorAll('.fv-tab').forEach(function(tab) {
@@ -200,24 +266,29 @@ $body$
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
       var filePath = btn.getAttribute('data-close-path');
-      fetch('/_close?path=' + encodeURIComponent(filePath)).then(function() {
-        // Remove tab and content from DOM immediately
-        var tab = btn.closest('.fv-tab');
-        var tabId = tab.getAttribute('data-tab');
-        var content = document.getElementById(tabId);
-        var wasActive = tab.classList.contains('active');
-        tab.remove();
-        if (content) content.remove();
-        // If closed tab was active, activate the first remaining tab
-        if (wasActive) {
-          var remaining = document.querySelector('.fv-tab');
-          if (remaining) {
-            var newTabId = remaining.getAttribute('data-tab');
-            activateTab(newTabId);
-            history.replaceState(null, '', '#' + newTabId);
-          }
-        }
-      });
+      var tab = btn.closest('.fv-tab');
+      var tabId = tab.getAttribute('data-tab');
+      var content = document.getElementById(tabId);
+      var wasActive = tab.classList.contains('active');
+      var nextTab = tab.nextElementSibling;
+      if (nextTab && !nextTab.classList.contains('fv-tab')) nextTab = null;
+      var prevTab = tab.previousElementSibling;
+      if (prevTab && !prevTab.classList.contains('fv-tab')) prevTab = null;
+      var newActiveTarget = wasActive ? (nextTab || prevTab) : document.querySelector('.fv-tab.active');
+      var newActivePath = newActiveTarget ? (newActiveTarget.getAttribute('title') || '') : '';
+      tab.remove();
+      if (content) content.remove();
+      if (wasActive && newActiveTarget) {
+        var newTabId = newActiveTarget.getAttribute('data-tab');
+        activateTab(newTabId);
+        history.replaceState(null, '', '#' + newTabId);
+      }
+      pendingCloses++;
+      fetch('/_close?path=' + encodeURIComponent(filePath) + '&active=' + encodeURIComponent(newActivePath))
+        .finally(function() {
+          pendingCloses--;
+          lastCloseCompleted = Date.now();
+        });
     });
   });
   // Restore active tab from URL hash (survives auto-reload)
@@ -242,6 +313,38 @@ $body$
     var wrapper = document.createElement('div');
     wrapper.className = 'code-lines';
     wrapper.innerHTML = html;
+    // Apply diff highlighting if data attributes present
+    var diffAdded = block.getAttribute('data-diff-added');
+    var diffRemoved = block.getAttribute('data-diff-removed');
+    if (diffAdded) {
+      var addedSet = new Set(diffAdded.split(',').map(Number));
+      wrapper.querySelectorAll('.code-line').forEach(function(line, i) {
+        if (addedSet.has(i + 1)) line.classList.add('diff-added');
+      });
+    }
+    if (diffRemoved) {
+      try {
+        var removedMap = JSON.parse(diffRemoved);
+        var codeLines = wrapper.querySelectorAll('.code-line');
+        var insertions = [];
+        Object.keys(removedMap).forEach(function(afterLine) {
+          var removedLines = removedMap[afterLine];
+          var targetIdx = parseInt(afterLine, 10);
+          var targetEl = codeLines[targetIdx] || null;
+          removedLines.forEach(function(text) {
+            var row = document.createElement('div');
+            row.className = 'code-line diff-removed';
+            row.innerHTML = '<span class="ln"></span><span class="lc">' + text + '</span>';
+            insertions.push({ before: targetEl, el: row });
+          });
+        });
+        insertions.reverse().forEach(function(ins) {
+          if (ins.before) wrapper.insertBefore(ins.el, ins.before);
+          else wrapper.appendChild(ins.el);
+        });
+      } catch(e) {}
+    }
+
     block.innerHTML = '';
     block.style.padding = '0';
     block.style.background = 'none';
@@ -258,6 +361,31 @@ $body$
   });
   mermaid.initialize({ startOnLoad: true, theme: isDark ? 'dark' : 'default' });
 
+  // Loading toast
+  var loadingToast = document.createElement('div');
+  loadingToast.id = 'fv-loading';
+  loadingToast.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#171b24;border:1px solid #353b4a;border-radius:8px;padding:8px 16px;display:none;align-items:center;gap:8px;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,0.4)';
+  loadingToast.innerHTML = '<div style="width:14px;height:14px;border:2px solid #353b4a;border-top-color:#73b8f0;border-radius:50%;animation:fvspin 0.8s linear infinite"></div><span style="font-size:12px;color:#6a7080;font-family:-apple-system,sans-serif">Loading...</span>';
+  var fvStyle = document.createElement('style');
+  fvStyle.textContent = '@keyframes fvspin{to{transform:rotate(360deg)}}';
+  document.body.appendChild(fvStyle);
+  document.body.appendChild(loadingToast);
+
+  // Poll loading state fast (every 300ms)
+  setInterval(function() {
+    try {
+      var lr = new XMLHttpRequest();
+      lr.open('GET', '/_loading?t=' + Date.now(), true);
+      lr.onload = function() {
+        try {
+          var d = JSON.parse(lr.responseText);
+          loadingToast.style.display = d.loading ? 'flex' : 'none';
+        } catch(e) {}
+      };
+      lr.send();
+    } catch(e) {}
+  }, 300);
+
   // Auto-reload: poll for HTML regeneration
   var marker = document.querySelector('[data-fv-gen]');
   if (marker) {
@@ -270,6 +398,7 @@ $body$
         xhr.onload = function() {
           var gm = xhr.responseText.match(/data-fv-gen="(\d+)"/);
           if (gm && gm[1] !== genTime) {
+            if (pendingCloses > 0 || (Date.now() - lastCloseCompleted) < 2000) return;
             var tm = xhr.responseText.match(/data-fv-tabs="(\d+)"/);
             if (tm && parseInt(tm[1], 10) !== tabCount) {
               history.replaceState(null, '', window.location.pathname);
@@ -298,6 +427,246 @@ $body$
     updateTs();
     setInterval(updateTs, 1000);
   }
+
+  // Diff navigation — jump between changes
+  var diffNav = document.getElementById('diff-nav');
+  var diffCounter = document.getElementById('diff-counter');
+  var currentDiffIdx = -1;
+
+  function getDiffHunks() {
+    var activePanel = document.querySelector('.fv-tab-content.active');
+    if (!activePanel) activePanel = document;
+    var lines = activePanel.querySelectorAll('.code-line.diff-added, .code-line.diff-removed');
+    // Group consecutive diff lines into hunks (return first line of each hunk)
+    var hunks = [];
+    var lastIdx = -2;
+    lines.forEach(function(line) {
+      var allLines = Array.from(line.closest('.code-lines').querySelectorAll('.code-line'));
+      var idx = allLines.indexOf(line);
+      if (idx - lastIdx > 1) hunks.push(line);
+      lastIdx = idx;
+    });
+    return hunks;
+  }
+
+  function updateDiffNav() {
+    var hunks = getDiffHunks();
+    if (hunks.length > 0) {
+      diffNav.classList.add('visible');
+      diffCounter.textContent = (currentDiffIdx + 1) + '/' + hunks.length;
+    } else {
+      diffNav.classList.remove('visible');
+    }
+  }
+
+  function jumpToDiff(direction) {
+    var hunks = getDiffHunks();
+    if (hunks.length === 0) return;
+    currentDiffIdx += direction;
+    if (currentDiffIdx >= hunks.length) currentDiffIdx = 0;
+    if (currentDiffIdx < 0) currentDiffIdx = hunks.length - 1;
+    // Clear previous focus
+    document.querySelectorAll('.code-line.diff-focus').forEach(function(el) { el.classList.remove('diff-focus'); });
+    // Highlight all consecutive diff lines in this hunk
+    var hunk = hunks[currentDiffIdx];
+    var allLines = Array.from(hunk.closest('.code-lines').querySelectorAll('.code-line'));
+    var startIdx = allLines.indexOf(hunk);
+    for (var i = startIdx; i < allLines.length; i++) {
+      if (allLines[i].classList.contains('diff-added') || allLines[i].classList.contains('diff-removed')) {
+        allLines[i].classList.add('diff-focus');
+      } else break;
+    }
+    hunk.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    diffCounter.textContent = (currentDiffIdx + 1) + '/' + hunks.length;
+  }
+
+  document.getElementById('diff-prev').addEventListener('click', function() { jumpToDiff(-1); });
+  document.getElementById('diff-next').addEventListener('click', function() { jumpToDiff(1); });
+
+  // Show nav after tab switch and jump to first change
+  document.querySelectorAll('.fv-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      currentDiffIdx = -1;
+      setTimeout(function() { updateDiffNav(); }, 100);
+    });
+  });
+  // Initial
+  setTimeout(function() { updateDiffNav(); }, 500);
+
+  // Search modal (Ctrl+P files, Ctrl+F text)
+  var modalOverlay = document.getElementById('fv-modal-overlay');
+  var modalInput = document.getElementById('fv-modal-input');
+  var modalList = document.getElementById('fv-modal-list');
+  var modalModeEl = document.getElementById('fv-modal-mode');
+  var modalSelectedIdx = 0;
+  var modalItems = [];
+  var modalMode = 'files';
+  var searchTimer = null;
+
+  function getTabData() {
+    var tabs = document.querySelectorAll('.fv-tab[data-tab]');
+    var data = [];
+    tabs.forEach(function(tab) {
+      var title = tab.getAttribute('title') || '';
+      var fname = title.split('/').pop();
+      var fpath = title;
+      data.push({ tabId: tab.getAttribute('data-tab'), fname: fname, fpath: fpath });
+    });
+    return data;
+  }
+
+  function searchText(query) {
+    if (!query || query.length < 2) return [];
+    var results = [];
+    var q = query.toLowerCase();
+    var tabs = getTabData();
+    var tabMap = {};
+    tabs.forEach(function(t) { tabMap[t.tabId] = t; });
+    var panels = document.querySelectorAll('.fv-tab-content');
+    panels.forEach(function(panel) {
+      var tabId = panel.id;
+      var tab = tabMap[tabId];
+      if (!tab) return;
+      var lines = panel.querySelectorAll('.code-line');
+      lines.forEach(function(line) {
+        if (results.length >= 50) return;
+        var lc = line.querySelector('.lc');
+        if (!lc) return;
+        var text = lc.textContent;
+        if (text.toLowerCase().indexOf(q) !== -1) {
+          var ln = line.querySelector('.ln');
+          var lineNum = ln ? ln.textContent.trim() : '?';
+          results.push({ tabId: tabId, fname: tab.fname, lineNum: lineNum, lineEl: line, content: text });
+        }
+      });
+    });
+    return results;
+  }
+
+  function renderModal(query) {
+    if (modalMode === 'text') {
+      var results = searchText(query);
+      modalItems = results;
+      modalSelectedIdx = Math.min(modalSelectedIdx, Math.max(0, modalItems.length - 1));
+      var q = (query || '').toLowerCase();
+      modalList.innerHTML = modalItems.map(function(item, i) {
+        var cls = 'fv-modal-item text-result' + (i === modalSelectedIdx ? ' selected' : '');
+        var escapedContent = item.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        if (q) {
+          var re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+          escapedContent = escapedContent.replace(re, '<mark>$1</mark>');
+        }
+        return '<li class="' + cls + '" data-idx="' + i + '">' +
+          '<span class="fv-modal-fname">' + item.fname + '<span class="fv-modal-line">:' + item.lineNum + '</span></span>' +
+          '<span class="fv-modal-content">' + escapedContent.trim() + '</span></li>';
+      }).join('');
+    } else {
+      var tabs = getTabData();
+      var q = (query || '').toLowerCase();
+      modalItems = q ? tabs.filter(function(t) {
+        return t.fname.toLowerCase().indexOf(q) !== -1 || t.fpath.toLowerCase().indexOf(q) !== -1;
+      }) : tabs;
+      modalSelectedIdx = Math.min(modalSelectedIdx, Math.max(0, modalItems.length - 1));
+      modalList.innerHTML = modalItems.map(function(item, i) {
+        var cls = 'fv-modal-item' + (i === modalSelectedIdx ? ' selected' : '');
+        return '<li class="' + cls + '" data-idx="' + i + '"><span class="fv-modal-fname">' +
+          item.fname + '</span><span class="fv-modal-fpath">' + item.fpath + '</span></li>';
+      }).join('');
+    }
+  }
+
+  function openModal(mode) {
+    modalMode = mode || 'files';
+    modalInput.value = '';
+    modalSelectedIdx = 0;
+    modalInput.placeholder = modalMode === 'text' ? 'Search in files...' : 'Search files...';
+    modalModeEl.textContent = modalMode === 'text'
+      ? 'Text \u00b7 Ctrl+P for file search'
+      : 'Files \u00b7 Ctrl+F for text search';
+    renderModal('');
+    modalOverlay.classList.add('visible');
+    setTimeout(function() { modalInput.focus(); }, 50);
+  }
+
+  function closeModal() {
+    clearTimeout(searchTimer);
+    modalOverlay.classList.remove('visible');
+  }
+
+  function selectModalItem() {
+    if (modalItems.length === 0) return;
+    var item = modalItems[modalSelectedIdx];
+    var wasText = modalMode === 'text';
+    activateTab(item.tabId);
+    history.replaceState(null, '', '#' + item.tabId);
+    closeModal();
+    if (wasText && item.lineEl) {
+      setTimeout(function() {
+        item.lineEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        item.lineEl.classList.add('diff-focus');
+        setTimeout(function() { item.lineEl.classList.remove('diff-focus'); }, 2000);
+      }, 50);
+    }
+    currentDiffIdx = -1;
+    setTimeout(function() { updateDiffNav(); }, 100);
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 'p') {
+      e.preventDefault();
+      if (modalOverlay.classList.contains('visible') && modalMode === 'files') closeModal();
+      else openModal('files');
+    }
+    if (e.ctrlKey && e.key === 'f') {
+      e.preventDefault();
+      if (modalOverlay.classList.contains('visible') && modalMode === 'text') closeModal();
+      else openModal('text');
+    }
+    if (e.ctrlKey && (e.key === ']' || e.key === '[')) {
+      e.preventDefault();
+      var tabs = Array.from(document.querySelectorAll('.fv-tab[data-tab]'));
+      if (tabs.length < 2) return;
+      var activeIdx = tabs.findIndex(function(t) { return t.classList.contains('active'); });
+      var newIdx = e.key === ']' ? (activeIdx + 1) % tabs.length : (activeIdx - 1 + tabs.length) % tabs.length;
+      var newTabId = tabs[newIdx].getAttribute('data-tab');
+      activateTab(newTabId);
+      history.replaceState(null, '', '#' + newTabId);
+      currentDiffIdx = -1;
+      setTimeout(function() { updateDiffNav(); }, 100);
+    }
+    if (e.ctrlKey && e.key === 'w') {
+      e.preventDefault();
+      var activeTab = document.querySelector('.fv-tab.active');
+      if (activeTab) {
+        var closeBtn = activeTab.querySelector('.fv-tab-close');
+        if (closeBtn) closeBtn.click();
+      }
+    }
+    if (!modalOverlay.classList.contains('visible')) return;
+    if (e.key === 'Escape') { closeModal(); e.preventDefault(); }
+    if (e.key === 'ArrowDown') { modalSelectedIdx = Math.min(modalSelectedIdx + 1, modalItems.length - 1); renderModal(modalInput.value); e.preventDefault(); }
+    if (e.key === 'ArrowUp') { modalSelectedIdx = Math.max(modalSelectedIdx - 1, 0); renderModal(modalInput.value); e.preventDefault(); }
+    if (e.key === 'Enter') { selectModalItem(); e.preventDefault(); }
+  });
+
+  modalInput.addEventListener('input', function() {
+    modalSelectedIdx = 0;
+    if (modalMode === 'text') {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(function() { renderModal(modalInput.value); }, 150);
+    } else {
+      renderModal(modalInput.value);
+    }
+  });
+
+  modalList.addEventListener('click', function(e) {
+    var li = e.target.closest('.fv-modal-item');
+    if (li) { modalSelectedIdx = parseInt(li.getAttribute('data-idx'), 10); selectModalItem(); }
+  });
+
+  modalOverlay.addEventListener('click', function(e) {
+    if (e.target === modalOverlay) closeModal();
+  });
 })();
 </script>
 </body>
@@ -408,9 +777,55 @@ _lang_from_ext() {
   esac
 }
 
+# Get comma-separated list of added/modified line numbers from git diff
+_get_diff_added() {
+  local file="$1"
+  git diff --unified=0 -- "$file" 2>/dev/null | \
+    grep -oE '^\@\@ [^ ]+ \+[0-9]+(,[0-9]+)?' | \
+    sed -E 's/.*\+([0-9]+)(,([0-9]+))?/\1 \3/' | \
+    while read s c; do
+      c=${c:-1}
+      for ((i=0; i<c; i++)); do echo $((s+i)); done
+    done | paste -sd, -
+}
+
+# Get JSON map of removed lines: {"afterLineIdx": ["escaped content", ...]}
+_get_diff_removed() {
+  local file="$1"
+  local diff_output
+  diff_output=$(git diff -- "$file" 2>/dev/null)
+  [ -z "$diff_output" ] && return
+
+  # Parse unified diff to extract removed lines with their position
+  # Uses sed to extract +line from @@ headers (BSD awk compatible)
+  echo "$diff_output" | python3 - << 'PYEOF'
+import sys, json, re
+new_line = 0
+result = {}
+for line in sys.stdin:
+    line = line.rstrip('\n')
+    if line.startswith('@@'):
+        m = re.search(r'\+(\d+)', line)
+        if m: new_line = int(m.group(1))
+    elif line.startswith('-') and not line.startswith('---'):
+        content = line[1:]
+        content = content.replace('&','&amp;').replace('<','&lt;').replace('>','&gt;').replace('"','&quot;')
+        key = str(new_line - 1)
+        if key not in result: result[key] = []
+        result[key].append(content)
+    elif line.startswith('+') and not line.startswith('+++'):
+        new_line += 1
+    elif line.startswith(' '):
+        new_line += 1
+print(json.dumps(result))
+PYEOF
+}
+
 # Generate body HTML for a single file (output to stdout, no template wrapper)
 generate_file_body() {
   local src_file="$1"
+  local mode=""
+  [ -f "$_FV_SESSION_DIR/mode" ] && mode=$(cat "$_FV_SESSION_DIR/mode")
 
   if _is_code_file "$src_file"; then
     local lang
@@ -418,6 +833,24 @@ generate_file_body() {
     local filename
     filename=$(basename "$src_file")
     local lang_display="${lang:-${src_file##*.}}"
+
+    # Build diff data attributes if in diff mode
+    local diff_attrs=""
+    if [ "$mode" = "diff" ]; then
+      local added
+      added=$(_get_diff_added "$src_file")
+      if [ -n "$added" ]; then
+        diff_attrs=" data-diff-added=\"$added\""
+      fi
+      local removed
+      removed=$(_get_diff_removed "$src_file")
+      if [ -n "$removed" ] && [ "$removed" != "{}" ]; then
+        # Escape for HTML attribute
+        local removed_escaped
+        removed_escaped=$(echo "$removed" | sed "s/'/\\&#39;/g")
+        diff_attrs="$diff_attrs data-diff-removed='$removed_escaped'"
+      fi
+    fi
 
     printf '<div class="code-file-wrapper">\n'
     printf '  <div class="code-file-header">\n'
@@ -427,13 +860,18 @@ generate_file_body() {
     printf '    <span class="filename">%s</span>\n' "$filename"
     printf '    <span class="lang-badge">%s</span>\n' "$lang_display"
     printf '  </div>\n'
-    printf '  <pre><code class="language-%s">' "$lang"
+    printf '  <pre><code class="language-%s"%s>' "$lang" "$diff_attrs"
     sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g' "$src_file"
     printf '</code></pre>\n'
     printf '</div>\n'
   else
     pandoc "$src_file" 2>/dev/null | sed '/<colgroup>/,/<\/colgroup>/d'
   fi
+}
+
+_show_loading() {
+  # Signal the browser-side JS to show a loading toast
+  touch "$_FV_SESSION_DIR/loading"
 }
 
 # Generate the full tabbed HTML page from all files in TABS_FILE
@@ -496,12 +934,19 @@ generate_tabbed_html() {
       if [ "$fp" = "$active_file" ]; then
         active_class=" active"
       fi
-      printf '<div class="fv-tab%s" data-tab="fv-tab-%d" title="%s">%s<span class="fv-tab-close" data-close-path="%s">&times;</span></div>\n' "$active_class" "$idx" "$fp" "$fname" "$fp"
+      # Pick tab icon: diff mode → git icon, code file → code icon, else → doc icon
+      local tab_icon='<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:-2px;margin-right:4px;opacity:0.6"><path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 9 4.25V1.5Zm6.75.062V4.25c0 .138.112.25.25.25h2.688l-.011-.013-2.914-2.914-.013-.011Z"/></svg>'
+      if [ "$mode" = "diff" ] && _is_code_file "$fp"; then
+        tab_icon='<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:-2px;margin-right:4px;opacity:0.6"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/></svg>'
+        tab_icon='<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:-2px;margin-right:4px;opacity:0.6"><path d="M11.93 1.25a1.75 1.75 0 0 1 2.632-.131l.014.014.136.136a1.75 1.75 0 0 1-.131 2.632l-9 7a1.75 1.75 0 0 1-.87.37l-3.16.39a.75.75 0 0 1-.83-.83l.39-3.16a1.75 1.75 0 0 1 .37-.87ZM2.25 14.5a.75.75 0 0 1 0-1.5h11.5a.75.75 0 0 1 0 1.5Z"/></svg>'
+      elif _is_code_file "$fp"; then
+        tab_icon='<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:-2px;margin-right:4px;opacity:0.6"><path d="m11.28 3.22 4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L13.94 8l-3.72-3.72a.749.749 0 0 1 .326-1.275.749.749 0 0 1 .734.215Zm-6.56 0a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042L2.06 8l3.72 3.72a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215L.47 8.53a.75.75 0 0 1 0-1.06Z"/></svg>'
+      fi
+      printf '<div class="fv-tab%s" data-tab="fv-tab-%d" title="%s">%s%s<span class="fv-tab-close" data-close-path="%s">&times;</span></div>\n' "$active_class" "$idx" "$fp" "$tab_icon" "$fname" "$fp"
       idx=$((idx + 1))
     done < "$TABS_FILE"
-    printf '<div class="fv-tab-spacer"></div>\n'
-    printf '<div class="fv-tab-ts" id="fv-ts" data-generated="%s"></div>\n' "$gen_epoch"
     printf '</div>\n'
+    printf '<div class="fv-tab-ts" id="fv-ts" data-generated="%s"></div>\n' "$gen_epoch"
   } >> "$body_tmp"
 
   # Tab content panels
@@ -530,7 +975,7 @@ generate_tabbed_html() {
     }
     { print }
   ' "$VIEW_TEMPLATE" > "$VIEW_HTML"
-  rm -f "$body_tmp"
+  rm -f "$body_tmp" "$_FV_SESSION_DIR/loading"
 }
 
 stop_watcher() {
@@ -579,16 +1024,32 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path == '/_close':
-            fp = urllib.parse.parse_qs(parsed.query).get('path', [''])[0]
+            qs = urllib.parse.parse_qs(parsed.query)
+            fp = qs.get('path', [''])[0]
+            new_active = qs.get('active', [''])[0]
             if fp and os.path.exists(TABS):
                 with open(TABS) as f:
                     lines = [l for l in f.read().splitlines() if l and l != fp]
                 with open(TABS, 'w') as f:
                     f.write('\n'.join(lines) + '\n' if lines else '')
+                active_file = os.path.join(DIR, 'active')
+                if new_active:
+                    with open(active_file, 'w') as f:
+                        f.write(new_active)
+                elif lines:
+                    with open(active_file, 'w') as f:
+                        f.write(lines[0])
                 if SCRIPT:
                     subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self.send_response(204)
             self.end_headers()
+            return
+        if parsed.path == '/_loading':
+            loading = os.path.exists(os.path.join(DIR, 'loading'))
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(b'{"loading":true}' if loading else b'{"loading":false}')
             return
         super().do_GET()
 
@@ -752,6 +1213,7 @@ cmd_open() {
     return 1
   fi
 
+  _show_loading
   touch "$TABS_FILE"
 
   local last_file=""
@@ -793,7 +1255,7 @@ cmd_close() {
     stop_watcher
     stop_server
     rm -f "$TABS_FILE" "$ACTIVE_FILE"
-    rm -f "$_FV_SESSION_DIR/plan"
+    rm -f "$_FV_SESSION_DIR/plan" "$_FV_SESSION_DIR/mode"
     _close_fileview_pane
     return 0
   fi
@@ -832,6 +1294,44 @@ cmd_close() {
   start_watcher
 }
 
+cmd_diff() {
+  local files
+  files=$({ git diff --name-only; git diff --name-only --cached; git ls-files --others --exclude-standard; } 2>/dev/null | sort -u)
+  if [ -z "$files" ]; then
+    echo "fileview: no git changes found" >&2
+    return 1
+  fi
+  _show_loading
+  # Set diff mode so generate_file_body adds diff data attributes
+  echo "diff" > "$_FV_SESSION_DIR/mode"
+  # Append changed files to existing tabs (preserves plan file etc.)
+  touch "$TABS_FILE"
+  while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    local abs_path
+    abs_path=$(_resolve_path "$f")
+    [ ! -f "$abs_path" ] && continue
+    if ! grep -qxF "$abs_path" "$TABS_FILE" 2>/dev/null; then
+      echo "$abs_path" >> "$TABS_FILE"
+    fi
+  done <<< "$files"
+  if [ ! -s "$TABS_FILE" ]; then
+    rm -f "$_FV_SESSION_DIR/mode"
+    return 1
+  fi
+  # Keep existing active file; if none set, use the first tab
+  if [ ! -f "$ACTIVE_FILE" ] || [ ! -s "$ACTIVE_FILE" ]; then
+    head -1 "$TABS_FILE" > "$ACTIVE_FILE"
+  fi
+  if ! generate_tabbed_html; then
+    rm -f "$_FV_SESSION_DIR/mode"
+    return 1
+  fi
+  start_watcher
+  start_server
+  _open_or_reuse_pane
+}
+
 cmd_list() {
   if [ ! -f "$TABS_FILE" ] || [ ! -s "$TABS_FILE" ]; then
     echo "No tabs open."
@@ -854,7 +1354,8 @@ cmd_list() {
 case "$1" in
   open)    shift; cmd_open "$@" ;;
   close)   shift; cmd_close "$@" ;;
+  diff)    cmd_diff ;;
   list)    cmd_list ;;
   _regen)  generate_tabbed_html ;;
-  *)       echo "Usage: fileview {open|close|list} [file ...]" >&2; exit 1 ;;
+  *)       echo "Usage: fileview {open|close|diff|list} [file ...]" >&2; exit 1 ;;
 esac
