@@ -45,7 +45,7 @@ _build_diff_stats_html() {
     rem_count=$(echo "$removed" | python3 -c "import sys,json; d=json.load(sys.stdin); print(sum(len(v) for v in d.values()))" 2>/dev/null || echo 0)
   fi
   if [ "$add_count" -gt 0 ] || [ "$rem_count" -gt 0 ]; then
-    printf '<span class="diff-stats">'
+    printf '<span class="diff-stats">Δ '
     [ "$add_count" -gt 0 ] && printf '<span class="diff-stat-add">+%s</span>' "$add_count"
     [ "$rem_count" -gt 0 ] && printf '<span class="diff-stat-rem">-%s</span>' "$rem_count"
     printf '</span>'
