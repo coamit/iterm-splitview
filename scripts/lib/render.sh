@@ -73,8 +73,7 @@ _render_code_file() {
 
 generate_file_body() {
   local src_file="$1"
-  local mode=""
-  [ -f "$_FV_SESSION_DIR/mode" ] && mode=$(cat "$_FV_SESSION_DIR/mode")
+  local mode="${2:-}"
 
   if _is_code_file "$src_file"; then
     local lang diff_attrs="" diff_stats=""
@@ -115,22 +114,29 @@ _resolve_active_file() {
   local active_file=""
   [ -f "$ACTIVE_FILE" ] && active_file=$(cat "$ACTIVE_FILE")
 
-  # Validate active file exists in tabs
+  # Validate active file exists in either tab file
   local has_active=false
-  while IFS= read -r fp; do
-    [ -z "$fp" ] || [ ! -f "$fp" ] && continue
-    if [ "$fp" = "$active_file" ]; then
-      has_active=true
-      break
-    fi
-  done < "$TABS_FILE"
-
-  if [ "$has_active" = false ]; then
+  for tabfile in "$TABS_FILE" "$TABS_GIT_FILE"; do
+    [ -f "$tabfile" ] || continue
     while IFS= read -r fp; do
       [ -z "$fp" ] || [ ! -f "$fp" ] && continue
-      active_file="$fp"
-      break
-    done < "$TABS_FILE"
+      if [ "$fp" = "$active_file" ]; then
+        has_active=true
+        break 2
+      fi
+    done < "$tabfile"
+  done
+
+  if [ "$has_active" = false ]; then
+    # Pick first valid file from either tab file
+    for tabfile in "$TABS_FILE" "$TABS_GIT_FILE"; do
+      [ -f "$tabfile" ] || continue
+      while IFS= read -r fp; do
+        [ -z "$fp" ] || [ ! -f "$fp" ] && continue
+        active_file="$fp"
+        break 2
+      done < "$tabfile"
+    done
     echo "$active_file" > "$ACTIVE_FILE"
   fi
   echo "$active_file"
@@ -138,10 +144,13 @@ _resolve_active_file() {
 
 _count_valid_tabs() {
   local count=0
-  while IFS= read -r fp; do
-    [ -z "$fp" ] || [ ! -f "$fp" ] && continue
-    count=$((count + 1))
-  done < "$TABS_FILE"
+  for tabfile in "$TABS_FILE" "$TABS_GIT_FILE"; do
+    [ -f "$tabfile" ] || continue
+    while IFS= read -r fp; do
+      [ -z "$fp" ] || [ ! -f "$fp" ] && continue
+      count=$((count + 1))
+    done < "$tabfile"
+  done
   echo "$count"
 }
 
@@ -157,42 +166,99 @@ _tab_icon_for_file() {
   fi
 }
 
-_generate_tab_bar() {
-  local active_file="$1" gen_epoch="$2"
-  local mode=""
-  [ -f "$_FV_SESSION_DIR/mode" ] && mode=$(cat "$_FV_SESSION_DIR/mode")
-
-  printf '<div class="fv-tab-bar">\n'
+_render_tab_group_tabs() {
+  local group_id="$1" tabs_src="$2" active_file="$3" icon_mode="$4"
   local idx=0
   while IFS= read -r fp; do
     [ -z "$fp" ] || [ ! -f "$fp" ] && continue
     local fname active_class="" tab_icon
     fname=$(basename "$fp")
     [ "$fp" = "$active_file" ] && active_class=" active"
-    tab_icon=$(_tab_icon_for_file "$fp" "$mode")
-    printf '<div class="fv-tab%s" data-tab="fv-tab-%d" title="%s">%s%s<span class="fv-tab-close" data-close-path="%s">&times;</span></div>\n' "$active_class" "$idx" "$fp" "$tab_icon" "$fname" "$fp"
+    tab_icon=$(_tab_icon_for_file "$fp" "$icon_mode")
+    printf '<div class="fv-tab%s" data-tab="fv-tab-%s-%d" data-group="%s" title="%s">%s%s<span class="fv-tab-close" data-close-path="%s">&times;</span></div>\n' \
+      "$active_class" "$group_id" "$idx" "$group_id" "$fp" "$tab_icon" "$fname" "$fp"
     idx=$((idx + 1))
-  done < "$TABS_FILE"
+  done < "$tabs_src"
+}
+
+_count_group_tabs() {
+  local tabs_src="$1" count=0
+  while IFS= read -r fp; do
+    [ -z "$fp" ] || [ ! -f "$fp" ] && continue
+    count=$((count + 1))
+  done < "$tabs_src"
+  echo "$count"
+}
+
+_generate_tab_bar() {
+  local active_file="$1" gen_epoch="$2"
+  local has_files=false has_git=false
+  local files_count=0 git_count=0
+  [ -f "$TABS_FILE" ] && [ -s "$TABS_FILE" ] && has_files=true && files_count=$(_count_group_tabs "$TABS_FILE")
+  [ -f "$TABS_GIT_FILE" ] && [ -s "$TABS_GIT_FILE" ] && has_git=true && git_count=$(_count_group_tabs "$TABS_GIT_FILE")
+
+  # Determine which group is active (based on which group contains the active file)
+  local active_group="files"
+  if [ "$has_git" = true ] && grep -qxF "$active_file" "$TABS_GIT_FILE" 2>/dev/null; then
+    active_group="git"
+  fi
+
+  # Group selector bar (always visible)
+  printf '<div class="fv-group-bar">\n'
+  local files_active="" git_active=""
+  [ "$active_group" = "files" ] && files_active=" active"
+  [ "$active_group" = "git" ] && git_active=" active"
+  printf '<span class="fv-group-sel%s" data-group="files">&#9671; Files <span class="fv-group-count">%d</span></span>\n' "$files_active" "$files_count"
+  printf '<span class="fv-group-sel%s" data-group="git">&#9095; Git Changes <span class="fv-group-count">%d</span></span>\n' "$git_active" "$git_count"
   printf '<div class="fv-tab-spacer"></div>'
+  printf '<div class="fv-tab-action" id="fv-git-reload" title="Reload git changes">&#9095;</div>'
   printf '<div class="fv-tab-action" id="fv-refresh" title="Refresh"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></div>'
+  printf '</div>\n'
+
+  # Tab bar with tabs from all groups (hidden by group via CSS/JS)
+  printf '<div class="fv-tab-bar">\n'
+  if [ "$has_files" = true ]; then
+    _render_tab_group_tabs "files" "$TABS_FILE" "$active_file" ""
+  fi
+  if [ "$has_git" = true ]; then
+    _render_tab_group_tabs "git" "$TABS_GIT_FILE" "$active_file" "diff"
+  fi
+  if [ "$has_files" = false ] && [ "$has_git" = false ]; then
+    : # empty tab bar
+  fi
+  printf '<div class="fv-tab-spacer"></div>'
   printf '</div>\n'
   printf '<div class="fv-tab-ts" id="fv-ts" data-generated="%s"></div>\n' "$gen_epoch"
 }
 
-_generate_tab_panels() {
-  local active_file="$1" body_tmp="$2"
+_generate_panels_for_group() {
+  local group_id="$1" tabs_src="$2" active_file="$3" body_tmp="$4" mode="$5"
   local idx=0
   while IFS= read -r fp; do
     [ -z "$fp" ] || [ ! -f "$fp" ] && continue
     local active_class=""
     [ "$fp" = "$active_file" ] && active_class=" active"
     {
-      printf '<div class="fv-tab-content%s" id="fv-tab-%d">\n' "$active_class" "$idx"
-      generate_file_body "$fp"
+      printf '<div class="fv-tab-content%s" id="fv-tab-%s-%d">\n' "$active_class" "$group_id" "$idx"
+      generate_file_body "$fp" "$mode"
       printf '</div>\n'
     } >> "$body_tmp"
     idx=$((idx + 1))
-  done < "$TABS_FILE"
+  done < "$tabs_src"
+}
+
+_generate_tab_panels() {
+  local active_file="$1" body_tmp="$2"
+
+  # Generate panels for files group
+  if [ -f "$TABS_FILE" ] && [ -s "$TABS_FILE" ]; then
+    _generate_panels_for_group "files" "$TABS_FILE" "$active_file" "$body_tmp" ""
+  fi
+
+  # Generate panels for git group (with diff mode)
+  if [ -f "$TABS_GIT_FILE" ] && [ -s "$TABS_GIT_FILE" ]; then
+    _generate_panels_for_group "git" "$TABS_GIT_FILE" "$active_file" "$body_tmp" "diff"
+  fi
 }
 
 generate_tabbed_html() {
@@ -202,7 +268,11 @@ generate_tabbed_html() {
   saved_theme=""
   [ -f "$HOME/.config/fileview/theme" ] && saved_theme=$(cat "$HOME/.config/fileview/theme" 2>/dev/null)
 
-  if [ ! -f "$TABS_FILE" ] || [ ! -s "$TABS_FILE" ]; then
+  local has_files=false has_git=false
+  [ -f "$TABS_FILE" ] && [ -s "$TABS_FILE" ] && has_files=true
+  [ -f "$TABS_GIT_FILE" ] && [ -s "$TABS_GIT_FILE" ] && has_git=true
+
+  if [ "$has_files" = false ] && [ "$has_git" = false ]; then
     # Empty state — generate minimal page with tab bar (no tabs)
     tab_count=0
     {

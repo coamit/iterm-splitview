@@ -112,7 +112,7 @@ fi
 _close_all() {
   stop_watcher
   stop_server
-  rm -f "$TABS_FILE" "$ACTIVE_FILE" "$CWD_FILE" "$SEARCH_ROOT_FILE"
+  rm -f "$TABS_FILE" "$ACTIVE_FILE" "$CWD_FILE" "$SEARCH_ROOT_FILE" "$TABS_GIT_FILE" "$COLLAPSED_FILE"
   rm -f "$_FV_SESSION_DIR/plan" "$_FV_SESSION_DIR/mode"
   _close_fileview_pane
 }
@@ -121,6 +121,13 @@ _add_file_to_tabs() {
   local abs_path="$1"
   if ! grep -qxF "$abs_path" "$TABS_FILE" 2>/dev/null; then
     echo "$abs_path" >> "$TABS_FILE"
+  fi
+}
+
+_add_file_to_git_tabs() {
+  local abs_path="$1"
+  if ! grep -qxF "$abs_path" "$TABS_GIT_FILE" 2>/dev/null; then
+    echo "$abs_path" >> "$TABS_GIT_FILE"
   fi
 }
 
@@ -154,7 +161,10 @@ cmd_open() {
       echo "fileview: file not found: $src_file" >&2
       continue
     fi
-    _add_file_to_tabs "$abs_path"
+    # If the file is already in git tabs, just activate it without duplicating
+    if ! grep -qxF "$abs_path" "$TABS_GIT_FILE" 2>/dev/null; then
+      _add_file_to_tabs "$abs_path"
+    fi
     last_file="$abs_path"
     case "$abs_path" in
       */.claude/plans/*.md) echo "$abs_path" > "$_FV_SESSION_DIR/plan" ;;
@@ -178,16 +188,19 @@ cmd_close() {
   local target
   target=$(_resolve_path "$1")
 
-  if [ ! -f "$TABS_FILE" ]; then
-    return 0
-  fi
+  # Remove from both tab files
+  for tabfile in "$TABS_FILE" "$TABS_GIT_FILE"; do
+    if [ -f "$tabfile" ]; then
+      local tmp
+      tmp=$(mktemp)
+      grep -vxF "$target" "$tabfile" > "$tmp" || true
+      mv "$tmp" "$tabfile"
+    fi
+  done
 
-  local tmp
-  tmp=$(mktemp)
-  grep -vxF "$target" "$TABS_FILE" > "$tmp" || true
-  mv "$tmp" "$TABS_FILE"
-
-  if [ ! -s "$TABS_FILE" ]; then
+  # If both tab files are empty, close all
+  if { [ ! -f "$TABS_FILE" ] || [ ! -s "$TABS_FILE" ]; } && \
+     { [ ! -f "$TABS_GIT_FILE" ] || [ ! -s "$TABS_GIT_FILE" ]; }; then
     _close_all
     return 0
   fi
@@ -195,7 +208,12 @@ cmd_close() {
   local current_active
   current_active=$(cat "$ACTIVE_FILE" 2>/dev/null)
   if [ "$current_active" = "$target" ]; then
-    tail -1 "$TABS_FILE" > "$ACTIVE_FILE"
+    # Pick new active from whichever tab file has content
+    if [ -f "$TABS_FILE" ] && [ -s "$TABS_FILE" ]; then
+      tail -1 "$TABS_FILE" > "$ACTIVE_FILE"
+    elif [ -f "$TABS_GIT_FILE" ] && [ -s "$TABS_GIT_FILE" ]; then
+      tail -1 "$TABS_GIT_FILE" > "$ACTIVE_FILE"
+    fi
   fi
 
   generate_tabbed_html
@@ -213,23 +231,23 @@ cmd_diff() {
   _show_loading
   echo "diff" > "$_FV_SESSION_DIR/mode"
   echo "$PWD" > "$CWD_FILE"
-  touch "$TABS_FILE"
+  touch "$TABS_GIT_FILE"
 
   while IFS= read -r f; do
     [ -z "$f" ] && continue
     local abs_path
     abs_path=$(_resolve_path "$f")
     [ ! -f "$abs_path" ] && continue
-    _add_file_to_tabs "$abs_path"
+    _add_file_to_git_tabs "$abs_path"
   done <<< "$files"
 
-  if [ ! -s "$TABS_FILE" ]; then
+  if [ ! -s "$TABS_GIT_FILE" ]; then
     rm -f "$_FV_SESSION_DIR/mode"
     return 1
   fi
 
   if [ ! -f "$ACTIVE_FILE" ] || [ ! -s "$ACTIVE_FILE" ]; then
-    head -1 "$TABS_FILE" > "$ACTIVE_FILE"
+    head -1 "$TABS_GIT_FILE" > "$ACTIVE_FILE"
   fi
 
   if ! _generate_and_launch; then
@@ -239,20 +257,41 @@ cmd_diff() {
 }
 
 cmd_list() {
-  if [ ! -f "$TABS_FILE" ] || [ ! -s "$TABS_FILE" ]; then
+  local has_files=false has_git=false
+  [ -f "$TABS_FILE" ] && [ -s "$TABS_FILE" ] && has_files=true
+  [ -f "$TABS_GIT_FILE" ] && [ -s "$TABS_GIT_FILE" ] && has_git=true
+
+  if [ "$has_files" = false ] && [ "$has_git" = false ]; then
     echo "No tabs open."
     return 0
   fi
+
   local active_file=""
   [ -f "$ACTIVE_FILE" ] && active_file=$(cat "$ACTIVE_FILE")
-  while IFS= read -r fp; do
-    [ -z "$fp" ] && continue
-    if [ "$fp" = "$active_file" ]; then
-      echo "* $(basename "$fp")  ($fp)"
-    else
-      echo "  $(basename "$fp")  ($fp)"
-    fi
-  done < "$TABS_FILE"
+
+  if [ "$has_files" = true ]; then
+    echo "Files:"
+    while IFS= read -r fp; do
+      [ -z "$fp" ] && continue
+      if [ "$fp" = "$active_file" ]; then
+        echo "* $(basename "$fp")  ($fp)"
+      else
+        echo "  $(basename "$fp")  ($fp)"
+      fi
+    done < "$TABS_FILE"
+  fi
+
+  if [ "$has_git" = true ]; then
+    echo "Git Changes:"
+    while IFS= read -r fp; do
+      [ -z "$fp" ] && continue
+      if [ "$fp" = "$active_file" ]; then
+        echo "* $(basename "$fp")  ($fp)"
+      else
+        echo "  $(basename "$fp")  ($fp)"
+      fi
+    done < "$TABS_GIT_FILE"
+  fi
 }
 
 cmd_search_root() {

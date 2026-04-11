@@ -15,6 +15,8 @@ SERVER_PID_FILE="$_FV_SESSION_DIR/server.pid"
 SERVER_PORT_FILE="$_FV_SESSION_DIR/server_port"
 CWD_FILE="$_FV_SESSION_DIR/cwd"
 SEARCH_ROOT_FILE="$_FV_SESSION_DIR/search_root"
+TABS_GIT_FILE="$_FV_SESSION_DIR/tabs.git"
+COLLAPSED_FILE="$_FV_SESSION_DIR/collapsed"
 PANE_SESSION_ID_FILE="$_FV_SESSION_DIR/pane_session_id"
 mkdir -p /tmp/fileview
 

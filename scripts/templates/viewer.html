@@ -24,6 +24,7 @@ body {
   top: 0;
   z-index: 100;
 }
+.fv-group-bar + .fv-tab-bar { top: 29px; }
 .fv-tab-bar::-webkit-scrollbar { height: 3px; }
 .fv-tab-bar::-webkit-scrollbar-track { background: transparent; }
 .fv-tab-bar::-webkit-scrollbar-thumb { background: #353b4a; border-radius: 3px; }
@@ -63,8 +64,20 @@ body {
   background: #73b8f0;
 }
 .fv-tab-spacer { flex: 1; }
-.fv-tab-action { padding: 6px 10px; color: #4b5263; cursor: pointer; display: flex; align-items: center; position: sticky; right: 0; background: inherit; }
+.fv-tab-action { padding: 6px 4px; color: #4b5263; cursor: pointer; display: flex; align-items: center; position: sticky; right: 0; background: inherit; }
+#fv-git-reload { font-size: 16px; padding: 4px 6px; }
 .fv-tab-action:hover { color: #ccd0d4; }
+/* Group selector bar */
+.fv-group-bar { display: flex; align-items: center; background: #171b24; border-bottom: 1px solid #252a35; position: sticky; top: 0; z-index: 101; padding: 0 4px; }
+.fv-group-sel { padding: 5px 10px; font-size: 11px; font-family: -apple-system, sans-serif; color: #4b5263; cursor: pointer; user-select: none; white-space: nowrap; border-bottom: 2px solid transparent; transition: color 0.1s; }
+.fv-group-sel:hover { color: #8a90a0; }
+.fv-group-sel.active { color: #ccd0d4; }
+.fv-group-sel[data-group="files"].active { color: #ffcc66; border-bottom-color: #ffcc66; }
+.fv-group-sel[data-group="git"].active { color: #a78bfa; border-bottom-color: #a78bfa; }
+.fv-group-count { background: #353b4a; padding: 0 5px; border-radius: 8px; font-size: 9px; min-width: 14px; text-align: center; line-height: 1.5; margin-left: 4px; }
+/* Group-colored active tab underline */
+.fv-tab[data-group="files"].active::after { background: #ffcc66; }
+.fv-tab[data-group="git"].active::after { background: #a78bfa; }
 .fv-tab-ts { display: none; }
 .fv-tab-content { display: none; padding: 14px 18px; }
 .fv-tab-content.active { display: block; }
@@ -106,7 +119,7 @@ div.sourceCode { margin: 8px 0; }
 /* Diff counter badge */
 .diff-counter-badge { position: fixed; bottom: 16px; left: 16px; background: #2a3040; border: 1px solid #353b4a; border-radius: 6px; padding: 4px 12px; font-size: 12px; font-family: "JetBrains Mono", monospace; color: #ccd0d4; z-index: 200; display: none; user-select: none; }
 .diff-counter-badge.visible { display: block; }
-.diff-view-mode { display: none; font-size: 10px; color: #ffcc66; font-family: -apple-system, sans-serif; padding: 2px 8px; background: rgba(255, 204, 102, 0.1); border: 1px solid rgba(255, 204, 102, 0.3); border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; margin-left: auto; }
+.diff-view-mode { display: none; font-size: 10px; color: #a78bfa; font-family: -apple-system, sans-serif; padding: 2px 8px; background: rgba(167, 139, 250, 0.1); border: 1px solid rgba(167, 139, 250, 0.3); border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; margin-left: auto; }
 .diff-collapsed .diff-view-mode { display: inline-block; }
 .diff-stats { display: inline-flex; gap: 6px; margin-left: 8px; font-size: 11px; font-family: "JetBrains Mono", monospace; }
 .diff-stat-add { color: #28c840; }
@@ -145,8 +158,9 @@ div.sourceCode { margin: 8px 0; }
 .fv-modal-empty { padding: 20px; text-align: center; color: #6a7080; font-size: 12px; font-family: -apple-system, sans-serif; }
 @keyframes fv-spin { to { transform: rotate(360deg); } }
 .fv-tab-loading-content { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: calc(100vh - 50px); color: #6a7080; font-size: 14px; font-family: -apple-system, sans-serif; gap: 16px; margin: -14px -18px; }
-.fv-tab-loading-content::before { content: ''; display: block; width: 32px; height: 32px; border: 3px solid #353b4a; border-top-color: #73b8f0; border-radius: 50%; animation: fv-spin 0.8s linear infinite; }
+.fv-tab-loading-content::before { content: ''; display: block; width: 32px; height: 32px; border: 3px solid #353b4a; border-top-color: #ccd0d4; border-radius: 50%; animation: fv-spin 0.7s linear infinite; }
 .fv-tab.loading .fv-tab-close { display: none; }
+.fv-tab.loading::before { content: ''; display: inline-block; width: 10px; height: 10px; border: 1.5px solid #353b4a; border-top-color: #ccd0d4; border-radius: 50%; animation: fv-spin 0.7s linear infinite; margin-right: 6px; vertical-align: middle; flex-shrink: 0; }
 .fv-toast { position: fixed; top: 50px; left: 50%; transform: translateX(-50%) translateY(-10px); background: #2a3040; border: 1px solid #353b4a; border-radius: 6px; padding: 8px 18px; font-size: 12px; color: #e8ecf0; font-family: -apple-system, sans-serif; z-index: 400; opacity: 0; transition: opacity 0.15s, transform 0.15s; pointer-events: none; white-space: nowrap; }
 .fv-toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
 /* Settings modal */
@@ -185,7 +199,7 @@ div.sourceCode { margin: 8px 0; }
   .diff-collapsed .code-line.diff-spacer .ln,
   .diff-collapsed .code-line.diff-spacer .lc { background: transparent; }
   .diff-counter-badge { background: #ffffff; border-color: #d0d7de; color: #24292e; }
-  .diff-view-mode { color: #b8860b; background: rgba(184, 134, 11, 0.08); border-color: rgba(184, 134, 11, 0.3); }
+  .diff-view-mode { color: #7c3aed; background: rgba(124, 58, 237, 0.08); border-color: rgba(124, 58, 237, 0.3); }
   .fv-modal { background: #ffffff; border-color: #d0d7de; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
   .fv-modal-input { background: #f6f8fa; border-bottom-color: #d0d7de; color: #24292e; }
   .fv-modal-input::placeholder { color: #6a737d; }
@@ -203,7 +217,8 @@ div.sourceCode { margin: 8px 0; }
   .fv-modal-loading { color: #6a737d; }
   .fv-modal-loading::after { border-color: #d0d7de; border-top-color: #0366d6; }
   .fv-tab-loading-content { color: #6a737d; }
-  .fv-tab-loading-content::before { border-color: #d0d7de; border-top-color: #0366d6; }
+  .fv-tab-loading-content::before { border-color: #d0d7de; border-top-color: #24292e; }
+  .fv-tab.loading::before { border-color: #d0d7de; border-top-color: #24292e; }
   .fv-toast { background: #ffffff; border-color: #d0d7de; color: #24292e; }
   .fv-shortcut-key { background: #e1e4e8; border-color: #d0d7de; color: #24292e; }
   .fv-settings { background: #ffffff; border-color: #d0d7de; }
@@ -212,6 +227,15 @@ div.sourceCode { margin: 8px 0; }
   .fv-theme-card { border-color: #d0d7de; }
   .fv-theme-card:hover { border-color: #9ca3af; }
   .fv-theme-card.active { border-color: #0366d6; }
+  .fv-group-bar { background: #eaecef; border-bottom-color: #d0d7de; }
+  .fv-group-sel { color: #9ca3af; }
+  .fv-group-sel:hover { color: #6a737d; }
+  .fv-group-sel.active { color: #24292e; }
+  .fv-group-sel[data-group="files"].active { color: #b45309; border-bottom-color: #b45309; }
+  .fv-group-sel[data-group="git"].active { color: #7c3aed; border-bottom-color: #7c3aed; }
+  .fv-group-count { background: #e1e4e8; }
+  .fv-tab[data-group="files"].active::after { background: #b45309; }
+  .fv-tab[data-group="git"].active::after { background: #7c3aed; }
 }
 .code-file-wrapper { border-radius: 8px; overflow: hidden; border: 1px solid #353b4a; margin: 0; }
 .code-file-header { background: #2a2f3d; padding: 8px 14px; font-size: 11px; color: #8a90a0; font-family: -apple-system, sans-serif; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #353b4a; }
@@ -403,7 +427,8 @@ $body$
       '.fv-modal-loading { color: ' + t.textMuted + '; }' +
       '.fv-modal-loading::after { border-color: ' + t.border + '; border-top-color: ' + t.accent + '; }' +
       '.fv-tab-loading-content { color: ' + t.textMuted + '; }' +
-      '.fv-tab-loading-content::before { border-color: ' + t.border + '; border-top-color: ' + t.accent + '; }' +
+      '.fv-tab-loading-content::before { border-color: ' + t.border + '; border-top-color: ' + t.text + '; }' +
+      '.fv-tab.loading::before { border-color: ' + t.border + '; border-top-color: ' + t.text + '; }' +
       '.fv-toast { background: ' + t.bgHover + '; border-color: ' + t.border + '; color: ' + t.textBright + '; }' +
       '.fv-shortcut-key { background: ' + t.bgHover + '; border-color: ' + t.border + '; color: ' + t.text + '; }' +
       '.fv-shortcut-desc { color: ' + t.textMuted + '; }' +
@@ -416,7 +441,16 @@ $body$
       '.fv-theme-card.active { border-color: ' + t.accent + '; }' +
       '.fv-theme-label { color: ' + t.text + '; }' +
       '.fv-modal-overlay { background: rgba(0,0,0,' + (t.dark ? '0.5' : '0.2') + '); }' +
-      '.fv-settings-overlay { background: rgba(0,0,0,' + (t.dark ? '0.5' : '0.2') + '); }';
+      '.fv-settings-overlay { background: rgba(0,0,0,' + (t.dark ? '0.5' : '0.2') + '); }' +
+      '.fv-group-bar { background: ' + t.bgAlt + '; border-bottom-color: ' + t.borderAlt + '; }' +
+      '.fv-group-sel { color: ' + t.textDim + '; }' +
+      '.fv-group-sel:hover { color: ' + t.textMuted + '; }' +
+      '.fv-group-sel.active { color: ' + t.text + '; }' +
+      '.fv-group-sel[data-group="files"].active { color: ' + t.accentAlt + '; border-bottom-color: ' + t.accentAlt + '; }' +
+      '.fv-group-sel[data-group="git"].active { color: ' + t.accent + '; border-bottom-color: ' + t.accent + '; }' +
+      '.fv-group-count { background: ' + t.border + '; }' +
+      '.fv-tab[data-group="files"].active::after { background: ' + t.accentAlt + '; }' +
+      '.fv-tab[data-group="git"].active::after { background: ' + t.accent + '; }';
   }
 
   // Settings modal
@@ -484,6 +518,74 @@ $body$
     });
   }
 
+  // Create a loading placeholder tab in the tab bar
+  function createLoadingTabHeader(fname, filePath, group) {
+    var tabBar = document.querySelector('.fv-tab-bar');
+    var spacer = tabBar.querySelector('.fv-tab-spacer');
+    var tab = document.createElement('div');
+    tab.className = 'fv-tab loading';
+    tab.setAttribute('data-group', group);
+    tab.setAttribute('title', filePath);
+    tab.textContent = escHtml(fname);
+    // Insert in correct group position
+    var groupTabs = tabBar.querySelectorAll('.fv-tab[data-group="' + group + '"]');
+    if (groupTabs.length > 0) {
+      groupTabs[groupTabs.length - 1].insertAdjacentElement('afterend', tab);
+    } else if (group === 'git') {
+      tabBar.insertBefore(tab, spacer);
+    } else {
+      var gitTabs = tabBar.querySelectorAll('.fv-tab[data-group="git"]');
+      if (gitTabs.length > 0) gitTabs[0].insertAdjacentElement('beforebegin', tab);
+      else tabBar.insertBefore(tab, spacer);
+    }
+    return tab;
+  }
+
+  // Git reload button
+  var gitReloadBtn = document.getElementById('fv-git-reload');
+  if (gitReloadBtn) {
+    gitReloadBtn.addEventListener('click', function() {
+      // First, get the list of new files
+      fetch('/_git-changes')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.error) { showToast(data.error); return; }
+          if (data.files.length === 0) {
+            // No new files, but still trigger reload to remove stale ones
+            fetch('/_git-reload')
+              .then(function(r) { return r.json(); })
+              .then(function(result) {
+                if (result.removed > 0) {
+                  showToast(result.removed + ' stale file' + (result.removed > 1 ? 's' : '') + ' removed \u2713');
+                  updateGroupCounts();
+                } else {
+                  showToast('All git changes already open');
+                }
+              });
+            return;
+          }
+          // Create loading tabs immediately
+          data.files.forEach(function(f) {
+            createLoadingTabHeader(f.fname, f.file, 'git');
+          });
+          updateGroupCounts();
+          showToast(data.files.length + ' file' + (data.files.length > 1 ? 's' : '') + ' loading\u2026');
+          // Then trigger the actual add + regen
+          lastOpenTriggered = Date.now();
+          fetch('/_git-reload')
+            .then(function(r) { return r.json(); })
+            .then(function(result) {
+              var parts = [];
+              if (result.added > 0) parts.push(result.added + ' added');
+              if (result.removed > 0) parts.push(result.removed + ' removed');
+              if (parts.length) showToast(parts.join(', ') + ' \u2713');
+              updateGroupCounts();
+            });
+        })
+        .catch(function() { showToast('Failed to reload git changes'); });
+    });
+  }
+
   // Apply saved theme on load (synchronous from embedded data attribute)
   var themeMarker = document.querySelector('[data-fv-theme]');
   var savedTheme = themeMarker ? themeMarker.getAttribute('data-fv-theme') : '';
@@ -504,7 +606,13 @@ $body$
     var tab = document.querySelector('[data-tab="' + tabId + '"]');
     if (tab) {
       tab.classList.add('active');
-      document.getElementById(tabId).classList.add('active');
+      var content = document.getElementById(tabId);
+      if (content) content.classList.add('active');
+      // Switch group bar to match the activated tab's group
+      var tabGroup = tab.getAttribute('data-group');
+      if (tabGroup && document.querySelector('.fv-group-bar')) {
+        switchGroup(tabGroup);
+      }
       tab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
     }
   }
@@ -525,18 +633,29 @@ $body$
       var tabId = tab.getAttribute('data-tab');
       var content = document.getElementById(tabId);
       var wasActive = tab.classList.contains('active');
-      var nextTab = tab.nextElementSibling;
-      if (nextTab && !nextTab.classList.contains('fv-tab')) nextTab = null;
-      var prevTab = tab.previousElementSibling;
-      if (prevTab && !prevTab.classList.contains('fv-tab')) prevTab = null;
+      var allTabs = Array.from(document.querySelectorAll('.fv-tab[data-tab]'));
+      var idx = allTabs.indexOf(tab);
+      var nextTab = idx < allTabs.length - 1 ? allTabs[idx + 1] : null;
+      var prevTab = idx > 0 ? allTabs[idx - 1] : null;
       var newActiveTarget = wasActive ? (nextTab || prevTab) : document.querySelector('.fv-tab.active');
       var newActivePath = newActiveTarget ? (newActiveTarget.getAttribute('title') || '') : '';
+      var closedGroup = tab.getAttribute('data-group');
       tab.remove();
       if (content) content.remove();
+      updateGroupCounts();
       if (wasActive && newActiveTarget) {
         var newTabId = newActiveTarget.getAttribute('data-tab');
         activateTab(newTabId);
         history.replaceState(null, '', '#' + newTabId);
+      }
+      // Last tab closed — show empty state immediately
+      if (!document.querySelector('.fv-tab[data-tab]')) {
+        var emptyDiv = document.createElement('div');
+        emptyDiv.className = 'fv-tab-content active';
+        emptyDiv.id = 'fv-tab-empty';
+        emptyDiv.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 50px);color:#6a7080;font-size:13px;font-family:-apple-system,sans-serif';
+        emptyDiv.textContent = 'Press Ctrl+O to open a file';
+        document.body.appendChild(emptyDiv);
       }
       pendingCloses++;
       fetch('/_close?path=' + encodeURIComponent(filePath) + '&active=' + encodeURIComponent(newActivePath))
@@ -687,12 +806,24 @@ $body$
         try {
           var d = JSON.parse(xhr.responseText);
           if (d.gen && d.gen !== genTime) {
-            if (pendingCloses > 0 || (Date.now() - lastCloseCompleted) < 3000 || (Date.now() - lastOpenTriggered) < 3000 || (Date.now() - pageLoadTime) < 2000) return;
+            if (pendingCloses > 0 || (Date.now() - lastCloseCompleted) < 3000 || (Date.now() - pageLoadTime) < 2000) return;
+            if (lastOpenTriggered > 0) {
+              // File is being opened — only reload once regen is done (loading file removed)
+              try {
+                var lxhr = new XMLHttpRequest();
+                lxhr.open('GET', '/_loading', false); // synchronous
+                lxhr.send();
+                var ld = JSON.parse(lxhr.responseText);
+                if (ld.loading) return; // still generating, skip this poll
+              } catch(e) {}
+              lastOpenTriggered = 0; // regen done, allow reload
+            }
             if (d.tabs !== String(tabCount)) {
               history.replaceState(null, '', window.location.pathname);
             }
             var ac = document.querySelector('.fv-tab-content.active');
             if (ac) { ac.style.opacity = '0'; }
+            loadingToast.style.display = 'flex';
             window.location.reload();
           }
         } catch(e) {}
@@ -920,6 +1051,33 @@ $body$
   if (initHide) initHide.remove();
   var activeContent = document.querySelector('.fv-tab-content.active');
   if (activeContent) activeContent.classList.add('fv-reveal');
+
+  function updateGroupCounts() {
+    document.querySelectorAll('.fv-group-sel').forEach(function(sel) {
+      var group = sel.getAttribute('data-group');
+      var count = document.querySelectorAll('.fv-tab[data-group="' + group + '"][data-tab]').length;
+      var badge = sel.querySelector('.fv-group-count');
+      if (badge) badge.textContent = count;
+    });
+  }
+
+  // Group selector bar — highlight active group
+  function switchGroup(groupName) {
+    document.querySelectorAll('.fv-group-sel').forEach(function(s) {
+      s.classList.toggle('active', s.getAttribute('data-group') === groupName);
+    });
+  }
+  document.querySelectorAll('.fv-group-sel').forEach(function(sel) {
+    sel.addEventListener('click', function() {
+      var group = sel.getAttribute('data-group');
+      // Activate first tab in that group
+      var first = document.querySelector('.fv-tab[data-group="' + group + '"][data-tab]');
+      if (first) {
+        activateTab(first.getAttribute('data-tab'));
+        history.replaceState(null, '', '#' + first.getAttribute('data-tab'));
+      }
+    });
+  });
 
   // Reset diff index on tab switch
   document.querySelectorAll('.fv-tab').forEach(function(tab) {
@@ -1315,7 +1473,17 @@ $body$
     tab.setAttribute('title', filePath);
     var safeFname = escHtml(fname);
     tab.innerHTML = safeFname + '<span class="fv-tab-close" data-close-path="' + escHtml(filePath) + '">\u00d7</span>';
-    tabBar.insertBefore(tab, spacer);
+    tab.setAttribute('data-group', 'files');
+    // Insert after the last files-group tab, or before the first git tab, or before spacer
+    var filesTabs = tabBar.querySelectorAll('.fv-tab[data-group="files"]');
+    var gitTabs = tabBar.querySelectorAll('.fv-tab[data-group="git"]');
+    if (filesTabs.length > 0) {
+      filesTabs[filesTabs.length - 1].insertAdjacentElement('afterend', tab);
+    } else if (gitTabs.length > 0) {
+      gitTabs[0].insertAdjacentElement('beforebegin', tab);
+    } else {
+      tabBar.insertBefore(tab, spacer);
+    }
 
     // Create loading content panel
     var panel = document.createElement('div');
