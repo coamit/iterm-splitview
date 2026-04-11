@@ -92,6 +92,18 @@ div.sourceCode { margin: 8px 0; }
 .code-line.diff-focus { outline: 1px solid rgba(115, 184, 240, 0.5); outline-offset: -1px; box-shadow: inset 3px 0 0 #73b8f0; }
 .code-line.search-highlight { background: rgba(226, 196, 108, 0.2); box-shadow: inset 3px 0 0 #e2c46c; }
 /* Diff navigation arrows */
+/* Collapsed diff mode — hide non-change lines */
+.diff-collapsed .code-line { display: none; }
+.diff-collapsed .code-line.diff-added,
+.diff-collapsed .code-line.diff-removed,
+.diff-collapsed .code-line.diff-context { display: table-row; }
+.diff-collapsed .code-line.diff-separator { display: table-row; }
+.diff-collapsed .code-line.diff-separator td,
+.diff-collapsed .code-line.diff-separator .ln,
+.diff-collapsed .code-line.diff-separator .lc { background: #171b24; color: #4b5263; font-size: 10px; padding-top: 4px; padding-bottom: 4px; border-top: 1px solid #353b4a; border-bottom: 1px solid #353b4a; }
+/* Diff counter badge */
+.diff-counter-badge { position: fixed; bottom: 16px; right: 16px; background: #2a3040; border: 1px solid #353b4a; border-radius: 6px; padding: 4px 12px; font-size: 12px; font-family: "JetBrains Mono", monospace; color: #ccd0d4; z-index: 200; display: none; user-select: none; }
+.diff-counter-badge.visible { display: block; }
 .diff-stats { display: inline-flex; gap: 6px; margin-left: 8px; font-size: 11px; font-family: "JetBrains Mono", monospace; }
 .diff-stat-add { color: #28c840; }
 .diff-stat-rem { color: #ff5f57; }
@@ -131,6 +143,10 @@ div.sourceCode { margin: 8px 0; }
   .code-line.diff-removed .ln { color: #d1242f; }
   .diff-stat-add { color: #1a7f37; }
   .diff-stat-rem { color: #d1242f; }
+  .diff-collapsed .code-line.diff-separator td,
+  .diff-collapsed .code-line.diff-separator .ln,
+  .diff-collapsed .code-line.diff-separator .lc { background: #f6f8fa; color: #9ca3af; border-color: #d0d7de; }
+  .diff-counter-badge { background: #ffffff; border-color: #d0d7de; color: #24292e; }
   .fv-modal { background: #ffffff; border-color: #d0d7de; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
   .fv-modal-input { background: #f6f8fa; border-bottom-color: #d0d7de; color: #24292e; }
   .fv-modal-input::placeholder { color: #6a737d; }
@@ -191,6 +207,7 @@ tr:hover { background: #2a3040; }
 </head>
 <body>
 $body$
+<div class="diff-counter-badge" id="diff-counter-badge"></div>
 <div class="fv-modal-overlay" id="fv-modal-overlay">
   <div class="fv-modal">
     <input class="fv-modal-input" id="fv-modal-input" type="text" placeholder="Search files..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
@@ -400,6 +417,8 @@ $body$
 
   // Diff navigation — jump between changes with Ctrl+D
   var currentDiffIdx = -1;
+  var diffCounterBadge = document.getElementById('diff-counter-badge');
+  var DIFF_CONTEXT_LINES = 3;
 
   function getDiffHunks() {
     var activePanel = document.querySelector('.fv-tab-content.active');
@@ -414,6 +433,16 @@ $body$
       lastIdx = idx;
     });
     return hunks;
+  }
+
+  function updateDiffCounter() {
+    var hunks = getDiffHunks();
+    if (hunks.length > 0 && currentDiffIdx >= 0) {
+      diffCounterBadge.textContent = (currentDiffIdx + 1) + '/' + hunks.length;
+      diffCounterBadge.classList.add('visible');
+    } else {
+      diffCounterBadge.classList.remove('visible');
+    }
   }
 
   function jumpToDiff(direction) {
@@ -432,11 +461,82 @@ $body$
       } else break;
     }
     hunk.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    updateDiffCounter();
   }
+
+  // Mark context lines around diff changes for collapsed mode
+  function markDiffContext(panel) {
+    var allCodeLines = panel.querySelectorAll('.code-lines');
+    allCodeLines.forEach(function(codeBlock) {
+      var lines = Array.from(codeBlock.querySelectorAll('.code-line'));
+      var diffIndices = [];
+      lines.forEach(function(line, idx) {
+        if (line.classList.contains('diff-added') || line.classList.contains('diff-removed')) {
+          diffIndices.push(idx);
+        }
+      });
+      if (diffIndices.length === 0) return;
+      // Mark context lines
+      var contextSet = {};
+      diffIndices.forEach(function(idx) {
+        for (var c = Math.max(0, idx - DIFF_CONTEXT_LINES); c <= Math.min(lines.length - 1, idx + DIFF_CONTEXT_LINES); c++) {
+          contextSet[c] = true;
+        }
+      });
+      lines.forEach(function(line, idx) {
+        if (contextSet[idx] && !line.classList.contains('diff-added') && !line.classList.contains('diff-removed')) {
+          line.classList.add('diff-context');
+        }
+      });
+      // Add separators between non-adjacent context groups
+      var visibleIndices = Object.keys(contextSet).map(Number).concat(diffIndices).sort(function(a,b){return a-b;});
+      var unique = visibleIndices.filter(function(v, i, a) { return !i || v !== a[i-1]; });
+      for (var i = 1; i < unique.length; i++) {
+        if (unique[i] - unique[i-1] > 1) {
+          var sepLine = lines[unique[i]];
+          if (sepLine) {
+            var sep = document.createElement('div');
+            sep.className = 'code-line diff-separator';
+            sep.innerHTML = '<span class="ln">\u22EF</span><span class="lc"></span>';
+            sepLine.parentNode.insertBefore(sep, sepLine);
+          }
+        }
+      }
+    });
+  }
+
+  function toggleDiffCollapse() {
+    var panels = document.querySelectorAll('.fv-tab-content');
+    var anyCollapsed = document.querySelector('.fv-tab-content.diff-collapsed');
+    panels.forEach(function(panel) {
+      if (anyCollapsed) {
+        panel.classList.remove('diff-collapsed');
+      } else {
+        panel.classList.add('diff-collapsed');
+      }
+    });
+  }
+
+  // Initialize collapsed diff mode on load
+  function initDiffCollapse() {
+    var panels = document.querySelectorAll('.fv-tab-content');
+    var hasDiffs = false;
+    panels.forEach(function(panel) {
+      if (panel.querySelector('.code-line.diff-added, .code-line.diff-removed')) {
+        hasDiffs = true;
+        markDiffContext(panel);
+        panel.classList.add('diff-collapsed');
+      }
+    });
+  }
+  setTimeout(initDiffCollapse, 300);
 
   // Reset diff index on tab switch
   document.querySelectorAll('.fv-tab').forEach(function(tab) {
-    tab.addEventListener('click', function() { currentDiffIdx = -1; });
+    tab.addEventListener('click', function() {
+      currentDiffIdx = -1;
+      updateDiffCounter();
+    });
   });
 
   // Search modal (Ctrl+P files, Ctrl+F text)
@@ -543,6 +643,7 @@ $body$
     { key: 'Ctrl+F', desc: 'Search text in all files' },
     { key: 'Ctrl+G', desc: 'Search text in active file' },
     { key: 'Ctrl+D', desc: 'Jump to next diff' },
+    { key: 'Ctrl+X', desc: 'Toggle collapsed/expanded diff' },
     { key: 'Ctrl+C', desc: 'Copy file path' },
     { key: 'Ctrl+J', desc: 'Open in Cursor' },
     { key: 'Ctrl+]', desc: 'Next tab' },
@@ -656,6 +757,7 @@ $body$
         case 'g': e.preventDefault(); toggleModal('text-active'); return;
         case '/': e.preventDefault(); toggleModal('shortcuts'); return;
         case 'd': e.preventDefault(); jumpToDiff(1); return;
+        case 'x': e.preventDefault(); toggleDiffCollapse(); return;
         case 'c': e.preventDefault(); var fp = getActiveFilePath(); if (fp) copyToClipboard(fp); return;
         case 'j': e.preventDefault(); var fp2 = getActiveFilePath(); if (fp2) fetch('/_open-in-editor?path=' + encodeURIComponent(fp2)); return;
         case ']': e.preventDefault(); cycleTab(1); return;
