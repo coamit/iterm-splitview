@@ -1,4 +1,4 @@
-
+#!/bin/bash
 # render.sh — HTML generation for file content and tabbed pages
 # shellcheck disable=SC2153  # Variables (ACTIVE_FILE etc.) are defined in config.sh
 
@@ -145,7 +145,6 @@ _count_valid_tabs() {
 
 _tab_icon_for_file() {
   local fp="$1" mode="$2"
-  local doc_icon='<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:-2px;margin-right:4px;opacity:0.6"><path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 9 4.25V1.5Zm6.75.062V4.25c0 .138.112.25.25.25h2.688l-.011-.013-2.914-2.914-.013-.011Z"/></svg>'
   local code_icon='<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:-2px;margin-right:4px;opacity:0.6"><path d="m11.28 3.22 4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L13.94 8l-3.72-3.72a.749.749 0 0 1 .326-1.275.749.749 0 0 1 .734.215Zm-6.56 0a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042L2.06 8l3.72 3.72a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215L.47 8.53a.75.75 0 0 1 0-1.06Z"/></svg>'
   local diff_icon='<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:-2px;margin-right:4px;opacity:0.6"><path d="M11.93 1.25a1.75 1.75 0 0 1 2.632-.131l.014.014.136.136a1.75 1.75 0 0 1-.131 2.632l-9 7a1.75 1.75 0 0 1-.87.37l-3.16.39a.75.75 0 0 1-.83-.83l.39-3.16a1.75 1.75 0 0 1 .37-.87ZM2.25 14.5a.75.75 0 0 1 0-1.5h11.5a.75.75 0 0 1 0 1.5Z"/></svg>'
 
@@ -204,11 +203,13 @@ generate_tabbed_html() {
   if [ ! -f "$TABS_FILE" ] || [ ! -s "$TABS_FILE" ]; then
     # Empty state — generate minimal page with tab bar (no tabs)
     tab_count=0
-    printf '<div data-fv-gen="%s" data-fv-tabs="0" data-fv-theme="%s" style="display:none"></div>\n' "$gen_epoch" "$saved_theme" > "$body_tmp"
-    printf '<div class="fv-tab-bar"><div class="fv-tab-spacer"></div>' >> "$body_tmp"
-    printf '<div class="fv-tab-action" id="fv-refresh" title="Refresh"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 3a5 5 0 0 0-4.55 2.92.5.5 0 1 1-.9-.38A6 6 0 0 1 14 8a6 6 0 0 1-6 6 6 6 0 0 1-5.46-3.54.5.5 0 0 1 .92-.38A5 5 0 1 0 8 3z"/><path d="M6.5 1a.5.5 0 0 1 .5.5V5h3.5a.5.5 0 0 1 0 1H6.5a.5.5 0 0 1-.5-.5V1.5a.5.5 0 0 1 .5-.5z"/></svg></div>' >> "$body_tmp"
-    printf '</div>\n' >> "$body_tmp"
-    printf '<div class="fv-tab-content active" id="fv-tab-empty" style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 50px);color:#6a7080;font-size:13px;font-family:-apple-system,sans-serif">Press Ctrl+O to open a file</div>\n' >> "$body_tmp"
+    {
+      printf '<div data-fv-gen="%s" data-fv-tabs="0" data-fv-theme="%s" style="display:none"></div>\n' "$gen_epoch" "$saved_theme"
+      printf '<div class="fv-tab-bar"><div class="fv-tab-spacer"></div>'
+      printf '<div class="fv-tab-action" id="fv-refresh" title="Refresh"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 3a5 5 0 0 0-4.55 2.92.5.5 0 1 1-.9-.38A6 6 0 0 1 14 8a6 6 0 0 1-6 6 6 6 0 0 1-5.46-3.54.5.5 0 0 1 .92-.38A5 5 0 1 0 8 3z"/><path d="M6.5 1a.5.5 0 0 1 .5.5V5h3.5a.5.5 0 0 1 0 1H6.5a.5.5 0 0 1-.5-.5V1.5a.5.5 0 0 1 .5-.5z"/></svg></div>'
+      printf '</div>\n'
+      printf '<div class="fv-tab-content active" id="fv-tab-empty" style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 50px);color:#6a7080;font-size:13px;font-family:-apple-system,sans-serif">Press Ctrl+O to open a file</div>\n'
+    } > "$body_tmp"
   else
     active_file=$(_resolve_active_file)
     tab_count=$(_count_valid_tabs)
@@ -217,7 +218,21 @@ generate_tabbed_html() {
     _generate_tab_panels "$active_file" "$body_tmp"
   fi
 
-  awk -v bodyfile="$body_tmp" '
+  # Generate inline theme CSS for instant paint
+  local theme_css=""
+  case "$saved_theme" in
+    obsidian)  theme_css='<style id="fv-theme-inline">body{color:#cccccc;background:#1b1b1f}.fv-tab-bar{background:#151518;border-bottom-color:#2d2d33}.fv-tab{color:#6e6e7a;border-right-color:#232328}.fv-tab.active{color:#e0e0e0;background:#1b1b1f}.fv-tab.active::after{background:#a78bfa}code{background:#232327;color:#d4a051}pre{background:#1e1e22;border-color:#2d2d33}.code-file-header{background:#222226;border-bottom-color:#2d2d33;color:#6e6e7a}.code-file-header .filename{color:#cccccc}.code-file-header .lang-badge{background:#2d2d33;color:#6e6e7a}.ln{color:#4e4e58;border-right-color:#2d2d33}h1,h2,h3{color:#e0e0e0;border-bottom-color:#2d2d33}a{color:#a78bfa}strong{color:#e0e0e0}</style><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css">' ;;
+    evergreen) theme_css='<style id="fv-theme-inline">body{color:#c8d4cc;background:#1a2320}.fv-tab-bar{background:#141d1a;border-bottom-color:#2d4038}.fv-tab{color:#6b8275;border-right-color:#233029}.fv-tab.active{color:#e2ece6;background:#1a2320}.fv-tab.active::after{background:#6ee7b7}code{background:#243530;color:#fcd34d}pre{background:#1c2824;border-color:#2d4038}.code-file-header{background:#213029;border-bottom-color:#2d4038;color:#6b8275}.code-file-header .filename{color:#c8d4cc}.code-file-header .lang-badge{background:#2d4038;color:#6b8275}.ln{color:#4a6358;border-right-color:#2d4038}h1,h2,h3{color:#e2ece6;border-bottom-color:#2d4038}a{color:#6ee7b7}strong{color:#e2ece6}</style>' ;;
+    paper)     theme_css='<style id="fv-theme-inline">body{color:#24292e;background:#ffffff}.fv-tab-bar{background:#eaecef;border-bottom-color:#d0d7de}.fv-tab{color:#6a737d;border-right-color:#d0d7de}.fv-tab.active{color:#24292e;background:#ffffff}.fv-tab.active::after{background:#0366d6}code{background:#f6f8fa;color:#c45100}pre{background:#fafafa;border-color:#d0d7de}.code-file-header{background:#f6f8fa;border-bottom-color:#d0d7de;color:#6a737d}.code-file-header .filename{color:#24292e}.code-file-header .lang-badge{background:#d0d7de;color:#6a737d}.ln{color:#bbb;border-right-color:#e1e4e8}h1,h2,h3{color:#24292e;border-bottom-color:#e1e4e8}a{color:#0366d6}strong{color:#24292e}</style><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css">' ;;
+    latte)     theme_css='<style id="fv-theme-inline">body{color:#3d3929;background:#faf8f5}.fv-tab-bar{background:#efe9e0;border-bottom-color:#ddd4c4}.fv-tab{color:#8a7e6b;border-right-color:#ddd4c4}.fv-tab.active{color:#2d2517;background:#faf8f5}.fv-tab.active::after{background:#b45309}code{background:#f3ede5;color:#92400e}pre{background:#f5f0ea;border-color:#ddd4c4}.code-file-header{background:#f0ebe3;border-bottom-color:#ddd4c4;color:#8a7e6b}.code-file-header .filename{color:#3d3929}.code-file-header .lang-badge{background:#ddd4c4;color:#8a7e6b}.ln{color:#b0a48e;border-right-color:#ddd4c4}h1,h2,h3{color:#2d2517;border-bottom-color:#ddd4c4}a{color:#b45309}strong{color:#2d2517}</style><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css">' ;;
+    arctic)    theme_css='<style id="fv-theme-inline">body{color:#1e3a5f;background:#f0f4f8}.fv-tab-bar{background:#dce4ed;border-bottom-color:#c5d3e0}.fv-tab{color:#5a7a9a;border-right-color:#c5d3e0}.fv-tab.active{color:#0f2440;background:#f0f4f8}.fv-tab.active::after{background:#2563eb}code{background:#e4eaf2;color:#c2410c}pre{background:#e8eef5;border-color:#c5d3e0}.code-file-header{background:#e1e8f0;border-bottom-color:#c5d3e0;color:#5a7a9a}.code-file-header .filename{color:#1e3a5f}.code-file-header .lang-badge{background:#c5d3e0;color:#5a7a9a}.ln{color:#8faabe;border-right-color:#c5d3e0}h1,h2,h3{color:#0f2440;border-bottom-color:#c5d3e0}a{color:#2563eb}strong{color:#0f2440}</style><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css">' ;;
+  esac
+
+  awk -v bodyfile="$body_tmp" -v themecss="$theme_css" '
+    /\$theme_style\$/ {
+      if (themecss != "") print themecss
+      next
+    }
     /\$body\$/ {
       while ((getline line < bodyfile) > 0) print line
       close(bodyfile)
