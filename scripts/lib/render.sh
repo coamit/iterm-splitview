@@ -211,7 +211,6 @@ _generate_tab_bar() {
   printf '<span class="fv-group-sel%s" data-group="files">&#9671; Files <span class="fv-group-count">%d</span></span>\n' "$files_active" "$files_count"
   printf '<span class="fv-group-sel%s" data-group="git">&#9095; Git Changes <span class="fv-group-count">%d</span></span>\n' "$git_active" "$git_count"
   printf '<div class="fv-tab-spacer"></div>'
-  printf '<div class="fv-tab-action" id="fv-git-reload" title="Reload git changes">&#9095;</div>'
   printf '<div class="fv-tab-action" id="fv-refresh" title="Refresh"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></div>'
   printf '</div>\n'
 
