@@ -538,6 +538,15 @@ $body$
         activateTab(newTabId);
         history.replaceState(null, '', '#' + newTabId);
       }
+      // Last tab closed — show empty state immediately
+      if (!document.querySelector('.fv-tab[data-tab]')) {
+        var emptyDiv = document.createElement('div');
+        emptyDiv.className = 'fv-tab-content active';
+        emptyDiv.id = 'fv-tab-empty';
+        emptyDiv.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 50px);color:#6a7080;font-size:13px;font-family:-apple-system,sans-serif';
+        emptyDiv.textContent = 'Press Ctrl+O to open a file';
+        document.body.appendChild(emptyDiv);
+      }
       pendingCloses++;
       fetch('/_close?path=' + encodeURIComponent(filePath) + '&active=' + encodeURIComponent(newActivePath))
         .finally(function() {
@@ -693,6 +702,7 @@ $body$
             }
             var ac = document.querySelector('.fv-tab-content.active');
             if (ac) { ac.style.opacity = '0'; }
+            loadingToast.style.display = 'flex';
             window.location.reload();
           }
         } catch(e) {}
