@@ -13,6 +13,8 @@ ACTIVE_FILE="$_FV_SESSION_DIR/active"
 WATCHER_PID="$_FV_SESSION_DIR/watcher.pid"
 SERVER_PID_FILE="$_FV_SESSION_DIR/server.pid"
 SERVER_PORT_FILE="$_FV_SESSION_DIR/server_port"
+CWD_FILE="$_FV_SESSION_DIR/cwd"
+SEARCH_ROOT_FILE="$_FV_SESSION_DIR/search_root"
 PANE_SESSION_ID_FILE="$_FV_SESSION_DIR/pane_session_id"
 mkdir -p /tmp/fileview
 

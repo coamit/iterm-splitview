@@ -1,4 +1,4 @@
-#!/bin/bash
+
 # render.sh — HTML generation for file content and tabbed pages
 # shellcheck disable=SC2153  # Variables (ACTIVE_FILE etc.) are defined in config.sh
 
