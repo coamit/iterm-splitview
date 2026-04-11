@@ -40,14 +40,29 @@ if [ "$MIGRATED" = true ]; then
   echo "    Migration from iterm-fileview plugin complete."
 fi
 
-# 1. Clone or update
-if [ -d "$INSTALL_DIR/.git" ]; then
-  echo "    Updating existing installation..."
-  git -C "$INSTALL_DIR" pull --quiet
+# 1. Detect repo or clone
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "$SCRIPT_DIR/scripts/fileview" ]; then
+  # Running from within the repo — use it directly
+  INSTALL_DIR="$SCRIPT_DIR"
+  echo "    Using local repository at $INSTALL_DIR"
+  # Clean up old clone if it exists elsewhere
+  OLD_CLONE="$HOME/.local/share/iterm-splitview"
+  if [ -d "$OLD_CLONE/.git" ] && [ "$INSTALL_DIR" != "$OLD_CLONE" ]; then
+    rm -rf "$OLD_CLONE"
+    echo "    Removed old clone at $OLD_CLONE"
+  fi
 else
-  echo "    Cloning repository..."
-  mkdir -p "$(dirname "$INSTALL_DIR")"
-  git clone --quiet "$REPO_URL" "$INSTALL_DIR"
+  # Running via curl/pipe — clone to standard location
+  INSTALL_DIR="$HOME/.local/share/iterm-splitview"
+  if [ -d "$INSTALL_DIR/.git" ]; then
+    echo "    Updating existing installation..."
+    git -C "$INSTALL_DIR" pull --quiet
+  else
+    echo "    Cloning repository..."
+    mkdir -p "$(dirname "$INSTALL_DIR")"
+    git clone --quiet "$REPO_URL" "$INSTALL_DIR"
+  fi
 fi
 
 # 2. Symlink scripts
