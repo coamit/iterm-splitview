@@ -953,20 +953,21 @@ $body$
   }
 
   function fuzzyHighlight(text, query) {
-    var escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    if (!query) return escaped;
+    if (!query) return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    // Match on raw text first, then escape with marks intact
     var ql = query.toLowerCase();
-    var result = '';
+    var marks = {};
     var qi = 0;
-    for (var i = 0; i < escaped.length && qi < ql.length; i++) {
-      if (escaped[i].toLowerCase() === ql[qi]) {
-        result += '<mark>' + escaped[i] + '</mark>';
-        qi++;
-      } else {
-        result += escaped[i];
-      }
+    for (var i = 0; i < text.length && qi < ql.length; i++) {
+      if (text[i].toLowerCase() === ql[qi]) { marks[i] = true; qi++; }
     }
-    return result + escaped.slice(i);
+    var result = '';
+    for (var j = 0; j < text.length; j++) {
+      var ch = text[j];
+      var esc = ch === '&' ? '&amp;' : ch === '<' ? '&lt;' : ch === '>' ? '&gt;' : ch;
+      result += marks[j] ? '<mark>' + esc + '</mark>' : esc;
+    }
+    return result;
   }
 
   function getTabData() {
