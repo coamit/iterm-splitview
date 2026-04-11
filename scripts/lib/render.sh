@@ -16,8 +16,27 @@ _build_diff_attrs() {
   fi
 }
 
+_git_file_status() {
+  local file="$1"
+  if git ls-files --others --exclude-standard 2>/dev/null | grep -qxF "$file"; then
+    echo "new"
+  elif git ls-files --deleted 2>/dev/null | grep -qxF "$file"; then
+    echo "deleted"
+  else
+    echo "modified"
+  fi
+}
+
 _build_diff_stats_html() {
-  local added="$1" removed="$2"
+  local added="$1" removed="$2" file_status="$3"
+  if [ "$file_status" = "new" ]; then
+    printf '<span class="diff-stats"><span class="diff-stat-add">new</span></span>'
+    return
+  fi
+  if [ "$file_status" = "deleted" ]; then
+    printf '<span class="diff-stats"><span class="diff-stat-rem">deleted</span></span>'
+    return
+  fi
   local add_count=0 rem_count=0
   if [ -n "$added" ]; then
     add_count=$(echo "$added" | tr ',' '\n' | wc -l | tr -d ' ')
@@ -64,11 +83,14 @@ generate_file_body() {
     lang=$(_lang_from_ext "$src_file")
 
     if [ "$mode" = "diff" ]; then
-      local added removed
+      local added removed file_status
       added=$(_get_diff_added "$src_file")
       removed=$(_get_diff_removed "$src_file")
       diff_attrs=$(_build_diff_attrs "$src_file")
-      diff_stats=$(_build_diff_stats_html "$added" "$removed")
+      local rel_path
+      rel_path=$(git -C "$(dirname "$src_file")" ls-files --full-name "$(basename "$src_file")" 2>/dev/null || basename "$src_file")
+      file_status=$(_git_file_status "$rel_path")
+      diff_stats=$(_build_diff_stats_html "$added" "$removed" "$file_status")
     fi
 
     _render_code_file "$src_file" "$lang" "$diff_attrs" "$diff_stats"
