@@ -37,6 +37,32 @@ if [ ! -f "$VIEW_TEMPLATE" ]; then
   cp "$SCRIPT_DIR/templates/viewer.html" "$VIEW_TEMPLATE"
 fi
 
+# --- Shared helpers ---
+
+_close_all() {
+  stop_watcher
+  stop_server
+  rm -f "$TABS_FILE" "$ACTIVE_FILE"
+  rm -f "$_FV_SESSION_DIR/plan" "$_FV_SESSION_DIR/mode"
+  _close_fileview_pane
+}
+
+_add_file_to_tabs() {
+  local abs_path="$1"
+  if ! grep -qxF "$abs_path" "$TABS_FILE" 2>/dev/null; then
+    echo "$abs_path" >> "$TABS_FILE"
+  fi
+}
+
+_generate_and_launch() {
+  if ! generate_tabbed_html; then
+    return 1
+  fi
+  start_watcher
+  start_server
+  _open_or_reuse_pane
+}
+
 # --- CLI Commands ---
 
 cmd_open() {
@@ -56,12 +82,8 @@ cmd_open() {
       echo "fileview: file not found: $src_file" >&2
       continue
     fi
-    # Add to tabs if not already present
-    if ! grep -qxF "$abs_path" "$TABS_FILE" 2>/dev/null; then
-      echo "$abs_path" >> "$TABS_FILE"
-    fi
+    _add_file_to_tabs "$abs_path"
     last_file="$abs_path"
-    # Track plan files per-session for fileview-plan shortcut
     case "$abs_path" in
       */.claude/plans/*.md) echo "$abs_path" > "$_FV_SESSION_DIR/plan" ;;
     esac
@@ -71,28 +93,16 @@ cmd_open() {
     return 1
   fi
 
-  # Set the last file as active
   echo "$last_file" > "$ACTIVE_FILE"
-
-  if ! generate_tabbed_html; then
-    return 1
-  fi
-  start_watcher
-  start_server
-  _open_or_reuse_pane
+  _generate_and_launch
 }
 
 cmd_close() {
   if [ $# -eq 0 ]; then
-    stop_watcher
-    stop_server
-    rm -f "$TABS_FILE" "$ACTIVE_FILE"
-    rm -f "$_FV_SESSION_DIR/plan" "$_FV_SESSION_DIR/mode"
-    _close_fileview_pane
+    _close_all
     return 0
   fi
 
-  # Remove a specific tab
   local target
   target=$(_resolve_path "$1")
 
@@ -102,20 +112,14 @@ cmd_close() {
 
   local tmp
   tmp=$(mktemp)
-  grep -vxF "$target" "$TABS_FILE" > "$tmp"
+  grep -vxF "$target" "$TABS_FILE" > "$tmp" || true
   mv "$tmp" "$TABS_FILE"
 
-  # If no tabs left, close everything
   if [ ! -s "$TABS_FILE" ]; then
-    stop_watcher
-    stop_server
-    rm -f "$TABS_FILE" "$ACTIVE_FILE"
-    rm -f "$_FV_SESSION_DIR/plan"
-    _close_fileview_pane
+    _close_all
     return 0
   fi
 
-  # If the closed tab was active, activate the last remaining tab
   local current_active
   current_active=$(cat "$ACTIVE_FILE" 2>/dev/null)
   if [ "$current_active" = "$target" ]; then
@@ -133,35 +137,32 @@ cmd_diff() {
     echo "fileview: no git changes found" >&2
     return 1
   fi
+
   _show_loading
-  # Set diff mode so generate_file_body adds diff data attributes
   echo "diff" > "$_FV_SESSION_DIR/mode"
-  # Append changed files to existing tabs (preserves plan file etc.)
   touch "$TABS_FILE"
+
   while IFS= read -r f; do
     [ -z "$f" ] && continue
     local abs_path
     abs_path=$(_resolve_path "$f")
     [ ! -f "$abs_path" ] && continue
-    if ! grep -qxF "$abs_path" "$TABS_FILE" 2>/dev/null; then
-      echo "$abs_path" >> "$TABS_FILE"
-    fi
+    _add_file_to_tabs "$abs_path"
   done <<< "$files"
+
   if [ ! -s "$TABS_FILE" ]; then
     rm -f "$_FV_SESSION_DIR/mode"
     return 1
   fi
-  # Keep existing active file; if none set, use the first tab
+
   if [ ! -f "$ACTIVE_FILE" ] || [ ! -s "$ACTIVE_FILE" ]; then
     head -1 "$TABS_FILE" > "$ACTIVE_FILE"
   fi
-  if ! generate_tabbed_html; then
+
+  if ! _generate_and_launch; then
     rm -f "$_FV_SESSION_DIR/mode"
     return 1
   fi
-  start_watcher
-  start_server
-  _open_or_reuse_pane
 }
 
 cmd_list() {
@@ -170,9 +171,7 @@ cmd_list() {
     return 0
   fi
   local active_file=""
-  if [ -f "$ACTIVE_FILE" ]; then
-    active_file=$(cat "$ACTIVE_FILE")
-  fi
+  [ -f "$ACTIVE_FILE" ] && active_file=$(cat "$ACTIVE_FILE")
   while IFS= read -r fp; do
     [ -z "$fp" ] && continue
     if [ "$fp" = "$active_file" ]; then

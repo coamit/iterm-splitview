@@ -52,69 +52,78 @@ PROFILE
   sleep 0.15
 }
 
+# Check if tracked pane still exists (with 60s cache)
+_check_pane_exists() {
+  local tracked_pane_id="$1"
+  local file_age=999
+  if command -v stat &>/dev/null; then
+    local file_mtime now_epoch
+    file_mtime=$(stat -f %m "$PANE_SESSION_ID_FILE" 2>/dev/null || echo 0)
+    now_epoch=$(date +%s)
+    file_age=$(( now_epoch - file_mtime ))
+  fi
+
+  if [ "$file_age" -lt 60 ]; then
+    return 0
+  fi
+
+  local pane_exists
+  pane_exists=$(osascript <<APPLESCRIPT
+    tell application "iTerm2"
+      repeat with w in windows
+        repeat with t in tabs of w
+          repeat with s in sessions of t
+            if unique ID of s is "$tracked_pane_id" then return "yes"
+          end repeat
+        end repeat
+      end repeat
+      return "no"
+    end tell
+APPLESCRIPT
+  )
+  if [ "$pane_exists" = "yes" ]; then
+    touch "$PANE_SESSION_ID_FILE"
+    return 0
+  fi
+  rm -f "$PANE_SESSION_ID_FILE"
+  return 1
+}
+
+_create_split_pane() {
+  local session_uuid="$1"
+  _ensure_dynamic_profile
+  local new_pane_id
+  new_pane_id=$(osascript <<APPLESCRIPT
+    tell application "iTerm2"
+      repeat with w in windows
+        repeat with t in tabs of w
+          repeat with s in sessions of t
+            if unique ID of s is "$session_uuid" then
+              tell s
+                set newSession to (split vertically with profile "$_PROFILE_NAME")
+              end tell
+              return unique ID of newSession
+            end if
+          end repeat
+        end repeat
+      end repeat
+    end tell
+APPLESCRIPT
+  )
+  echo "$new_pane_id" > "$PANE_SESSION_ID_FILE"
+  rm -f "$_PROFILE_FILE"
+}
+
 _open_or_reuse_pane() {
   local session_uuid="${ITERM_SESSION_ID#*:}"
-  local need_split=true
+
   if [ -f "$PANE_SESSION_ID_FILE" ]; then
     local tracked_pane_id
     tracked_pane_id=$(cat "$PANE_SESSION_ID_FILE")
-    if [ -n "$tracked_pane_id" ]; then
-      # Cache: skip AppleScript check if file was modified in the last 60s
-      local file_age=999
-      if command -v stat &>/dev/null; then
-        local file_mtime now_epoch
-        file_mtime=$(stat -f %m "$PANE_SESSION_ID_FILE" 2>/dev/null || echo 0)
-        now_epoch=$(date +%s)
-        file_age=$(( now_epoch - file_mtime ))
-      fi
-      if [ "$file_age" -lt 60 ]; then
-        need_split=false
-      else
-        local pane_exists
-        pane_exists=$(osascript <<APPLESCRIPT
-          tell application "iTerm2"
-            repeat with w in windows
-              repeat with t in tabs of w
-                repeat with s in sessions of t
-                  if unique ID of s is "$tracked_pane_id" then return "yes"
-                end repeat
-              end repeat
-            end repeat
-            return "no"
-          end tell
-APPLESCRIPT
-        )
-        if [ "$pane_exists" = "yes" ]; then
-          need_split=false
-          touch "$PANE_SESSION_ID_FILE"  # refresh cache TTL
-        else
-          rm -f "$PANE_SESSION_ID_FILE"
-        fi
-      fi
+    if [ -n "$tracked_pane_id" ] && _check_pane_exists "$tracked_pane_id"; then
+      return 0
     fi
   fi
 
-  if [ "$need_split" = true ]; then
-    _ensure_dynamic_profile
-    local new_pane_id
-    new_pane_id=$(osascript <<APPLESCRIPT
-      tell application "iTerm2"
-        repeat with w in windows
-          repeat with t in tabs of w
-            repeat with s in sessions of t
-              if unique ID of s is "$session_uuid" then
-                tell s
-                  set newSession to (split vertically with profile "$_PROFILE_NAME")
-                end tell
-                return unique ID of newSession
-              end if
-            end repeat
-          end repeat
-        end repeat
-      end tell
-APPLESCRIPT
-    )
-    echo "$new_pane_id" > "$PANE_SESSION_ID_FILE"
-    rm -f "$_PROFILE_FILE"
-  fi
+  _create_split_pane "$session_uuid"
 }

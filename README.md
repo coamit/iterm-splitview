@@ -89,9 +89,14 @@ fileedit close
 **Keyboard shortcuts** (in the browser pane):
 
 - `Ctrl+P` — search files by name
-- `Ctrl+F` — search text across all open files
+- `Ctrl+F` — search text across all files
+- `Ctrl+G` — search text in active file
+- `Ctrl+D` — jump to next diff
+- `Ctrl+C` — copy file path
+- `Ctrl+J` — open in Cursor
 - `Ctrl+]` / `Ctrl+[` — next/previous tab
 - `Ctrl+W` — close active tab
+- `Ctrl+/` — show all shortcuts
 
 ## How It Works
 
@@ -120,6 +125,18 @@ cp claude-code/SKILL.md ~/.claude/skills/iterm-splitview/SKILL.md
 ```
 
 ## Changelog
+
+### 2026-04-16 — Keyboard Shortcuts, Collapsed Diff, Line Numbers & UI Polish
+
+- **New shortcuts** — Ctrl+D (next diff), Ctrl+G (search active file), Ctrl+C (copy path), Ctrl+J (open in Cursor), Ctrl+X (toggle collapsed/expanded diff), Ctrl+/ (show shortcuts)
+- **Collapsed diff mode** — diff files open collapsed by default, showing only changes with 3 lines of context and dotted separators between sections; Ctrl+X toggles per tab
+- **Diff stats in file header** — `± +N -N` for modified files, `± new` / `± deleted` for untracked/deleted files
+- **Sticky diff counter** — shows current hunk position (e.g. "1/3") when navigating with Ctrl+D, dismisses on click/keypress
+- **Line numbers** — code files show line numbers (original numbers preserved in collapsed view); unselectable via CSS `::before` so copy-paste only grabs code
+- **Persistent search highlight** — text search results stay highlighted in yellow until click or keypress
+- **Collapsed indicator** — yellow "COLLAPSED" badge in file header when in collapsed mode
+- **Modal scrollbar** — visible thin scrollbar when results overflow
+- **Codebase refactoring** — extracted long methods and complex conditionals across all files
 
 ### 2026-04-11 — Multi-Tab, Search Modal, Diff Navigation & Installer Update
 

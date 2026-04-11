@@ -90,19 +90,41 @@ div.sourceCode { margin: 8px 0; }
 .code-line.diff-removed .ln { color: #ff5f57; }
 .code-line.diff-removed .lc { opacity: 0.6; text-decoration: line-through; }
 .code-line.diff-focus { outline: 1px solid rgba(115, 184, 240, 0.5); outline-offset: -1px; box-shadow: inset 3px 0 0 #73b8f0; }
+.code-line.search-highlight { background: rgba(226, 196, 108, 0.2); box-shadow: inset 3px 0 0 #e2c46c; }
 /* Diff navigation arrows */
-.diff-nav { position: fixed; right: 28px; top: 95px; display: none; flex-direction: column; gap: 6px; z-index: 200; }
-.diff-nav.visible { display: flex; }
-.diff-nav button { width: 36px; height: 36px; border: 1px solid #353b4a; border-radius: 6px; background: #1f2430; color: #ccd0d4; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0.85; }
-.diff-nav button:hover { background: #2a3040; opacity: 1; }
-.diff-nav .diff-counter { font-size: 10px; color: #6a7080; text-align: center; user-select: none; }
+/* Collapsed diff mode — hide non-change lines */
+.diff-collapsed .code-line { display: none; }
+.diff-collapsed .code-line.diff-added,
+.diff-collapsed .code-line.diff-removed,
+.diff-collapsed .code-line.diff-context { display: table-row; }
+.diff-collapsed .code-line.diff-separator,
+.diff-collapsed .code-line.diff-spacer { display: table-row; }
+.diff-collapsed .code-line.diff-separator .ln,
+.diff-collapsed .code-line.diff-separator .lc { background: transparent; padding: 0; height: 1px; border: none; border-bottom: 1px dotted #4b5263; }
+.diff-collapsed .code-line.diff-separator .lc { width: 100%; }
+.diff-collapsed .code-line.diff-spacer .ln,
+.diff-collapsed .code-line.diff-spacer .lc { background: transparent; padding: 6px 0; border: none; height: 0; }
+.diff-collapsed pre { overflow-x: hidden; }
+.diff-collapsed .code-line .lc { width: 100%; }
+/* Diff counter badge */
+.diff-counter-badge { position: fixed; bottom: 16px; left: 16px; background: #2a3040; border: 1px solid #353b4a; border-radius: 6px; padding: 4px 12px; font-size: 12px; font-family: "JetBrains Mono", monospace; color: #ccd0d4; z-index: 200; display: none; user-select: none; }
+.diff-counter-badge.visible { display: block; }
+.diff-view-mode { display: none; font-size: 10px; color: #ffcc66; font-family: -apple-system, sans-serif; padding: 2px 8px; background: rgba(255, 204, 102, 0.1); border: 1px solid rgba(255, 204, 102, 0.3); border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; margin-left: auto; }
+.diff-collapsed .diff-view-mode { display: inline-block; }
+.diff-stats { display: inline-flex; gap: 6px; margin-left: 8px; font-size: 11px; font-family: "JetBrains Mono", monospace; }
+.diff-stat-add { color: #28c840; }
+.diff-stat-rem { color: #ff5f57; }
 /* Quick-open modal (Cmd+P) */
 .fv-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; }
 .fv-modal-overlay.visible { display: flex; justify-content: center; padding-top: 60px; }
 .fv-modal { width: 420px; max-height: 360px; background: #1f2430; border: 1px solid #353b4a; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); display: flex; flex-direction: column; overflow: hidden; }
 .fv-modal-input { background: #171b24; border: none; border-bottom: 1px solid #353b4a; padding: 12px 14px; font-size: 14px; color: #e8ecf0; outline: none; font-family: -apple-system, sans-serif; }
-.fv-modal-input::placeholder { color: #4b5263; }
-.fv-modal-list { list-style: none; overflow-y: auto; flex: 1; padding: 0; margin: 0; }
+.fv-modal-input::placeholder { color: #8a90a0; }
+.fv-modal-list { list-style: none; overflow-y: auto; flex: 1; padding: 0; margin: 0; scrollbar-width: thin; scrollbar-color: #4b5263 transparent; }
+.fv-modal-list::-webkit-scrollbar { width: 6px; }
+.fv-modal-list::-webkit-scrollbar-track { background: transparent; }
+.fv-modal-list::-webkit-scrollbar-thumb { background: #4b5263; border-radius: 3px; }
+.fv-modal-list::-webkit-scrollbar-thumb:hover { background: #6a7080; }
 .fv-modal-item { padding: 8px 10px 8px 8px; cursor: pointer; font-size: 13px; font-family: -apple-system, sans-serif; color: #ccd0d4; display: flex; align-items: center; gap: 8px; border-left: 2px solid transparent; }
 .fv-modal-item:hover, .fv-modal-item.selected { background: #2a3040; }
 .fv-modal-item.selected { border-left-color: #73b8f0; }
@@ -112,8 +134,13 @@ div.sourceCode { margin: 8px 0; }
 .fv-modal-item .fv-modal-content { color: #ccd0d4; font-size: 12px; font-family: "JetBrains Mono", monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fv-modal-item .fv-modal-content mark { background: #e2c46c33; color: #ffcc66; }
 .fv-modal-item.text-result { flex-direction: column; align-items: flex-start; gap: 2px; }
+.fv-modal-item.shortcut-item { cursor: default; }
+.fv-modal-item.shortcut-item:hover { background: transparent; }
+.fv-shortcut-key { display: inline-block; background: #2a3040; border: 1px solid #353b4a; border-radius: 4px; padding: 1px 7px; font-size: 11px; font-family: -apple-system, sans-serif; color: #ccd0d4; min-width: 60px; text-align: center; }
+.fv-shortcut-desc { color: #8a90a0; font-size: 12px; font-family: -apple-system, sans-serif; }
 .fv-modal-mode { padding: 6px 14px; font-size: 11px; color: #4b5263; border-bottom: 1px solid #353b4a; font-family: -apple-system, sans-serif; }
-.ln { display: table-cell; width: 1px; user-select: none; text-align: right; color: #4b5263; border-right: 1px solid #353b4a; padding: 0 12px 0 16px; vertical-align: top; white-space: nowrap; font-size: 0.88em; font-family: "JetBrains Mono","Fira Code","SF Mono",Menlo,monospace; line-height: 1.6; }
+.ln { display: table-cell; width: 1px; user-select: none; text-align: right; color: #4b5263; border-right: 1px solid #353b4a; padding: 0 12px 0 16px; vertical-align: top; white-space: nowrap; font-size: 0.88em; font-family: "JetBrains Mono","Fira Code","SF Mono",Menlo,monospace; line-height: 1.6; -webkit-user-select: none; }
+.ln::before { content: attr(data-ln); }
 .lc { display: table-cell; padding: 0 16px; white-space: pre; vertical-align: top; font-size: 0.88em; font-family: "JetBrains Mono","Fira Code","SF Mono",Menlo,monospace; line-height: 1.6; }
 @media (prefers-color-scheme: light) {
   .ln { color: #bbb; border-right-color: #e1e4e8; }
@@ -122,12 +149,17 @@ div.sourceCode { margin: 8px 0; }
   .code-line.diff-added .ln { color: #1a7f37; }
   .code-line.diff-removed { background: rgba(255, 95, 87, 0.15); }
   .code-line.diff-removed .ln { color: #d1242f; }
-  .diff-nav button { background: #ffffff; border-color: #d0d7de; color: #24292e; }
-  .diff-nav button:hover { background: #f6f8fa; }
-  .diff-nav .diff-counter { color: #6a737d; }
+  .diff-stat-add { color: #1a7f37; }
+  .diff-stat-rem { color: #d1242f; }
+  .diff-collapsed .code-line.diff-separator .ln,
+  .diff-collapsed .code-line.diff-separator .lc { border-bottom-color: #d0d7de; }
+  .diff-collapsed .code-line.diff-spacer .ln,
+  .diff-collapsed .code-line.diff-spacer .lc { background: transparent; }
+  .diff-counter-badge { background: #ffffff; border-color: #d0d7de; color: #24292e; }
+  .diff-view-mode { color: #b8860b; background: rgba(184, 134, 11, 0.08); border-color: rgba(184, 134, 11, 0.3); }
   .fv-modal { background: #ffffff; border-color: #d0d7de; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
   .fv-modal-input { background: #f6f8fa; border-bottom-color: #d0d7de; color: #24292e; }
-  .fv-modal-input::placeholder { color: #9ca3af; }
+  .fv-modal-input::placeholder { color: #6a737d; }
   .fv-modal-item { color: #24292e; }
   .fv-modal-item:hover, .fv-modal-item.selected { background: #f6f8fa; }
   .fv-modal-item .fv-modal-fname { color: #24292e; }
@@ -136,13 +168,15 @@ div.sourceCode { margin: 8px 0; }
   .fv-modal-item .fv-modal-content { color: #24292e; }
   .fv-modal-item .fv-modal-content mark { background: #fff3b0; color: #24292e; }
   .fv-modal-mode { border-bottom-color: #d0d7de; color: #9ca3af; }
+  .fv-shortcut-key { background: #e1e4e8; border-color: #d0d7de; color: #24292e; }
 }
 .code-file-wrapper { border-radius: 8px; overflow: hidden; border: 1px solid #353b4a; margin: 0; }
 .code-file-header { background: #2a2f3d; padding: 8px 14px; font-size: 11px; color: #8a90a0; font-family: -apple-system, sans-serif; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #353b4a; }
 .code-file-header .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .dot-red { background: #ff5f57; } .dot-yellow { background: #febc2e; } .dot-green { background: #28c840; }
 .code-file-header .filename { color: #ccd0d4; font-weight: 500; margin-left: 4px; }
-.code-file-header .lang-badge { margin-left: auto; background: #353b4a; padding: 2px 8px; border-radius: 4px; font-size: 10px; color: #8a90a0; text-transform: uppercase; letter-spacing: 0.5px; }
+.code-file-header .lang-badge { background: #353b4a; padding: 2px 8px; border-radius: 4px; font-size: 10px; color: #8a90a0; text-transform: uppercase; letter-spacing: 0.5px; margin-left: auto; }
+.diff-collapsed .code-file-header .lang-badge { margin-left: 8px; }
 .code-file-wrapper pre { border: none; border-radius: 0; margin: 0; }
 blockquote { border-left: 3px solid #87d96c; padding-left: 10px; color: #8a90a0; margin: 6px 0; }
 ul, ol { padding-left: 20px; margin: 6px 0; } li { margin-bottom: 2px; }
@@ -184,17 +218,13 @@ tr:hover { background: #2a3040; }
 </head>
 <body>
 $body$
+<div class="diff-counter-badge" id="diff-counter-badge"></div>
 <div class="fv-modal-overlay" id="fv-modal-overlay">
   <div class="fv-modal">
     <input class="fv-modal-input" id="fv-modal-input" type="text" placeholder="Search files..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
     <div class="fv-modal-mode" id="fv-modal-mode">Files &middot; Ctrl+F for text search</div>
     <ul class="fv-modal-list" id="fv-modal-list"></ul>
   </div>
-</div>
-<div class="diff-nav" id="diff-nav">
-  <button id="diff-prev" title="Previous change">&#x25B2;</button>
-  <div class="diff-counter" id="diff-counter"></div>
-  <button id="diff-next" title="Next change">&#x25BC;</button>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
@@ -276,7 +306,7 @@ $body$
     var lines = highlighted.split('\n');
     if (lines[lines.length - 1] === '') lines.pop();
     var html = lines.map(function(line, i) {
-      return '<div class="code-line"><span class="lc">' + (line || '\u00a0') + '</span></div>';
+      return '<div class="code-line"><span class="ln" data-ln="' + (i + 1) + '"></span><span class="lc">' + (line || '\u00a0') + '</span></div>';
     }).join('');
     var wrapper = document.createElement('div');
     wrapper.className = 'code-lines';
@@ -396,16 +426,15 @@ $body$
     setInterval(updateTs, 1000);
   }
 
-  // Diff navigation — jump between changes
-  var diffNav = document.getElementById('diff-nav');
-  var diffCounter = document.getElementById('diff-counter');
+  // Diff navigation — jump between changes with Ctrl+D
   var currentDiffIdx = -1;
+  var diffCounterBadge = document.getElementById('diff-counter-badge');
+  var DIFF_CONTEXT_LINES = 3;
 
   function getDiffHunks() {
     var activePanel = document.querySelector('.fv-tab-content.active');
     if (!activePanel) activePanel = document;
     var lines = activePanel.querySelectorAll('.code-line.diff-added, .code-line.diff-removed');
-    // Group consecutive diff lines into hunks (return first line of each hunk)
     var hunks = [];
     var lastIdx = -2;
     lines.forEach(function(line) {
@@ -417,14 +446,32 @@ $body$
     return hunks;
   }
 
-  function updateDiffNav() {
-    var hunks = getDiffHunks();
-    if (hunks.length > 0) {
-      diffNav.classList.add('visible');
-      diffCounter.textContent = (currentDiffIdx + 1) + '/' + hunks.length;
-    } else {
-      diffNav.classList.remove('visible');
+  var _diffCounterDismiss = null;
+
+  function _clearDiffCounterListeners() {
+    if (_diffCounterDismiss) {
+      document.removeEventListener('click', _diffCounterDismiss);
+      document.removeEventListener('keydown', _diffCounterDismiss);
+      _diffCounterDismiss = null;
     }
+  }
+
+  function showDiffCounter() {
+    var hunks = getDiffHunks();
+    if (hunks.length === 0 || currentDiffIdx < 0) return;
+    diffCounterBadge.textContent = (currentDiffIdx + 1) + '/' + hunks.length;
+    diffCounterBadge.classList.add('visible');
+    _clearDiffCounterListeners();
+    _diffCounterDismiss = function(e) {
+      if (e.type === 'keydown' && e.ctrlKey && e.key === 'd') return;
+      diffCounterBadge.classList.remove('visible');
+      document.querySelectorAll('.code-line.diff-focus').forEach(function(el) { el.classList.remove('diff-focus'); });
+      _clearDiffCounterListeners();
+    };
+    setTimeout(function() {
+      document.addEventListener('click', _diffCounterDismiss);
+      document.addEventListener('keydown', _diffCounterDismiss);
+    }, 100);
   }
 
   function jumpToDiff(direction) {
@@ -433,9 +480,7 @@ $body$
     currentDiffIdx += direction;
     if (currentDiffIdx >= hunks.length) currentDiffIdx = 0;
     if (currentDiffIdx < 0) currentDiffIdx = hunks.length - 1;
-    // Clear previous focus
     document.querySelectorAll('.code-line.diff-focus').forEach(function(el) { el.classList.remove('diff-focus'); });
-    // Highlight all consecutive diff lines in this hunk
     var hunk = hunks[currentDiffIdx];
     var allLines = Array.from(hunk.closest('.code-lines').querySelectorAll('.code-line'));
     var startIdx = allLines.indexOf(hunk);
@@ -445,21 +490,114 @@ $body$
       } else break;
     }
     hunk.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    diffCounter.textContent = (currentDiffIdx + 1) + '/' + hunks.length;
+    showDiffCounter();
   }
 
-  document.getElementById('diff-prev').addEventListener('click', function() { jumpToDiff(-1); });
-  document.getElementById('diff-next').addEventListener('click', function() { jumpToDiff(1); });
+  // Mark context lines around diff changes for collapsed mode
+  function markDiffContext(panel) {
+    var allCodeLines = panel.querySelectorAll('.code-lines');
+    allCodeLines.forEach(function(codeBlock) {
+      var lines = Array.from(codeBlock.querySelectorAll('.code-line'));
+      var diffIndices = [];
+      lines.forEach(function(line, idx) {
+        if (line.classList.contains('diff-added') || line.classList.contains('diff-removed')) {
+          diffIndices.push(idx);
+        }
+      });
+      if (diffIndices.length === 0) return;
+      // Mark context lines
+      var contextSet = {};
+      diffIndices.forEach(function(idx) {
+        for (var c = Math.max(0, idx - DIFF_CONTEXT_LINES); c <= Math.min(lines.length - 1, idx + DIFF_CONTEXT_LINES); c++) {
+          contextSet[c] = true;
+        }
+      });
+      lines.forEach(function(line, idx) {
+        if (contextSet[idx] && !line.classList.contains('diff-added') && !line.classList.contains('diff-removed')) {
+          line.classList.add('diff-context');
+        }
+      });
+      // Add separators between non-adjacent context groups
+      var visibleIndices = Object.keys(contextSet).map(Number).concat(diffIndices).sort(function(a,b){return a-b;});
+      var unique = visibleIndices.filter(function(v, i, a) { return !i || v !== a[i-1]; });
 
-  // Show nav after tab switch and jump to first change
+      function insertSeparator(beforeEl) {
+        var spacerA = document.createElement('div');
+        spacerA.className = 'code-line diff-spacer';
+        spacerA.innerHTML = '<span class="ln"></span><span class="lc"></span>';
+        var sep = document.createElement('div');
+        sep.className = 'code-line diff-separator';
+        sep.innerHTML = '<span class="ln"></span><span class="lc"></span>';
+        var spacerB = document.createElement('div');
+        spacerB.className = 'code-line diff-spacer';
+        spacerB.innerHTML = '<span class="ln"></span><span class="lc"></span>';
+        beforeEl.parentNode.insertBefore(spacerA, beforeEl);
+        beforeEl.parentNode.insertBefore(sep, beforeEl);
+        beforeEl.parentNode.insertBefore(spacerB, beforeEl);
+      }
+
+      function appendSeparator(afterEl) {
+        var spacerA = document.createElement('div');
+        spacerA.className = 'code-line diff-spacer';
+        spacerA.innerHTML = '<span class="ln"></span><span class="lc"></span>';
+        var sep = document.createElement('div');
+        sep.className = 'code-line diff-separator';
+        sep.innerHTML = '<span class="ln"></span><span class="lc"></span>';
+        var spacerB = document.createElement('div');
+        spacerB.className = 'code-line diff-spacer';
+        spacerB.innerHTML = '<span class="ln"></span><span class="lc"></span>';
+        afterEl.parentNode.appendChild(spacerA);
+        afterEl.parentNode.appendChild(sep);
+        afterEl.parentNode.appendChild(spacerB);
+      }
+
+      // Separator at top if first visible line isn't line 1
+      if (unique.length > 0 && unique[0] > 0) {
+        insertSeparator(lines[unique[0]]);
+      }
+
+      // Separators between non-adjacent groups
+      for (var i = 1; i < unique.length; i++) {
+        if (unique[i] - unique[i-1] > 1) {
+          insertSeparator(lines[unique[i]]);
+        }
+      }
+
+      // Separator at bottom if last visible line isn't the last line
+      if (unique.length > 0 && unique[unique.length - 1] < lines.length - 1) {
+        var lastVisible = lines[unique[unique.length - 1]];
+        appendSeparator(lastVisible);
+      }
+    });
+  }
+
+  function toggleDiffCollapse() {
+    var panel = document.querySelector('.fv-tab-content.active');
+    if (!panel) return;
+    panel.classList.toggle('diff-collapsed');
+  }
+
+  // Initialize collapsed diff mode on load
+  function initDiffCollapse() {
+    var panels = document.querySelectorAll('.fv-tab-content');
+    var hasDiffs = false;
+    panels.forEach(function(panel) {
+      if (panel.querySelector('.code-line.diff-added, .code-line.diff-removed')) {
+        hasDiffs = true;
+        markDiffContext(panel);
+        panel.classList.add('diff-collapsed');
+      }
+    });
+  }
+  setTimeout(initDiffCollapse, 300);
+
+  // Reset diff index on tab switch
   document.querySelectorAll('.fv-tab').forEach(function(tab) {
     tab.addEventListener('click', function() {
       currentDiffIdx = -1;
-      setTimeout(function() { updateDiffNav(); }, 100);
+      diffCounterBadge.classList.remove('visible');
     });
   });
-  // Initial
-  setTimeout(function() { updateDiffNav(); }, 500);
 
   // Search modal (Ctrl+P files, Ctrl+F text)
   var modalOverlay = document.getElementById('fv-modal-overlay');
@@ -483,14 +621,16 @@ $body$
     return data;
   }
 
-  function searchText(query) {
+  function searchText(query, activeOnly) {
     if (!query || query.length < 2) return [];
     var results = [];
     var q = query.toLowerCase();
     var tabs = getTabData();
     var tabMap = {};
     tabs.forEach(function(t) { tabMap[t.tabId] = t; });
-    var panels = document.querySelectorAll('.fv-tab-content');
+    var panels = activeOnly
+      ? [document.querySelector('.fv-tab-content.active')].filter(Boolean)
+      : document.querySelectorAll('.fv-tab-content');
     panels.forEach(function(panel) {
       var tabId = panel.id;
       var tab = tabMap[tabId];
@@ -511,49 +651,88 @@ $body$
     return results;
   }
 
-  function renderModal(query) {
-    if (modalMode === 'text') {
-      var results = searchText(query);
-      modalItems = results;
-      modalSelectedIdx = Math.min(modalSelectedIdx, Math.max(0, modalItems.length - 1));
-      var q = (query || '').toLowerCase();
-      modalList.innerHTML = modalItems.map(function(item, i) {
-        var cls = 'fv-modal-item text-result' + (i === modalSelectedIdx ? ' selected' : '');
-        var escapedContent = item.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        if (q) {
-          var re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
-          escapedContent = escapedContent.replace(re, '<mark>$1</mark>');
-        }
-        return '<li class="' + cls + '" data-idx="' + i + '">' +
-          '<span class="fv-modal-fname">' + item.fname + '<span class="fv-modal-line">:' + item.lineNum + '</span></span>' +
-          '<span class="fv-modal-content">' + escapedContent.trim() + '</span></li>';
-      }).join('');
-    } else {
-      var tabs = getTabData();
-      var q = (query || '').toLowerCase();
-      modalItems = q ? tabs.filter(function(t) {
-        return t.fname.toLowerCase().indexOf(q) !== -1 || t.fpath.toLowerCase().indexOf(q) !== -1;
-      }) : tabs;
-      modalSelectedIdx = Math.min(modalSelectedIdx, Math.max(0, modalItems.length - 1));
-      modalList.innerHTML = modalItems.map(function(item, i) {
-        var cls = 'fv-modal-item' + (i === modalSelectedIdx ? ' selected' : '');
-        return '<li class="' + cls + '" data-idx="' + i + '"><span class="fv-modal-fname">' +
-          item.fname + '</span><span class="fv-modal-fpath">' + item.fpath + '</span></li>';
-      }).join('');
-    }
+  function renderShortcutsModal() {
+    modalItems = [];
+    modalList.innerHTML = shortcutsList.map(function(s) {
+      return '<li class="fv-modal-item shortcut-item">' +
+        '<span class="fv-shortcut-key">' + s.key + '</span>' +
+        '<span class="fv-shortcut-desc">' + s.desc + '</span></li>';
+    }).join('');
   }
+
+  function renderTextSearchModal(query) {
+    var results = searchText(query, modalMode === 'text-active');
+    modalItems = results;
+    modalSelectedIdx = Math.min(modalSelectedIdx, Math.max(0, modalItems.length - 1));
+    var q = (query || '').toLowerCase();
+    modalList.innerHTML = modalItems.map(function(item, i) {
+      var cls = 'fv-modal-item text-result' + (i === modalSelectedIdx ? ' selected' : '');
+      var escapedContent = item.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      if (q) {
+        var re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+        escapedContent = escapedContent.replace(re, '<mark>$1</mark>');
+      }
+      return '<li class="' + cls + '" data-idx="' + i + '">' +
+        '<span class="fv-modal-fname">' + item.fname + '<span class="fv-modal-line">:' + item.lineNum + '</span></span>' +
+        '<span class="fv-modal-content">' + escapedContent.trim() + '</span></li>';
+    }).join('');
+  }
+
+  function renderFileSearchModal(query) {
+    var tabs = getTabData();
+    var q = (query || '').toLowerCase();
+    modalItems = q ? tabs.filter(function(t) {
+      return t.fname.toLowerCase().indexOf(q) !== -1 || t.fpath.toLowerCase().indexOf(q) !== -1;
+    }) : tabs;
+    modalSelectedIdx = Math.min(modalSelectedIdx, Math.max(0, modalItems.length - 1));
+    modalList.innerHTML = modalItems.map(function(item, i) {
+      var cls = 'fv-modal-item' + (i === modalSelectedIdx ? ' selected' : '');
+      return '<li class="' + cls + '" data-idx="' + i + '"><span class="fv-modal-fname">' +
+        item.fname + '</span><span class="fv-modal-fpath">' + item.fpath + '</span></li>';
+    }).join('');
+  }
+
+  function renderModal(query) {
+    if (modalMode === 'shortcuts') return renderShortcutsModal();
+    if (modalMode === 'text' || modalMode === 'text-active') return renderTextSearchModal(query);
+    renderFileSearchModal(query);
+  }
+
+  var shortcutsList = [
+    { key: 'Ctrl+P', desc: 'Search files by name' },
+    { key: 'Ctrl+F', desc: 'Search text in all files' },
+    { key: 'Ctrl+G', desc: 'Search text in active file' },
+    { key: 'Ctrl+D', desc: 'Jump to next diff' },
+    { key: 'Ctrl+X', desc: 'Toggle collapsed/expanded diff' },
+    { key: 'Ctrl+C', desc: 'Copy file path' },
+    { key: 'Ctrl+J', desc: 'Open in Cursor' },
+    { key: 'Ctrl+]', desc: 'Next tab' },
+    { key: 'Ctrl+[', desc: 'Previous tab' },
+    { key: 'Ctrl+W', desc: 'Close tab' },
+    { key: 'Ctrl+/', desc: 'Show shortcuts' },
+    { key: 'Esc', desc: 'Close dialog' }
+  ];
+
+  var modalModeConfig = {
+    'files':       { placeholder: 'Search files...',          label: '<span style="color:#ffcc66">Files</span> \u00b7 Ctrl+F for text search' },
+    'text':        { placeholder: 'Search in all files...',   label: '<span style="color:#ffcc66">All Files</span> \u00b7 Ctrl+G for active file' },
+    'text-active': { placeholder: 'Search in active file...', label: '<span style="color:#ffcc66">Active File</span> \u00b7 Ctrl+F for all files' },
+    'shortcuts':   { placeholder: '',                         label: 'Keyboard Shortcuts' }
+  };
 
   function openModal(mode) {
     modalMode = mode || 'files';
     modalInput.value = '';
     modalSelectedIdx = 0;
-    modalInput.placeholder = modalMode === 'text' ? 'Search in files...' : 'Search files...';
-    modalModeEl.textContent = modalMode === 'text'
-      ? 'Text \u00b7 Ctrl+P for file search'
-      : 'Files \u00b7 Ctrl+F for text search';
+    var cfg = modalModeConfig[modalMode] || modalModeConfig['files'];
+    modalInput.style.display = modalMode === 'shortcuts' ? 'none' : '';
+    modalInput.placeholder = cfg.placeholder;
+    modalModeEl.innerHTML = cfg.label;
     renderModal('');
     modalOverlay.classList.add('visible');
-    setTimeout(function() { modalInput.focus(); }, 50);
+    if (modalMode !== 'shortcuts') {
+      setTimeout(function() { modalInput.focus(); }, 50);
+    }
   }
 
   function closeModal() {
@@ -561,61 +740,89 @@ $body$
     modalOverlay.classList.remove('visible');
   }
 
+  function highlightLineUntilDismiss(lineEl) {
+    lineEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    lineEl.classList.add('search-highlight');
+    function clear() {
+      document.querySelectorAll('.code-line.search-highlight').forEach(function(el) { el.classList.remove('search-highlight'); });
+      document.removeEventListener('click', clear);
+      document.removeEventListener('keydown', clear);
+    }
+    setTimeout(function() {
+      document.addEventListener('click', clear, { once: true });
+      document.addEventListener('keydown', clear, { once: true });
+    }, 100);
+  }
+
   function selectModalItem() {
     if (modalItems.length === 0) return;
     var item = modalItems[modalSelectedIdx];
-    var wasText = modalMode === 'text';
+    var wasText = modalMode === 'text' || modalMode === 'text-active';
     activateTab(item.tabId);
     history.replaceState(null, '', '#' + item.tabId);
     closeModal();
     if (wasText && item.lineEl) {
-      setTimeout(function() {
-        item.lineEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        item.lineEl.classList.add('diff-focus');
-        setTimeout(function() { item.lineEl.classList.remove('diff-focus'); }, 2000);
-      }, 50);
+      setTimeout(function() { highlightLineUntilDismiss(item.lineEl); }, 50);
     }
     currentDiffIdx = -1;
-    setTimeout(function() { updateDiffNav(); }, 100);
+  }
+
+  function getActiveFilePath() {
+    var tab = document.querySelector('.fv-tab.active');
+    return tab ? tab.getAttribute('title') : '';
+  }
+
+  function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).catch(function() {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    });
+  }
+
+  function toggleModal(mode) {
+    if (modalOverlay.classList.contains('visible') && modalMode === mode) closeModal();
+    else openModal(mode);
+  }
+
+  function cycleTab(direction) {
+    var tabs = Array.from(document.querySelectorAll('.fv-tab[data-tab]'));
+    if (tabs.length < 2) return;
+    var activeIdx = tabs.findIndex(function(t) { return t.classList.contains('active'); });
+    var newIdx = direction > 0 ? (activeIdx + 1) % tabs.length : (activeIdx - 1 + tabs.length) % tabs.length;
+    var newTabId = tabs[newIdx].getAttribute('data-tab');
+    activateTab(newTabId);
+    history.replaceState(null, '', '#' + newTabId);
+    currentDiffIdx = -1;
+  }
+
+  function closeActiveTab() {
+    var tab = document.querySelector('.fv-tab.active');
+    if (tab) {
+      var closeBtn = tab.querySelector('.fv-tab-close');
+      if (closeBtn) closeBtn.click();
+    }
   }
 
   document.addEventListener('keydown', function(e) {
-    if (e.ctrlKey && e.key === 'p') {
-      e.preventDefault();
-      if (modalOverlay.classList.contains('visible') && modalMode === 'files') closeModal();
-      else openModal('files');
-    }
-    if (e.ctrlKey && e.key === 'f') {
-      e.preventDefault();
-      if (modalOverlay.classList.contains('visible') && modalMode === 'text') closeModal();
-      else openModal('text');
-    }
-    if (e.ctrlKey && e.key === 'j') {
-      e.preventDefault();
-      var activeTab = document.querySelector('.fv-tab.active');
-      if (activeTab) {
-        var fpath = activeTab.getAttribute('title');
-        if (fpath) fetch('/_open-in-editor?path=' + encodeURIComponent(fpath));
-      }
-    }
-    if (e.ctrlKey && (e.key === ']' || e.key === '[')) {
-      e.preventDefault();
-      var tabs = Array.from(document.querySelectorAll('.fv-tab[data-tab]'));
-      if (tabs.length < 2) return;
-      var activeIdx = tabs.findIndex(function(t) { return t.classList.contains('active'); });
-      var newIdx = e.key === ']' ? (activeIdx + 1) % tabs.length : (activeIdx - 1 + tabs.length) % tabs.length;
-      var newTabId = tabs[newIdx].getAttribute('data-tab');
-      activateTab(newTabId);
-      history.replaceState(null, '', '#' + newTabId);
-      currentDiffIdx = -1;
-      setTimeout(function() { updateDiffNav(); }, 100);
-    }
-    if (e.ctrlKey && e.key === 'w') {
-      e.preventDefault();
-      var activeTab = document.querySelector('.fv-tab.active');
-      if (activeTab) {
-        var closeBtn = activeTab.querySelector('.fv-tab-close');
-        if (closeBtn) closeBtn.click();
+    if (e.ctrlKey) {
+      switch (e.key) {
+        case 'p': e.preventDefault(); toggleModal('files'); return;
+        case 'f': e.preventDefault(); toggleModal('text'); return;
+        case 'g': e.preventDefault(); toggleModal('text-active'); return;
+        case '/': e.preventDefault(); toggleModal('shortcuts'); return;
+        case 'd': e.preventDefault(); jumpToDiff(1); return;
+        case 'x': e.preventDefault(); toggleDiffCollapse(); return;
+        case 'c': e.preventDefault(); var fp = getActiveFilePath(); if (fp) copyToClipboard(fp); return;
+        case 'j': e.preventDefault(); var fp2 = getActiveFilePath(); if (fp2) fetch('/_open-in-editor?path=' + encodeURIComponent(fp2)); return;
+        case ']': e.preventDefault(); cycleTab(1); return;
+        case '[': e.preventDefault(); cycleTab(-1); return;
+        case 'w': e.preventDefault(); closeActiveTab(); return;
       }
     }
     if (!modalOverlay.classList.contains('visible')) return;
@@ -627,7 +834,7 @@ $body$
 
   modalInput.addEventListener('input', function() {
     modalSelectedIdx = 0;
-    if (modalMode === 'text') {
+    if (modalMode === 'text' || modalMode === 'text-active') {
       clearTimeout(searchTimer);
       searchTimer = setTimeout(function() { renderModal(modalInput.value); }, 150);
     } else {

@@ -5,7 +5,7 @@ stop_server() {
   if [ -f "$SERVER_PID_FILE" ]; then
     local pid
     pid=$(cat "$SERVER_PID_FILE")
-    kill "$pid" 2>/dev/null
+    kill "$pid" 2>/dev/null || true
     rm -f "$SERVER_PID_FILE" "$SERVER_PORT_FILE"
   fi
 }
