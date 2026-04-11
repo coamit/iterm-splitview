@@ -491,45 +491,51 @@ $body$
     return results;
   }
 
+  function renderShortcutsModal() {
+    modalItems = [];
+    modalList.innerHTML = shortcutsList.map(function(s) {
+      return '<li class="fv-modal-item shortcut-item">' +
+        '<span class="fv-shortcut-key">' + s.key + '</span>' +
+        '<span class="fv-shortcut-desc">' + s.desc + '</span></li>';
+    }).join('');
+  }
+
+  function renderTextSearchModal(query) {
+    var results = searchText(query, modalMode === 'text-active');
+    modalItems = results;
+    modalSelectedIdx = Math.min(modalSelectedIdx, Math.max(0, modalItems.length - 1));
+    var q = (query || '').toLowerCase();
+    modalList.innerHTML = modalItems.map(function(item, i) {
+      var cls = 'fv-modal-item text-result' + (i === modalSelectedIdx ? ' selected' : '');
+      var escapedContent = item.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      if (q) {
+        var re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+        escapedContent = escapedContent.replace(re, '<mark>$1</mark>');
+      }
+      return '<li class="' + cls + '" data-idx="' + i + '">' +
+        '<span class="fv-modal-fname">' + item.fname + '<span class="fv-modal-line">:' + item.lineNum + '</span></span>' +
+        '<span class="fv-modal-content">' + escapedContent.trim() + '</span></li>';
+    }).join('');
+  }
+
+  function renderFileSearchModal(query) {
+    var tabs = getTabData();
+    var q = (query || '').toLowerCase();
+    modalItems = q ? tabs.filter(function(t) {
+      return t.fname.toLowerCase().indexOf(q) !== -1 || t.fpath.toLowerCase().indexOf(q) !== -1;
+    }) : tabs;
+    modalSelectedIdx = Math.min(modalSelectedIdx, Math.max(0, modalItems.length - 1));
+    modalList.innerHTML = modalItems.map(function(item, i) {
+      var cls = 'fv-modal-item' + (i === modalSelectedIdx ? ' selected' : '');
+      return '<li class="' + cls + '" data-idx="' + i + '"><span class="fv-modal-fname">' +
+        item.fname + '</span><span class="fv-modal-fpath">' + item.fpath + '</span></li>';
+    }).join('');
+  }
+
   function renderModal(query) {
-    if (modalMode === 'shortcuts') {
-      modalItems = [];
-      modalList.innerHTML = shortcutsList.map(function(s) {
-        return '<li class="fv-modal-item shortcut-item">' +
-          '<span class="fv-shortcut-key">' + s.key + '</span>' +
-          '<span class="fv-shortcut-desc">' + s.desc + '</span></li>';
-      }).join('');
-      return;
-    }
-    if (modalMode === 'text' || modalMode === 'text-active') {
-      var results = searchText(query, modalMode === 'text-active');
-      modalItems = results;
-      modalSelectedIdx = Math.min(modalSelectedIdx, Math.max(0, modalItems.length - 1));
-      var q = (query || '').toLowerCase();
-      modalList.innerHTML = modalItems.map(function(item, i) {
-        var cls = 'fv-modal-item text-result' + (i === modalSelectedIdx ? ' selected' : '');
-        var escapedContent = item.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        if (q) {
-          var re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
-          escapedContent = escapedContent.replace(re, '<mark>$1</mark>');
-        }
-        return '<li class="' + cls + '" data-idx="' + i + '">' +
-          '<span class="fv-modal-fname">' + item.fname + '<span class="fv-modal-line">:' + item.lineNum + '</span></span>' +
-          '<span class="fv-modal-content">' + escapedContent.trim() + '</span></li>';
-      }).join('');
-    } else {
-      var tabs = getTabData();
-      var q = (query || '').toLowerCase();
-      modalItems = q ? tabs.filter(function(t) {
-        return t.fname.toLowerCase().indexOf(q) !== -1 || t.fpath.toLowerCase().indexOf(q) !== -1;
-      }) : tabs;
-      modalSelectedIdx = Math.min(modalSelectedIdx, Math.max(0, modalItems.length - 1));
-      modalList.innerHTML = modalItems.map(function(item, i) {
-        var cls = 'fv-modal-item' + (i === modalSelectedIdx ? ' selected' : '');
-        return '<li class="' + cls + '" data-idx="' + i + '"><span class="fv-modal-fname">' +
-          item.fname + '</span><span class="fv-modal-fpath">' + item.fpath + '</span></li>';
-      }).join('');
-    }
+    if (modalMode === 'shortcuts') return renderShortcutsModal();
+    if (modalMode === 'text' || modalMode === 'text-active') return renderTextSearchModal(query);
+    renderFileSearchModal(query);
   }
 
   var shortcutsList = [
@@ -546,26 +552,21 @@ $body$
     { key: 'Esc', desc: 'Close dialog' }
   ];
 
+  var modalModeConfig = {
+    'files':       { placeholder: 'Search files...',          label: '<span style="color:#ffcc66">Files</span> \u00b7 Ctrl+F for text search' },
+    'text':        { placeholder: 'Search in all files...',   label: '<span style="color:#ffcc66">All Files</span> \u00b7 Ctrl+G for active file' },
+    'text-active': { placeholder: 'Search in active file...', label: '<span style="color:#ffcc66">Active File</span> \u00b7 Ctrl+F for all files' },
+    'shortcuts':   { placeholder: '',                         label: 'Keyboard Shortcuts' }
+  };
+
   function openModal(mode) {
     modalMode = mode || 'files';
     modalInput.value = '';
     modalSelectedIdx = 0;
-    if (modalMode === 'shortcuts') {
-      modalInput.style.display = 'none';
-      modalModeEl.textContent = 'Keyboard Shortcuts';
-    } else {
-      modalInput.style.display = '';
-      if (modalMode === 'text') {
-        modalInput.placeholder = 'Search in all files...';
-        modalModeEl.innerHTML = '<span style="color:#ffcc66">All Files</span> \u00b7 Ctrl+G for active file';
-      } else if (modalMode === 'text-active') {
-        modalInput.placeholder = 'Search in active file...';
-        modalModeEl.innerHTML = '<span style="color:#ffcc66">Active File</span> \u00b7 Ctrl+F for all files';
-      } else {
-        modalInput.placeholder = 'Search files...';
-        modalModeEl.innerHTML = '<span style="color:#ffcc66">Files</span> \u00b7 Ctrl+F for text search';
-      }
-    }
+    var cfg = modalModeConfig[modalMode] || modalModeConfig['files'];
+    modalInput.style.display = modalMode === 'shortcuts' ? 'none' : '';
+    modalInput.placeholder = cfg.placeholder;
+    modalModeEl.innerHTML = cfg.label;
     renderModal('');
     modalOverlay.classList.add('visible');
     if (modalMode !== 'shortcuts') {
@@ -578,6 +579,20 @@ $body$
     modalOverlay.classList.remove('visible');
   }
 
+  function highlightLineUntilDismiss(lineEl) {
+    lineEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    lineEl.classList.add('search-highlight');
+    function clear() {
+      document.querySelectorAll('.code-line.search-highlight').forEach(function(el) { el.classList.remove('search-highlight'); });
+      document.removeEventListener('click', clear);
+      document.removeEventListener('keydown', clear);
+    }
+    setTimeout(function() {
+      document.addEventListener('click', clear, { once: true });
+      document.addEventListener('keydown', clear, { once: true });
+    }, 100);
+  }
+
   function selectModalItem() {
     if (modalItems.length === 0) return;
     var item = modalItems[modalSelectedIdx];
@@ -586,93 +601,66 @@ $body$
     history.replaceState(null, '', '#' + item.tabId);
     closeModal();
     if (wasText && item.lineEl) {
-      setTimeout(function() {
-        item.lineEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        item.lineEl.classList.add('search-highlight');
-        function clearHighlight() {
-          document.querySelectorAll('.code-line.search-highlight').forEach(function(el) { el.classList.remove('search-highlight'); });
-          document.removeEventListener('click', clearHighlight);
-          document.removeEventListener('keydown', clearHighlight);
-        }
-        setTimeout(function() {
-          document.addEventListener('click', clearHighlight, { once: true });
-          document.addEventListener('keydown', clearHighlight, { once: true });
-        }, 100);
-      }, 50);
+      setTimeout(function() { highlightLineUntilDismiss(item.lineEl); }, 50);
     }
     currentDiffIdx = -1;
   }
 
+  function getActiveFilePath() {
+    var tab = document.querySelector('.fv-tab.active');
+    return tab ? tab.getAttribute('title') : '';
+  }
+
+  function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).catch(function() {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    });
+  }
+
+  function toggleModal(mode) {
+    if (modalOverlay.classList.contains('visible') && modalMode === mode) closeModal();
+    else openModal(mode);
+  }
+
+  function cycleTab(direction) {
+    var tabs = Array.from(document.querySelectorAll('.fv-tab[data-tab]'));
+    if (tabs.length < 2) return;
+    var activeIdx = tabs.findIndex(function(t) { return t.classList.contains('active'); });
+    var newIdx = direction > 0 ? (activeIdx + 1) % tabs.length : (activeIdx - 1 + tabs.length) % tabs.length;
+    var newTabId = tabs[newIdx].getAttribute('data-tab');
+    activateTab(newTabId);
+    history.replaceState(null, '', '#' + newTabId);
+    currentDiffIdx = -1;
+  }
+
+  function closeActiveTab() {
+    var tab = document.querySelector('.fv-tab.active');
+    if (tab) {
+      var closeBtn = tab.querySelector('.fv-tab-close');
+      if (closeBtn) closeBtn.click();
+    }
+  }
+
   document.addEventListener('keydown', function(e) {
-    if (e.ctrlKey && e.key === 'p') {
-      e.preventDefault();
-      if (modalOverlay.classList.contains('visible') && modalMode === 'files') closeModal();
-      else openModal('files');
-    }
-    if (e.ctrlKey && e.key === 'f') {
-      e.preventDefault();
-      if (modalOverlay.classList.contains('visible') && modalMode === 'text') closeModal();
-      else openModal('text');
-    }
-    if (e.ctrlKey && e.key === 'g') {
-      e.preventDefault();
-      if (modalOverlay.classList.contains('visible') && modalMode === 'text-active') closeModal();
-      else openModal('text-active');
-    }
-    if (e.ctrlKey && e.key === 'd') {
-      e.preventDefault();
-      jumpToDiff(1);
-    }
-    if (e.ctrlKey && e.key === 'c') {
-      e.preventDefault();
-      var activeTab = document.querySelector('.fv-tab.active');
-      if (activeTab) {
-        var fpath = activeTab.getAttribute('title');
-        if (fpath) {
-          navigator.clipboard.writeText(fpath).catch(function() {
-            // Fallback for non-HTTPS contexts
-            var ta = document.createElement('textarea');
-            ta.value = fpath;
-            ta.style.position = 'fixed';
-            ta.style.opacity = '0';
-            document.body.appendChild(ta);
-            ta.select();
-            document.execCommand('copy');
-            document.body.removeChild(ta);
-          });
-        }
-      }
-    }
-    if (e.ctrlKey && e.key === '/') {
-      e.preventDefault();
-      if (modalOverlay.classList.contains('visible') && modalMode === 'shortcuts') closeModal();
-      else openModal('shortcuts');
-    }
-    if (e.ctrlKey && e.key === 'j') {
-      e.preventDefault();
-      var activeTab = document.querySelector('.fv-tab.active');
-      if (activeTab) {
-        var fpath = activeTab.getAttribute('title');
-        if (fpath) fetch('/_open-in-editor?path=' + encodeURIComponent(fpath));
-      }
-    }
-    if (e.ctrlKey && (e.key === ']' || e.key === '[')) {
-      e.preventDefault();
-      var tabs = Array.from(document.querySelectorAll('.fv-tab[data-tab]'));
-      if (tabs.length < 2) return;
-      var activeIdx = tabs.findIndex(function(t) { return t.classList.contains('active'); });
-      var newIdx = e.key === ']' ? (activeIdx + 1) % tabs.length : (activeIdx - 1 + tabs.length) % tabs.length;
-      var newTabId = tabs[newIdx].getAttribute('data-tab');
-      activateTab(newTabId);
-      history.replaceState(null, '', '#' + newTabId);
-      currentDiffIdx = -1;
-    }
-    if (e.ctrlKey && e.key === 'w') {
-      e.preventDefault();
-      var activeTab = document.querySelector('.fv-tab.active');
-      if (activeTab) {
-        var closeBtn = activeTab.querySelector('.fv-tab-close');
-        if (closeBtn) closeBtn.click();
+    if (e.ctrlKey) {
+      switch (e.key) {
+        case 'p': e.preventDefault(); toggleModal('files'); return;
+        case 'f': e.preventDefault(); toggleModal('text'); return;
+        case 'g': e.preventDefault(); toggleModal('text-active'); return;
+        case '/': e.preventDefault(); toggleModal('shortcuts'); return;
+        case 'd': e.preventDefault(); jumpToDiff(1); return;
+        case 'c': e.preventDefault(); var fp = getActiveFilePath(); if (fp) copyToClipboard(fp); return;
+        case 'j': e.preventDefault(); var fp2 = getActiveFilePath(); if (fp2) fetch('/_open-in-editor?path=' + encodeURIComponent(fp2)); return;
+        case ']': e.preventDefault(); cycleTab(1); return;
+        case '[': e.preventDefault(); cycleTab(-1); return;
+        case 'w': e.preventDefault(); closeActiveTab(); return;
       }
     }
     if (!modalOverlay.classList.contains('visible')) return;

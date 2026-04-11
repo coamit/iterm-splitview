@@ -10,76 +10,52 @@ _FE_SESSION_DIR="/tmp/fileedit/${_FE_SESSION_ID:-default}"
 mkdir -p "$_FE_SESSION_DIR"
 PANE_SESSION_ID_FILE="$_FE_SESSION_DIR/pane_session_id"
 
-cmd_open() {
-  local src_file="$1"
-  if [ -z "$src_file" ]; then
-    echo "Usage: fileedit open <file>" >&2
-    return 1
-  fi
-
-  local abs_path
-  abs_path="$(cd "$(dirname "$src_file")" && pwd)/$(basename "$src_file")"
-  local session_uuid="${ITERM_SESSION_ID#*:}"
-
-  # Check if our tracked edit pane still exists
-  local target_pane_id=""
-  if [ -f "$PANE_SESSION_ID_FILE" ]; then
-    local tracked_pane_id
-    tracked_pane_id=$(cat "$PANE_SESSION_ID_FILE")
-    if [ -n "$tracked_pane_id" ]; then
-      local pane_exists
-      pane_exists=$(osascript <<APPLESCRIPT
-        tell application "iTerm2"
-          repeat with w in windows
-            repeat with t in tabs of w
-              repeat with s in sessions of t
-                if unique ID of s is "$tracked_pane_id" then return "yes"
-              end repeat
-            end repeat
-          end repeat
-          return "no"
-        end tell
-APPLESCRIPT
-      )
-      if [ "$pane_exists" = "yes" ]; then
-        target_pane_id="$tracked_pane_id"
-      else
-        rm -f "$PANE_SESSION_ID_FILE"
-      fi
-    fi
-  fi
-
-  # Create split if needed
-  if [ -z "$target_pane_id" ]; then
-    target_pane_id=$(osascript <<APPLESCRIPT
-      tell application "iTerm2"
-        repeat with w in windows
-          repeat with t in tabs of w
-            repeat with s in sessions of t
-              if unique ID of s is "$session_uuid" then
-                tell s
-                  set newSession to (split vertically with default profile)
-                end tell
-                return unique ID of newSession
-              end if
-            end repeat
-          end repeat
-        end repeat
-      end tell
-APPLESCRIPT
-    )
-    echo "$target_pane_id" > "$PANE_SESSION_ID_FILE"
-  fi
-
-  # Send fresh command to the tracked pane
+_iterm_pane_exists() {
+  local pane_id="$1"
   osascript <<APPLESCRIPT
     tell application "iTerm2"
       repeat with w in windows
         repeat with t in tabs of w
           repeat with s in sessions of t
-            if unique ID of s is "$target_pane_id" then
+            if unique ID of s is "$pane_id" then return "yes"
+          end repeat
+        end repeat
+      end repeat
+      return "no"
+    end tell
+APPLESCRIPT
+}
+
+_iterm_split_vertical() {
+  local session_uuid="$1"
+  osascript <<APPLESCRIPT
+    tell application "iTerm2"
+      repeat with w in windows
+        repeat with t in tabs of w
+          repeat with s in sessions of t
+            if unique ID of s is "$session_uuid" then
               tell s
-                write text "fresh \"$abs_path\""
+                set newSession to (split vertically with default profile)
+              end tell
+              return unique ID of newSession
+            end if
+          end repeat
+        end repeat
+      end repeat
+    end tell
+APPLESCRIPT
+}
+
+_iterm_send_text() {
+  local pane_id="$1" text="$2"
+  osascript <<APPLESCRIPT
+    tell application "iTerm2"
+      repeat with w in windows
+        repeat with t in tabs of w
+          repeat with s in sessions of t
+            if unique ID of s is "$pane_id" then
+              tell s
+                write text "$text"
               end tell
               return
             end if
@@ -90,16 +66,8 @@ APPLESCRIPT
 APPLESCRIPT
 }
 
-cmd_close() {
-  if [ ! -f "$PANE_SESSION_ID_FILE" ]; then
-    return 0
-  fi
-  local pane_id
-  pane_id=$(cat "$PANE_SESSION_ID_FILE")
-  if [ -z "$pane_id" ]; then
-    rm -f "$PANE_SESSION_ID_FILE"
-    return 0
-  fi
+_iterm_close_pane() {
+  local pane_id="$1"
   osascript <<APPLESCRIPT
     tell application "iTerm2"
       repeat with w in windows
@@ -114,6 +82,58 @@ cmd_close() {
       end repeat
     end tell
 APPLESCRIPT
+}
+
+_find_or_create_pane() {
+  local session_uuid="$1"
+
+  if [ -f "$PANE_SESSION_ID_FILE" ]; then
+    local tracked_pane_id
+    tracked_pane_id=$(cat "$PANE_SESSION_ID_FILE")
+    if [ -n "$tracked_pane_id" ]; then
+      local exists
+      exists=$(_iterm_pane_exists "$tracked_pane_id")
+      if [ "$exists" = "yes" ]; then
+        echo "$tracked_pane_id"
+        return 0
+      fi
+      rm -f "$PANE_SESSION_ID_FILE"
+    fi
+  fi
+
+  local new_pane_id
+  new_pane_id=$(_iterm_split_vertical "$session_uuid")
+  echo "$new_pane_id" > "$PANE_SESSION_ID_FILE"
+  echo "$new_pane_id"
+}
+
+cmd_open() {
+  local src_file="$1"
+  if [ -z "$src_file" ]; then
+    echo "Usage: fileedit open <file>" >&2
+    return 1
+  fi
+
+  local abs_path
+  abs_path="$(cd "$(dirname "$src_file")" && pwd)/$(basename "$src_file")"
+  local session_uuid="${ITERM_SESSION_ID#*:}"
+
+  local target_pane_id
+  target_pane_id=$(_find_or_create_pane "$session_uuid")
+  _iterm_send_text "$target_pane_id" "fresh \"$abs_path\""
+}
+
+cmd_close() {
+  if [ ! -f "$PANE_SESSION_ID_FILE" ]; then
+    return 0
+  fi
+  local pane_id
+  pane_id=$(cat "$PANE_SESSION_ID_FILE")
+  if [ -z "$pane_id" ]; then
+    rm -f "$PANE_SESSION_ID_FILE"
+    return 0
+  fi
+  _iterm_close_pane "$pane_id"
   rm -f "$PANE_SESSION_ID_FILE"
 }
 
