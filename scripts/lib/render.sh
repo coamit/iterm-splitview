@@ -87,8 +87,9 @@ generate_file_body() {
       added=$(_get_diff_added "$src_file")
       removed=$(_get_diff_removed "$src_file")
       diff_attrs=$(_build_diff_attrs "$src_file")
-      local rel_path
-      rel_path=$(git -C "$(dirname "$src_file")" ls-files --full-name "$(basename "$src_file")" 2>/dev/null || basename "$src_file")
+      local git_root rel_path
+      git_root=$(git -C "$(dirname "$src_file")" rev-parse --show-toplevel 2>/dev/null)
+      rel_path="${src_file#"$git_root"/}"
       file_status=$(_git_file_status "$rel_path")
       diff_stats=$(_build_diff_stats_html "$added" "$removed" "$file_status")
     fi
