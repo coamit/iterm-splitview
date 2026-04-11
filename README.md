@@ -18,7 +18,7 @@ Side-by-side viewing and editing in iTerm2 — for Claude Code and terminal work
 
 ## Features
 
-- **fileview** — read-only styled HTML rendering (markdown, tables, reports, plans)
+- **fileview** — read-only styled HTML rendering (markdown, tables, reports, plans) 
 - **fileedit** — editable terminal editor in split pane (code, config, notes)
 - **Multi-tab** — open multiple files as tabs in the same pane, close individual tabs
 - **Search modal** — Ctrl+P for file search, Ctrl+F for text search across files
