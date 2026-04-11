@@ -139,7 +139,8 @@ div.sourceCode { margin: 8px 0; }
 .fv-shortcut-key { display: inline-block; background: #2a3040; border: 1px solid #353b4a; border-radius: 4px; padding: 1px 7px; font-size: 11px; font-family: -apple-system, sans-serif; color: #ccd0d4; min-width: 60px; text-align: center; }
 .fv-shortcut-desc { color: #8a90a0; font-size: 12px; font-family: -apple-system, sans-serif; }
 .fv-modal-mode { padding: 6px 14px; font-size: 11px; color: #4b5263; border-bottom: 1px solid #353b4a; font-family: -apple-system, sans-serif; }
-.ln { display: table-cell; width: 1px; user-select: none; text-align: right; color: #4b5263; border-right: 1px solid #353b4a; padding: 0 12px 0 16px; vertical-align: top; white-space: nowrap; font-size: 0.88em; font-family: "JetBrains Mono","Fira Code","SF Mono",Menlo,monospace; line-height: 1.6; }
+.ln { display: table-cell; width: 1px; user-select: none; text-align: right; color: #4b5263; border-right: 1px solid #353b4a; padding: 0 12px 0 16px; vertical-align: top; white-space: nowrap; font-size: 0.88em; font-family: "JetBrains Mono","Fira Code","SF Mono",Menlo,monospace; line-height: 1.6; -webkit-user-select: none; }
+.ln::before { content: attr(data-ln); }
 .lc { display: table-cell; padding: 0 16px; white-space: pre; vertical-align: top; font-size: 0.88em; font-family: "JetBrains Mono","Fira Code","SF Mono",Menlo,monospace; line-height: 1.6; }
 @media (prefers-color-scheme: light) {
   .ln { color: #bbb; border-right-color: #e1e4e8; }
@@ -305,7 +306,7 @@ $body$
     var lines = highlighted.split('\n');
     if (lines[lines.length - 1] === '') lines.pop();
     var html = lines.map(function(line, i) {
-      return '<div class="code-line"><span class="ln">' + (i + 1) + '</span><span class="lc">' + (line || '\u00a0') + '</span></div>';
+      return '<div class="code-line"><span class="ln" data-ln="' + (i + 1) + '"></span><span class="lc">' + (line || '\u00a0') + '</span></div>';
     }).join('');
     var wrapper = document.createElement('div');
     wrapper.className = 'code-lines';
