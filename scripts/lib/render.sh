@@ -153,8 +153,6 @@ _tab_icon_for_file() {
     echo "$diff_icon"
   elif _is_code_file "$fp"; then
     echo "$code_icon"
-  else
-    echo "$doc_icon"
   fi
 }
 
@@ -174,6 +172,8 @@ _generate_tab_bar() {
     printf '<div class="fv-tab%s" data-tab="fv-tab-%d" title="%s">%s%s<span class="fv-tab-close" data-close-path="%s">&times;</span></div>\n' "$active_class" "$idx" "$fp" "$tab_icon" "$fname" "$fp"
     idx=$((idx + 1))
   done < "$TABS_FILE"
+  printf '<div class="fv-tab-spacer"></div>'
+  printf '<div class="fv-tab-action" id="fv-refresh" title="Refresh"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></div>'
   printf '</div>\n'
   printf '<div class="fv-tab-ts" id="fv-ts" data-generated="%s"></div>\n' "$gen_epoch"
 }
@@ -195,19 +195,27 @@ _generate_tab_panels() {
 }
 
 generate_tabbed_html() {
-  if [ ! -f "$TABS_FILE" ] || [ ! -s "$TABS_FILE" ]; then
-    return 1
-  fi
-
-  local active_file gen_epoch tab_count body_tmp
-  active_file=$(_resolve_active_file)
-  tab_count=$(_count_valid_tabs)
+  local active_file gen_epoch tab_count body_tmp saved_theme
   gen_epoch=$(date +%s)
   body_tmp=$(mktemp)
+  saved_theme=""
+  [ -f "$HOME/.config/fileview/theme" ] && saved_theme=$(cat "$HOME/.config/fileview/theme" 2>/dev/null)
 
-  printf '<div data-fv-gen="%s" data-fv-tabs="%s" style="display:none"></div>\n' "$gen_epoch" "$tab_count" > "$body_tmp"
-  _generate_tab_bar "$active_file" "$gen_epoch" >> "$body_tmp"
-  _generate_tab_panels "$active_file" "$body_tmp"
+  if [ ! -f "$TABS_FILE" ] || [ ! -s "$TABS_FILE" ]; then
+    # Empty state — generate minimal page with tab bar (no tabs)
+    tab_count=0
+    printf '<div data-fv-gen="%s" data-fv-tabs="0" data-fv-theme="%s" style="display:none"></div>\n' "$gen_epoch" "$saved_theme" > "$body_tmp"
+    printf '<div class="fv-tab-bar"><div class="fv-tab-spacer"></div>' >> "$body_tmp"
+    printf '<div class="fv-tab-action" id="fv-refresh" title="Refresh"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 3a5 5 0 0 0-4.55 2.92.5.5 0 1 1-.9-.38A6 6 0 0 1 14 8a6 6 0 0 1-6 6 6 6 0 0 1-5.46-3.54.5.5 0 0 1 .92-.38A5 5 0 1 0 8 3z"/><path d="M6.5 1a.5.5 0 0 1 .5.5V5h3.5a.5.5 0 0 1 0 1H6.5a.5.5 0 0 1-.5-.5V1.5a.5.5 0 0 1 .5-.5z"/></svg></div>' >> "$body_tmp"
+    printf '</div>\n' >> "$body_tmp"
+    printf '<div class="fv-tab-content active" id="fv-tab-empty" style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 50px);color:#6a7080;font-size:13px;font-family:-apple-system,sans-serif">Press Ctrl+O to open a file</div>\n' >> "$body_tmp"
+  else
+    active_file=$(_resolve_active_file)
+    tab_count=$(_count_valid_tabs)
+    printf '<div data-fv-gen="%s" data-fv-tabs="%s" data-fv-theme="%s" style="display:none"></div>\n' "$gen_epoch" "$tab_count" "$saved_theme" > "$body_tmp"
+    _generate_tab_bar "$active_file" "$gen_epoch" >> "$body_tmp"
+    _generate_tab_panels "$active_file" "$body_tmp"
+  fi
 
   awk -v bodyfile="$body_tmp" '
     /\$body\$/ {

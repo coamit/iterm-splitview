@@ -153,6 +153,22 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_response(204)
             self.end_headers()
             return
+        if parsed.path == '/_theme':
+            theme_file = os.path.expanduser('~/.config/fileview/theme')
+            qs = urllib.parse.parse_qs(parsed.query)
+            new_theme = qs.get('set', [''])[0]
+            if new_theme:
+                os.makedirs(os.path.dirname(theme_file), exist_ok=True)
+                with open(theme_file, 'w') as f:
+                    f.write(new_theme)
+            theme = ''
+            if os.path.exists(theme_file):
+                theme = open(theme_file).read().strip()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({'theme': theme}).encode())
+            return
         if parsed.path == '/_loading':
             loading = os.path.exists(os.path.join(DIR, 'loading'))
             self.send_response(200)
@@ -244,6 +260,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps(results).encode())
+            return
+        if parsed.path == '/_refresh':
+            if SCRIPT:
+                subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self.send_response(204)
+            self.end_headers()
             return
         if parsed.path == '/_open':
             qs = urllib.parse.parse_qs(parsed.query)
