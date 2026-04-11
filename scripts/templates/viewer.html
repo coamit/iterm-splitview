@@ -461,6 +461,7 @@ $body$
     _diffCounterDismiss = function(e) {
       if (e.type === 'keydown' && e.ctrlKey && e.key === 'd') return;
       diffCounterBadge.classList.remove('visible');
+      document.querySelectorAll('.code-line.diff-focus').forEach(function(el) { el.classList.remove('diff-focus'); });
       _clearDiffCounterListeners();
     };
     setTimeout(function() {
