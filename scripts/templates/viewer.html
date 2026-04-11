@@ -97,11 +97,13 @@ div.sourceCode { margin: 8px 0; }
 .diff-collapsed .code-line.diff-added,
 .diff-collapsed .code-line.diff-removed,
 .diff-collapsed .code-line.diff-context { display: table-row; }
-.diff-collapsed .code-line.diff-separator { display: table-row; }
+.diff-collapsed .code-line.diff-separator,
+.diff-collapsed .code-line.diff-spacer { display: table-row; }
 .diff-collapsed .code-line.diff-separator .ln,
-.diff-collapsed .code-line.diff-separator .lc { background: transparent; padding: 0; height: 1px; border: none; border-right: none; }
-.diff-collapsed .code-line.diff-separator .ln { border-bottom: 1px dotted #4b5263; padding: 16px 0; }
-.diff-collapsed .code-line.diff-separator .lc { border-bottom: 1px dotted #4b5263; padding: 16px 0; width: 100%; }
+.diff-collapsed .code-line.diff-separator .lc { background: transparent; padding: 0; height: 1px; border: none; border-bottom: 1px dotted #4b5263; }
+.diff-collapsed .code-line.diff-separator .lc { width: 100%; }
+.diff-collapsed .code-line.diff-spacer .ln,
+.diff-collapsed .code-line.diff-spacer .lc { background: transparent; padding: 6px 0; border: none; height: 0; }
 .diff-collapsed pre { overflow-x: hidden; }
 .diff-collapsed .code-line .lc { width: 100%; }
 /* Diff counter badge */
@@ -150,6 +152,8 @@ div.sourceCode { margin: 8px 0; }
   .diff-stat-rem { color: #d1242f; }
   .diff-collapsed .code-line.diff-separator .ln,
   .diff-collapsed .code-line.diff-separator .lc { border-bottom-color: #d0d7de; }
+  .diff-collapsed .code-line.diff-spacer .ln,
+  .diff-collapsed .code-line.diff-spacer .lc { background: transparent; }
   .diff-counter-badge { background: #ffffff; border-color: #d0d7de; color: #24292e; }
   .diff-view-mode { color: #b8860b; background: rgba(184, 134, 11, 0.08); border-color: rgba(184, 134, 11, 0.3); }
   .fv-modal { background: #ffffff; border-color: #d0d7de; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
@@ -519,10 +523,18 @@ $body$
         if (unique[i] - unique[i-1] > 1) {
           var sepLine = lines[unique[i]];
           if (sepLine) {
+            var spacerAbove = document.createElement('div');
+            spacerAbove.className = 'code-line diff-spacer';
+            spacerAbove.innerHTML = '<span class="ln"></span><span class="lc"></span>';
             var sep = document.createElement('div');
             sep.className = 'code-line diff-separator';
             sep.innerHTML = '<span class="ln"></span><span class="lc"></span>';
+            var spacerBelow = document.createElement('div');
+            spacerBelow.className = 'code-line diff-spacer';
+            spacerBelow.innerHTML = '<span class="ln"></span><span class="lc"></span>';
+            sepLine.parentNode.insertBefore(spacerAbove, sepLine);
             sepLine.parentNode.insertBefore(sep, sepLine);
+            sepLine.parentNode.insertBefore(spacerBelow, sepLine);
           }
         }
       }
