@@ -33,12 +33,31 @@ generate_file_body() {
       fi
     fi
 
+    # Count additions and removals for diff stats
+    local diff_stats=""
+    if [ "$mode" = "diff" ]; then
+      local add_count=0 rem_count=0
+      if [ -n "$added" ]; then
+        add_count=$(echo "$added" | tr ',' '\n' | wc -l | tr -d ' ')
+      fi
+      if [ -n "$removed" ] && [ "$removed" != "{}" ]; then
+        rem_count=$(echo "$removed" | python3 -c "import sys,json; d=json.load(sys.stdin); print(sum(len(v) for v in d.values()))" 2>/dev/null || echo 0)
+      fi
+      if [ "$add_count" -gt 0 ] || [ "$rem_count" -gt 0 ]; then
+        diff_stats="<span class=\"diff-stats\">"
+        [ "$add_count" -gt 0 ] && diff_stats="$diff_stats<span class=\"diff-stat-add\">+$add_count</span>"
+        [ "$rem_count" -gt 0 ] && diff_stats="$diff_stats<span class=\"diff-stat-rem\">-$rem_count</span>"
+        diff_stats="$diff_stats</span>"
+      fi
+    fi
+
     printf '<div class="code-file-wrapper">\n'
     printf '  <div class="code-file-header">\n'
     printf '    <span class="dot dot-red"></span>\n'
     printf '    <span class="dot dot-yellow"></span>\n'
     printf '    <span class="dot dot-green"></span>\n'
     printf '    <span class="filename">%s</span>\n' "$filename"
+    [ -n "$diff_stats" ] && printf '    %s\n' "$diff_stats"
     printf '    <span class="lang-badge">%s</span>\n' "$lang_display"
     printf '  </div>\n'
     printf '  <pre><code class="language-%s"%s>' "$lang" "$diff_attrs"

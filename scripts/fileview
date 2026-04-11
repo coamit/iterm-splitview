@@ -102,7 +102,7 @@ cmd_close() {
 
   local tmp
   tmp=$(mktemp)
-  grep -vxF "$target" "$TABS_FILE" > "$tmp"
+  grep -vxF "$target" "$TABS_FILE" > "$tmp" || true
   mv "$tmp" "$TABS_FILE"
 
   # If no tabs left, close everything

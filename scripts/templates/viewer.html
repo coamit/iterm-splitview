@@ -90,28 +90,35 @@ div.sourceCode { margin: 8px 0; }
 .code-line.diff-removed .ln { color: #ff5f57; }
 .code-line.diff-removed .lc { opacity: 0.6; text-decoration: line-through; }
 .code-line.diff-focus { outline: 1px solid rgba(115, 184, 240, 0.5); outline-offset: -1px; box-shadow: inset 3px 0 0 #73b8f0; }
+.code-line.search-highlight { background: rgba(226, 196, 108, 0.2); box-shadow: inset 3px 0 0 #e2c46c; }
 /* Diff navigation arrows */
-.diff-nav { position: fixed; right: 28px; top: 95px; display: none; flex-direction: column; gap: 6px; z-index: 200; }
-.diff-nav.visible { display: flex; }
-.diff-nav button { width: 36px; height: 36px; border: 1px solid #353b4a; border-radius: 6px; background: #1f2430; color: #ccd0d4; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0.85; }
-.diff-nav button:hover { background: #2a3040; opacity: 1; }
-.diff-nav .diff-counter { font-size: 10px; color: #6a7080; text-align: center; user-select: none; }
+.diff-stats { display: inline-flex; gap: 6px; margin-left: 8px; font-size: 11px; font-family: "JetBrains Mono", monospace; }
+.diff-stat-add { color: #28c840; }
+.diff-stat-rem { color: #ff5f57; }
 /* Quick-open modal (Cmd+P) */
 .fv-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; }
 .fv-modal-overlay.visible { display: flex; justify-content: center; padding-top: 60px; }
 .fv-modal { width: 420px; max-height: 360px; background: #1f2430; border: 1px solid #353b4a; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); display: flex; flex-direction: column; overflow: hidden; }
 .fv-modal-input { background: #171b24; border: none; border-bottom: 1px solid #353b4a; padding: 12px 14px; font-size: 14px; color: #e8ecf0; outline: none; font-family: -apple-system, sans-serif; }
-.fv-modal-input::placeholder { color: #4b5263; }
-.fv-modal-list { list-style: none; overflow-y: auto; flex: 1; padding: 0; margin: 0; }
+.fv-modal-input::placeholder { color: #e2c46c99; }
+.fv-modal-list { list-style: none; overflow-y: auto; flex: 1; padding: 0; margin: 0; scrollbar-width: thin; scrollbar-color: #4b5263 transparent; }
+.fv-modal-list::-webkit-scrollbar { width: 6px; }
+.fv-modal-list::-webkit-scrollbar-track { background: transparent; }
+.fv-modal-list::-webkit-scrollbar-thumb { background: #4b5263; border-radius: 3px; }
+.fv-modal-list::-webkit-scrollbar-thumb:hover { background: #6a7080; }
 .fv-modal-item { padding: 8px 10px 8px 8px; cursor: pointer; font-size: 13px; font-family: -apple-system, sans-serif; color: #ccd0d4; display: flex; align-items: center; gap: 8px; border-left: 2px solid transparent; }
 .fv-modal-item:hover, .fv-modal-item.selected { background: #2a3040; }
 .fv-modal-item.selected { border-left-color: #73b8f0; }
-.fv-modal-item .fv-modal-fname { color: #e8ecf0; }
+.fv-modal-item .fv-modal-fname { color: #ffcc66; }
 .fv-modal-item .fv-modal-fpath { color: #4b5263; font-size: 11px; margin-left: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; direction: rtl; text-align: right; }
 .fv-modal-item .fv-modal-line { color: #4b5263; font-size: 11px; font-family: "JetBrains Mono", monospace; }
 .fv-modal-item .fv-modal-content { color: #ccd0d4; font-size: 12px; font-family: "JetBrains Mono", monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fv-modal-item .fv-modal-content mark { background: #e2c46c33; color: #ffcc66; }
 .fv-modal-item.text-result { flex-direction: column; align-items: flex-start; gap: 2px; }
+.fv-modal-item.shortcut-item { cursor: default; }
+.fv-modal-item.shortcut-item:hover { background: transparent; }
+.fv-shortcut-key { display: inline-block; background: #2a3040; border: 1px solid #353b4a; border-radius: 4px; padding: 1px 7px; font-size: 11px; font-family: -apple-system, sans-serif; color: #ccd0d4; min-width: 60px; text-align: center; }
+.fv-shortcut-desc { color: #8a90a0; font-size: 12px; font-family: -apple-system, sans-serif; }
 .fv-modal-mode { padding: 6px 14px; font-size: 11px; color: #4b5263; border-bottom: 1px solid #353b4a; font-family: -apple-system, sans-serif; }
 .ln { display: table-cell; width: 1px; user-select: none; text-align: right; color: #4b5263; border-right: 1px solid #353b4a; padding: 0 12px 0 16px; vertical-align: top; white-space: nowrap; font-size: 0.88em; font-family: "JetBrains Mono","Fira Code","SF Mono",Menlo,monospace; line-height: 1.6; }
 .lc { display: table-cell; padding: 0 16px; white-space: pre; vertical-align: top; font-size: 0.88em; font-family: "JetBrains Mono","Fira Code","SF Mono",Menlo,monospace; line-height: 1.6; }
@@ -122,20 +129,20 @@ div.sourceCode { margin: 8px 0; }
   .code-line.diff-added .ln { color: #1a7f37; }
   .code-line.diff-removed { background: rgba(255, 95, 87, 0.15); }
   .code-line.diff-removed .ln { color: #d1242f; }
-  .diff-nav button { background: #ffffff; border-color: #d0d7de; color: #24292e; }
-  .diff-nav button:hover { background: #f6f8fa; }
-  .diff-nav .diff-counter { color: #6a737d; }
+  .diff-stat-add { color: #1a7f37; }
+  .diff-stat-rem { color: #d1242f; }
   .fv-modal { background: #ffffff; border-color: #d0d7de; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
   .fv-modal-input { background: #f6f8fa; border-bottom-color: #d0d7de; color: #24292e; }
-  .fv-modal-input::placeholder { color: #9ca3af; }
+  .fv-modal-input::placeholder { color: #b8860b99; }
   .fv-modal-item { color: #24292e; }
   .fv-modal-item:hover, .fv-modal-item.selected { background: #f6f8fa; }
-  .fv-modal-item .fv-modal-fname { color: #24292e; }
+  .fv-modal-item .fv-modal-fname { color: #b8860b; }
   .fv-modal-item .fv-modal-fpath { color: #6a737d; }
   .fv-modal-overlay { background: rgba(0,0,0,0.2); }
   .fv-modal-item .fv-modal-content { color: #24292e; }
   .fv-modal-item .fv-modal-content mark { background: #fff3b0; color: #24292e; }
   .fv-modal-mode { border-bottom-color: #d0d7de; color: #9ca3af; }
+  .fv-shortcut-key { background: #e1e4e8; border-color: #d0d7de; color: #24292e; }
 }
 .code-file-wrapper { border-radius: 8px; overflow: hidden; border: 1px solid #353b4a; margin: 0; }
 .code-file-header { background: #2a2f3d; padding: 8px 14px; font-size: 11px; color: #8a90a0; font-family: -apple-system, sans-serif; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #353b4a; }
@@ -190,11 +197,6 @@ $body$
     <div class="fv-modal-mode" id="fv-modal-mode">Files &middot; Ctrl+F for text search</div>
     <ul class="fv-modal-list" id="fv-modal-list"></ul>
   </div>
-</div>
-<div class="diff-nav" id="diff-nav">
-  <button id="diff-prev" title="Previous change">&#x25B2;</button>
-  <div class="diff-counter" id="diff-counter"></div>
-  <button id="diff-next" title="Next change">&#x25BC;</button>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
@@ -396,16 +398,13 @@ $body$
     setInterval(updateTs, 1000);
   }
 
-  // Diff navigation — jump between changes
-  var diffNav = document.getElementById('diff-nav');
-  var diffCounter = document.getElementById('diff-counter');
+  // Diff navigation — jump between changes with Ctrl+D
   var currentDiffIdx = -1;
 
   function getDiffHunks() {
     var activePanel = document.querySelector('.fv-tab-content.active');
     if (!activePanel) activePanel = document;
     var lines = activePanel.querySelectorAll('.code-line.diff-added, .code-line.diff-removed');
-    // Group consecutive diff lines into hunks (return first line of each hunk)
     var hunks = [];
     var lastIdx = -2;
     lines.forEach(function(line) {
@@ -417,25 +416,13 @@ $body$
     return hunks;
   }
 
-  function updateDiffNav() {
-    var hunks = getDiffHunks();
-    if (hunks.length > 0) {
-      diffNav.classList.add('visible');
-      diffCounter.textContent = (currentDiffIdx + 1) + '/' + hunks.length;
-    } else {
-      diffNav.classList.remove('visible');
-    }
-  }
-
   function jumpToDiff(direction) {
     var hunks = getDiffHunks();
     if (hunks.length === 0) return;
     currentDiffIdx += direction;
     if (currentDiffIdx >= hunks.length) currentDiffIdx = 0;
     if (currentDiffIdx < 0) currentDiffIdx = hunks.length - 1;
-    // Clear previous focus
     document.querySelectorAll('.code-line.diff-focus').forEach(function(el) { el.classList.remove('diff-focus'); });
-    // Highlight all consecutive diff lines in this hunk
     var hunk = hunks[currentDiffIdx];
     var allLines = Array.from(hunk.closest('.code-lines').querySelectorAll('.code-line'));
     var startIdx = allLines.indexOf(hunk);
@@ -445,21 +432,12 @@ $body$
       } else break;
     }
     hunk.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    diffCounter.textContent = (currentDiffIdx + 1) + '/' + hunks.length;
   }
 
-  document.getElementById('diff-prev').addEventListener('click', function() { jumpToDiff(-1); });
-  document.getElementById('diff-next').addEventListener('click', function() { jumpToDiff(1); });
-
-  // Show nav after tab switch and jump to first change
+  // Reset diff index on tab switch
   document.querySelectorAll('.fv-tab').forEach(function(tab) {
-    tab.addEventListener('click', function() {
-      currentDiffIdx = -1;
-      setTimeout(function() { updateDiffNav(); }, 100);
-    });
+    tab.addEventListener('click', function() { currentDiffIdx = -1; });
   });
-  // Initial
-  setTimeout(function() { updateDiffNav(); }, 500);
 
   // Search modal (Ctrl+P files, Ctrl+F text)
   var modalOverlay = document.getElementById('fv-modal-overlay');
@@ -483,14 +461,16 @@ $body$
     return data;
   }
 
-  function searchText(query) {
+  function searchText(query, activeOnly) {
     if (!query || query.length < 2) return [];
     var results = [];
     var q = query.toLowerCase();
     var tabs = getTabData();
     var tabMap = {};
     tabs.forEach(function(t) { tabMap[t.tabId] = t; });
-    var panels = document.querySelectorAll('.fv-tab-content');
+    var panels = activeOnly
+      ? [document.querySelector('.fv-tab-content.active')].filter(Boolean)
+      : document.querySelectorAll('.fv-tab-content');
     panels.forEach(function(panel) {
       var tabId = panel.id;
       var tab = tabMap[tabId];
@@ -512,8 +492,17 @@ $body$
   }
 
   function renderModal(query) {
-    if (modalMode === 'text') {
-      var results = searchText(query);
+    if (modalMode === 'shortcuts') {
+      modalItems = [];
+      modalList.innerHTML = shortcutsList.map(function(s) {
+        return '<li class="fv-modal-item shortcut-item">' +
+          '<span class="fv-shortcut-key">' + s.key + '</span>' +
+          '<span class="fv-shortcut-desc">' + s.desc + '</span></li>';
+      }).join('');
+      return;
+    }
+    if (modalMode === 'text' || modalMode === 'text-active') {
+      var results = searchText(query, modalMode === 'text-active');
       modalItems = results;
       modalSelectedIdx = Math.min(modalSelectedIdx, Math.max(0, modalItems.length - 1));
       var q = (query || '').toLowerCase();
@@ -543,17 +532,45 @@ $body$
     }
   }
 
+  var shortcutsList = [
+    { key: 'Ctrl+P', desc: 'Search files by name' },
+    { key: 'Ctrl+F', desc: 'Search text in all files' },
+    { key: 'Ctrl+G', desc: 'Search text in active file' },
+    { key: 'Ctrl+D', desc: 'Jump to next diff' },
+    { key: 'Ctrl+C', desc: 'Copy file path' },
+    { key: 'Ctrl+J', desc: 'Open in Cursor' },
+    { key: 'Ctrl+]', desc: 'Next tab' },
+    { key: 'Ctrl+[', desc: 'Previous tab' },
+    { key: 'Ctrl+W', desc: 'Close tab' },
+    { key: 'Ctrl+/', desc: 'Show shortcuts' },
+    { key: 'Esc', desc: 'Close dialog' }
+  ];
+
   function openModal(mode) {
     modalMode = mode || 'files';
     modalInput.value = '';
     modalSelectedIdx = 0;
-    modalInput.placeholder = modalMode === 'text' ? 'Search in files...' : 'Search files...';
-    modalModeEl.textContent = modalMode === 'text'
-      ? 'Text \u00b7 Ctrl+P for file search'
-      : 'Files \u00b7 Ctrl+F for text search';
+    if (modalMode === 'shortcuts') {
+      modalInput.style.display = 'none';
+      modalModeEl.textContent = 'Keyboard Shortcuts';
+    } else {
+      modalInput.style.display = '';
+      if (modalMode === 'text') {
+        modalInput.placeholder = 'Search in all files...';
+        modalModeEl.textContent = 'All Files \u00b7 Ctrl+G for active file';
+      } else if (modalMode === 'text-active') {
+        modalInput.placeholder = 'Search in active file...';
+        modalModeEl.textContent = 'Active File \u00b7 Ctrl+F for all files';
+      } else {
+        modalInput.placeholder = 'Search files...';
+        modalModeEl.textContent = 'Files \u00b7 Ctrl+F for text search';
+      }
+    }
     renderModal('');
     modalOverlay.classList.add('visible');
-    setTimeout(function() { modalInput.focus(); }, 50);
+    if (modalMode !== 'shortcuts') {
+      setTimeout(function() { modalInput.focus(); }, 50);
+    }
   }
 
   function closeModal() {
@@ -564,19 +581,26 @@ $body$
   function selectModalItem() {
     if (modalItems.length === 0) return;
     var item = modalItems[modalSelectedIdx];
-    var wasText = modalMode === 'text';
+    var wasText = modalMode === 'text' || modalMode === 'text-active';
     activateTab(item.tabId);
     history.replaceState(null, '', '#' + item.tabId);
     closeModal();
     if (wasText && item.lineEl) {
       setTimeout(function() {
         item.lineEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        item.lineEl.classList.add('diff-focus');
-        setTimeout(function() { item.lineEl.classList.remove('diff-focus'); }, 2000);
+        item.lineEl.classList.add('search-highlight');
+        function clearHighlight() {
+          document.querySelectorAll('.code-line.search-highlight').forEach(function(el) { el.classList.remove('search-highlight'); });
+          document.removeEventListener('click', clearHighlight);
+          document.removeEventListener('keydown', clearHighlight);
+        }
+        setTimeout(function() {
+          document.addEventListener('click', clearHighlight, { once: true });
+          document.addEventListener('keydown', clearHighlight, { once: true });
+        }, 100);
       }, 50);
     }
     currentDiffIdx = -1;
-    setTimeout(function() { updateDiffNav(); }, 100);
   }
 
   document.addEventListener('keydown', function(e) {
@@ -589,6 +613,40 @@ $body$
       e.preventDefault();
       if (modalOverlay.classList.contains('visible') && modalMode === 'text') closeModal();
       else openModal('text');
+    }
+    if (e.ctrlKey && e.key === 'g') {
+      e.preventDefault();
+      if (modalOverlay.classList.contains('visible') && modalMode === 'text-active') closeModal();
+      else openModal('text-active');
+    }
+    if (e.ctrlKey && e.key === 'd') {
+      e.preventDefault();
+      jumpToDiff(1);
+    }
+    if (e.ctrlKey && e.key === 'c') {
+      e.preventDefault();
+      var activeTab = document.querySelector('.fv-tab.active');
+      if (activeTab) {
+        var fpath = activeTab.getAttribute('title');
+        if (fpath) {
+          navigator.clipboard.writeText(fpath).catch(function() {
+            // Fallback for non-HTTPS contexts
+            var ta = document.createElement('textarea');
+            ta.value = fpath;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+          });
+        }
+      }
+    }
+    if (e.ctrlKey && e.key === '/') {
+      e.preventDefault();
+      if (modalOverlay.classList.contains('visible') && modalMode === 'shortcuts') closeModal();
+      else openModal('shortcuts');
     }
     if (e.ctrlKey && e.key === 'j') {
       e.preventDefault();
@@ -608,7 +666,6 @@ $body$
       activateTab(newTabId);
       history.replaceState(null, '', '#' + newTabId);
       currentDiffIdx = -1;
-      setTimeout(function() { updateDiffNav(); }, 100);
     }
     if (e.ctrlKey && e.key === 'w') {
       e.preventDefault();
@@ -627,7 +684,7 @@ $body$
 
   modalInput.addEventListener('input', function() {
     modalSelectedIdx = 0;
-    if (modalMode === 'text') {
+    if (modalMode === 'text' || modalMode === 'text-active') {
       clearTimeout(searchTimer);
       searchTimer = setTimeout(function() { renderModal(modalInput.value); }, 150);
     } else {

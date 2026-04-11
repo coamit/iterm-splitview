@@ -5,7 +5,7 @@ stop_watcher() {
   if [ -f "$WATCHER_PID" ]; then
     local pid
     pid=$(cat "$WATCHER_PID")
-    kill "$pid" 2>/dev/null
+    kill "$pid" 2>/dev/null || true
     rm -f "$WATCHER_PID"
   fi
 }
