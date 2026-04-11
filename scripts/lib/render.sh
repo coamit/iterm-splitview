@@ -45,7 +45,7 @@ _build_diff_stats_html() {
     rem_count=$(echo "$removed" | python3 -c "import sys,json; d=json.load(sys.stdin); print(sum(len(v) for v in d.values()))" 2>/dev/null || echo 0)
   fi
   if [ "$add_count" -gt 0 ] || [ "$rem_count" -gt 0 ]; then
-    printf '<span class="diff-stats">Δ '
+    printf '<span class="diff-stats">±'
     [ "$add_count" -gt 0 ] && printf '<span class="diff-stat-add">+%s</span>' "$add_count"
     [ "$rem_count" -gt 0 ] && printf '<span class="diff-stat-rem">-%s</span>' "$rem_count"
     printf '</span>'
@@ -85,10 +85,16 @@ generate_file_body() {
       added=$(_get_diff_added "$src_file")
       removed=$(_get_diff_removed "$src_file")
       diff_attrs=$(_build_diff_attrs "$src_file")
-      local git_root rel_path normalized_file
-      git_root=$(cd "$(git -C "$(dirname "$src_file")" rev-parse --show-toplevel 2>/dev/null)" && pwd -P)
-      normalized_file=$(cd "$(dirname "$src_file")" && pwd -P)/$(basename "$src_file")
-      rel_path="${normalized_file#"$git_root"/}"
+      local git_root rel_path
+      git_root=$(git -C "$(dirname "$src_file")" rev-parse --show-toplevel 2>/dev/null)
+      rel_path=$(git -C "$git_root" ls-files --full-name -- "$src_file" 2>/dev/null)
+      if [ -z "$rel_path" ]; then
+        # Untracked file — strip git root prefix (case-insensitive for macOS)
+        local lower_root lower_file
+        lower_root=$(echo "$git_root" | tr '[:upper:]' '[:lower:]')
+        lower_file=$(echo "$src_file" | tr '[:upper:]' '[:lower:]')
+        rel_path="${lower_file#"$lower_root"/}"
+      fi
       file_status=$(_git_file_status "$rel_path" "$git_root")
       diff_stats=$(_build_diff_stats_html "$added" "$removed" "$file_status")
     fi
