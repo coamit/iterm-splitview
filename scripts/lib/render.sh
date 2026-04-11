@@ -17,10 +17,10 @@ _build_diff_attrs() {
 }
 
 _git_file_status() {
-  local file="$1"
-  if git ls-files --others --exclude-standard 2>/dev/null | grep -qxF "$file"; then
+  local file="$1" git_root="$2"
+  if git -C "$git_root" ls-files --others --exclude-standard 2>/dev/null | grep -qxF "$file"; then
     echo "new"
-  elif git ls-files --deleted 2>/dev/null | grep -qxF "$file"; then
+  elif git -C "$git_root" ls-files --deleted 2>/dev/null | grep -qxF "$file"; then
     echo "deleted"
   else
     echo "modified"
@@ -87,7 +87,7 @@ generate_file_body() {
       local git_root rel_path
       git_root=$(git -C "$(dirname "$src_file")" rev-parse --show-toplevel 2>/dev/null)
       rel_path="${src_file#"$git_root"/}"
-      file_status=$(_git_file_status "$rel_path")
+      file_status=$(_git_file_status "$rel_path" "$git_root")
       diff_stats=$(_build_diff_stats_html "$added" "$removed" "$file_status")
     fi
 
