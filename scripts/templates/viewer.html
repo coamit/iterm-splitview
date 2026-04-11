@@ -521,15 +521,9 @@ $body$
   }
 
   function toggleDiffCollapse() {
-    var panels = document.querySelectorAll('.fv-tab-content');
-    var anyCollapsed = document.querySelector('.fv-tab-content.diff-collapsed');
-    panels.forEach(function(panel) {
-      if (anyCollapsed) {
-        panel.classList.remove('diff-collapsed');
-      } else {
-        panel.classList.add('diff-collapsed');
-      }
-    });
+    var panel = document.querySelector('.fv-tab-content.active');
+    if (!panel) return;
+    panel.classList.toggle('diff-collapsed');
   }
 
   // Initialize collapsed diff mode on load
