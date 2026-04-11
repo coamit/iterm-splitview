@@ -100,7 +100,7 @@ div.sourceCode { margin: 8px 0; }
 .fv-modal-overlay.visible { display: flex; justify-content: center; padding-top: 60px; }
 .fv-modal { width: 420px; max-height: 360px; background: #1f2430; border: 1px solid #353b4a; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); display: flex; flex-direction: column; overflow: hidden; }
 .fv-modal-input { background: #171b24; border: none; border-bottom: 1px solid #353b4a; padding: 12px 14px; font-size: 14px; color: #e8ecf0; outline: none; font-family: -apple-system, sans-serif; }
-.fv-modal-input::placeholder { color: #e2c46c99; }
+.fv-modal-input::placeholder { color: #8a90a0; }
 .fv-modal-list { list-style: none; overflow-y: auto; flex: 1; padding: 0; margin: 0; scrollbar-width: thin; scrollbar-color: #4b5263 transparent; }
 .fv-modal-list::-webkit-scrollbar { width: 6px; }
 .fv-modal-list::-webkit-scrollbar-track { background: transparent; }
@@ -109,7 +109,7 @@ div.sourceCode { margin: 8px 0; }
 .fv-modal-item { padding: 8px 10px 8px 8px; cursor: pointer; font-size: 13px; font-family: -apple-system, sans-serif; color: #ccd0d4; display: flex; align-items: center; gap: 8px; border-left: 2px solid transparent; }
 .fv-modal-item:hover, .fv-modal-item.selected { background: #2a3040; }
 .fv-modal-item.selected { border-left-color: #73b8f0; }
-.fv-modal-item .fv-modal-fname { color: #ffcc66; }
+.fv-modal-item .fv-modal-fname { color: #e8ecf0; }
 .fv-modal-item .fv-modal-fpath { color: #4b5263; font-size: 11px; margin-left: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; direction: rtl; text-align: right; }
 .fv-modal-item .fv-modal-line { color: #4b5263; font-size: 11px; font-family: "JetBrains Mono", monospace; }
 .fv-modal-item .fv-modal-content { color: #ccd0d4; font-size: 12px; font-family: "JetBrains Mono", monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -133,10 +133,10 @@ div.sourceCode { margin: 8px 0; }
   .diff-stat-rem { color: #d1242f; }
   .fv-modal { background: #ffffff; border-color: #d0d7de; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
   .fv-modal-input { background: #f6f8fa; border-bottom-color: #d0d7de; color: #24292e; }
-  .fv-modal-input::placeholder { color: #b8860b99; }
+  .fv-modal-input::placeholder { color: #6a737d; }
   .fv-modal-item { color: #24292e; }
   .fv-modal-item:hover, .fv-modal-item.selected { background: #f6f8fa; }
-  .fv-modal-item .fv-modal-fname { color: #b8860b; }
+  .fv-modal-item .fv-modal-fname { color: #24292e; }
   .fv-modal-item .fv-modal-fpath { color: #6a737d; }
   .fv-modal-overlay { background: rgba(0,0,0,0.2); }
   .fv-modal-item .fv-modal-content { color: #24292e; }
@@ -557,13 +557,13 @@ $body$
       modalInput.style.display = '';
       if (modalMode === 'text') {
         modalInput.placeholder = 'Search in all files...';
-        modalModeEl.textContent = 'All Files \u00b7 Ctrl+G for active file';
+        modalModeEl.innerHTML = '<span style="color:#ffcc66">All Files</span> \u00b7 Ctrl+G for active file';
       } else if (modalMode === 'text-active') {
         modalInput.placeholder = 'Search in active file...';
-        modalModeEl.textContent = 'Active File \u00b7 Ctrl+F for all files';
+        modalModeEl.innerHTML = '<span style="color:#ffcc66">Active File</span> \u00b7 Ctrl+F for all files';
       } else {
         modalInput.placeholder = 'Search files...';
-        modalModeEl.textContent = 'Files \u00b7 Ctrl+F for text search';
+        modalModeEl.innerHTML = '<span style="color:#ffcc66">Files</span> \u00b7 Ctrl+F for text search';
       }
     }
     renderModal('');
