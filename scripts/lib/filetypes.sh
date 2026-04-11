@@ -1,6 +1,10 @@
 #!/bin/bash
 # filetypes.sh — File type detection and language mapping
 
+_is_text_file() {
+  [ -f "$1" ] && file -b --mime-encoding "$1" 2>/dev/null | grep -qv binary
+}
+
 _is_code_file() {
   local ext="${1##*.}"
   case "$ext" in
