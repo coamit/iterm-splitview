@@ -110,13 +110,27 @@ _show_loading() {
   touch "$_FV_SESSION_DIR/loading"
 }
 
+_all_tab_files() {
+  echo "$TABS_FILE"
+  if [ -f "$WATCHED_FILE" ]; then
+    while IFS= read -r repo_root; do
+      [ -z "$repo_root" ] && continue
+      local name
+      name=$(basename "$repo_root")
+      local tf
+      tf=$(_git_tabs_file "$name")
+      [ -f "$tf" ] && echo "$tf"
+    done < "$WATCHED_FILE"
+  fi
+}
+
 _resolve_active_file() {
   local active_file=""
   [ -f "$ACTIVE_FILE" ] && active_file=$(cat "$ACTIVE_FILE")
 
-  # Validate active file exists in either tab file
+  # Validate active file exists in any tab file
   local has_active=false
-  for tabfile in "$TABS_FILE" "$TABS_GIT_FILE"; do
+  while IFS= read -r tabfile; do
     [ -f "$tabfile" ] || continue
     while IFS= read -r fp; do
       [ -z "$fp" ] || [ ! -f "$fp" ] && continue
@@ -125,18 +139,18 @@ _resolve_active_file() {
         break 2
       fi
     done < "$tabfile"
-  done
+  done < <(_all_tab_files)
 
   if [ "$has_active" = false ]; then
-    # Pick first valid file from either tab file
-    for tabfile in "$TABS_FILE" "$TABS_GIT_FILE"; do
+    # Pick first valid file from any tab file
+    while IFS= read -r tabfile; do
       [ -f "$tabfile" ] || continue
       while IFS= read -r fp; do
         [ -z "$fp" ] || [ ! -f "$fp" ] && continue
         active_file="$fp"
         break 2
       done < "$tabfile"
-    done
+    done < <(_all_tab_files)
     echo "$active_file" > "$ACTIVE_FILE"
   fi
   echo "$active_file"
@@ -144,13 +158,13 @@ _resolve_active_file() {
 
 _count_valid_tabs() {
   local count=0
-  for tabfile in "$TABS_FILE" "$TABS_GIT_FILE"; do
+  while IFS= read -r tabfile; do
     [ -f "$tabfile" ] || continue
     while IFS= read -r fp; do
       [ -z "$fp" ] || [ ! -f "$fp" ] && continue
       count=$((count + 1))
     done < "$tabfile"
-  done
+  done < <(_all_tab_files)
   echo "$count"
 }
 
@@ -176,7 +190,10 @@ _render_tab_group_tabs() {
     [ "$fp" = "$active_file" ] && active_class=" active"
     tab_icon=$(_tab_icon_for_file "$fp" "$icon_mode")
     local close_btn=""
-    [ "$group_id" != "git" ] && close_btn=$(printf '<span class="fv-tab-close" data-close-path="%s">&times;</span>' "$fp")
+    case "$group_id" in
+      git.*) ;; # git group tabs don't get individual close buttons
+      *) close_btn=$(printf '<span class="fv-tab-close" data-close-path="%s">&times;</span>' "$fp") ;;
+    esac
     printf '<div class="fv-tab%s" data-tab="fv-tab-%s-%d" data-group="%s" title="%s">%s%s%s</div>\n' \
       "$active_class" "$group_id" "$idx" "$group_id" "$fp" "$tab_icon" "$fname" "$close_btn"
     idx=$((idx + 1))
@@ -194,24 +211,56 @@ _count_group_tabs() {
 
 _generate_tab_bar() {
   local active_file="$1" gen_epoch="$2"
-  local has_files=false has_git=false
-  local files_count=0 git_count=0
+  local has_files=false
+  local files_count=0
   [ -f "$TABS_FILE" ] && [ -s "$TABS_FILE" ] && has_files=true && files_count=$(_count_group_tabs "$TABS_FILE")
-  [ -f "$TABS_GIT_FILE" ] && [ -s "$TABS_GIT_FILE" ] && has_git=true && git_count=$(_count_group_tabs "$TABS_GIT_FILE")
 
   # Determine which group is active (based on which group contains the active file)
   local active_group="files"
-  if [ "$has_git" = true ] && grep -qxF "$active_file" "$TABS_GIT_FILE" 2>/dev/null; then
-    active_group="git"
+
+  # Build list of watched repos with their tab counts
+  local -a repo_names=()
+  local -a repo_tab_files=()
+  local -a repo_counts=()
+  local has_any_git=false
+  if [ -f "$WATCHED_FILE" ] && [ -s "$WATCHED_FILE" ]; then
+    while IFS= read -r repo_root; do
+      [ -z "$repo_root" ] && continue
+      local rname
+      rname=$(basename "$repo_root")
+      local rtf
+      rtf=$(_git_tabs_file "$rname")
+      if [ -f "$rtf" ] && [ -s "$rtf" ]; then
+        has_any_git=true
+        repo_names+=("$rname")
+        repo_tab_files+=("$rtf")
+        repo_counts+=("$(_count_group_tabs "$rtf")")
+        # Check if active file is in this git group
+        if grep -qxF "$active_file" "$rtf" 2>/dev/null; then
+          active_group="git.${rname}"
+        fi
+      fi
+    done < "$WATCHED_FILE"
   fi
 
   # Group selector bar (always visible)
   printf '<div class="fv-group-bar">\n'
-  local files_active="" git_active=""
+  local files_active=""
   [ "$active_group" = "files" ] && files_active=" active"
-  [ "$active_group" = "git" ] && git_active=" active"
   printf '<span class="fv-group-sel%s" data-group="files">&#9671; Files <span class="fv-group-count">%d</span></span>\n' "$files_active" "$files_count"
-  printf '<span class="fv-group-sel%s" data-group="git">&#9095; Git Changes <span class="fv-group-count">%d</span></span>\n' "$git_active" "$git_count"
+
+  # Render a group selector for each watched repo
+  local i
+  for i in "${!repo_names[@]}"; do
+    local rname="${repo_names[$i]}"
+    local rcount="${repo_counts[$i]}"
+    local group_id="git.${rname}"
+    local git_active=""
+    [ "$active_group" = "$group_id" ] && git_active=" active"
+    printf '<span class="fv-group-sel%s" data-group="%s">&#9095; %s <span class="fv-group-count">%d</span><span class="fv-group-close" data-unwatch="%s" title="Stop watching">&times;</span></span>\n' \
+      "$git_active" "$group_id" "$rname" "$rcount" "$rname"
+  done
+
   printf '<div class="fv-tab-spacer"></div>'
   printf '<div class="fv-tab-action" id="fv-refresh" title="Refresh"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></div>'
   printf '</div>\n'
@@ -221,12 +270,11 @@ _generate_tab_bar() {
   if [ "$has_files" = true ]; then
     _render_tab_group_tabs "files" "$TABS_FILE" "$active_file" ""
   fi
-  if [ "$has_git" = true ]; then
-    _render_tab_group_tabs "git" "$TABS_GIT_FILE" "$active_file" "diff"
-  fi
-  if [ "$has_files" = false ] && [ "$has_git" = false ]; then
-    : # empty tab bar
-  fi
+  for i in "${!repo_names[@]}"; do
+    local rname="${repo_names[$i]}"
+    local rtf="${repo_tab_files[$i]}"
+    _render_tab_group_tabs "git.${rname}" "$rtf" "$active_file" "diff"
+  done
   printf '<div class="fv-tab-spacer"></div>'
   printf '</div>\n'
   printf '<div class="fv-tab-ts" id="fv-ts" data-generated="%s"></div>\n' "$gen_epoch"
@@ -256,9 +304,18 @@ _generate_tab_panels() {
     _generate_panels_for_group "files" "$TABS_FILE" "$active_file" "$body_tmp" ""
   fi
 
-  # Generate panels for git group (with diff mode)
-  if [ -f "$TABS_GIT_FILE" ] && [ -s "$TABS_GIT_FILE" ]; then
-    _generate_panels_for_group "git" "$TABS_GIT_FILE" "$active_file" "$body_tmp" "diff"
+  # Generate panels for each watched repo (with diff mode)
+  if [ -f "$WATCHED_FILE" ] && [ -s "$WATCHED_FILE" ]; then
+    while IFS= read -r repo_root; do
+      [ -z "$repo_root" ] && continue
+      local rname
+      rname=$(basename "$repo_root")
+      local rtf
+      rtf=$(_git_tabs_file "$rname")
+      if [ -f "$rtf" ] && [ -s "$rtf" ]; then
+        _generate_panels_for_group "git.${rname}" "$rtf" "$active_file" "$body_tmp" "diff"
+      fi
+    done < "$WATCHED_FILE"
   fi
 }
 
@@ -269,11 +326,14 @@ generate_tabbed_html() {
   saved_theme=""
   [ -f "$HOME/.config/fileview/theme" ] && saved_theme=$(cat "$HOME/.config/fileview/theme" 2>/dev/null)
 
-  local has_files=false has_git=false
+  local has_files=false has_any_git=false
   [ -f "$TABS_FILE" ] && [ -s "$TABS_FILE" ] && has_files=true
-  [ -f "$TABS_GIT_FILE" ] && [ -s "$TABS_GIT_FILE" ] && has_git=true
+  # Check if any watched repo has tabs
+  for gtf in "$_FV_SESSION_DIR"/tabs.git.*; do
+    [ -f "$gtf" ] && [ -s "$gtf" ] && { has_any_git=true; break; }
+  done
 
-  if [ "$has_files" = false ] && [ "$has_git" = false ]; then
+  if [ "$has_files" = false ] && [ "$has_any_git" = false ]; then
     # Empty state — generate minimal page with tab bar (no tabs)
     tab_count=0
     {

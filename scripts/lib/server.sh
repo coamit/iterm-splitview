@@ -24,14 +24,22 @@ start_server() {
   port=$(python3 -c "import socket; s=socket.socket(); s.bind(('',0)); print(s.getsockname()[1]); s.close()")
   echo "$port" > "$SERVER_PORT_FILE"
   FILEVIEW_SCRIPT="$(realpath "${_FV_ENTRYPOINT:-$0}")" python3 -c "
-import http.server, socketserver, urllib.parse, os, sys, subprocess, json, threading, signal
+import http.server, socketserver, urllib.parse, os, sys, subprocess, json, threading, signal, glob
 
 DIR = sys.argv[1]
 TABS = os.path.join(DIR, 'tabs')
-TABS_GIT = os.path.join(DIR, 'tabs.git')
+WATCHED = os.path.join(DIR, 'watched')
 COLLAPSED = os.path.join(DIR, 'collapsed')
 SEARCH_ROOT = os.path.join(DIR, 'search_root')
 SCRIPT = os.environ.get('FILEVIEW_SCRIPT', '')
+
+def _all_git_tab_files():
+    return sorted(glob.glob(os.path.join(DIR, 'tabs.git.*')))
+
+def _all_tab_files():
+    result = [TABS]
+    result.extend(_all_git_tab_files())
+    return result
 
 SEARCH_TIMEOUT = 5
 SEARCH_EXCLUDES = ['.git', 'node_modules', '.cache', '__pycache__', '.DS_Store',
@@ -116,7 +124,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             new_active = qs.get('active', [''])[0]
             if fp:
                 all_remaining = []
-                for tabfile in [TABS, TABS_GIT]:
+                for tabfile in _all_tab_files():
                     if os.path.exists(tabfile):
                         with open(tabfile) as f:
                             lines = [l for l in f.read().splitlines() if l and l != fp]
@@ -292,20 +300,38 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_response(204)
             self.end_headers()
             return
+        if parsed.path == '/_unwatch':
+            qs = urllib.parse.parse_qs(parsed.query)
+            repo_name = qs.get('name', [''])[0]
+            if repo_name:
+                tabs_file = os.path.join(DIR, 'tabs.git.' + repo_name)
+                if os.path.exists(tabs_file):
+                    os.remove(tabs_file)
+                if os.path.exists(WATCHED):
+                    with open(WATCHED) as f:
+                        lines = [l for l in f.read().splitlines() if l and os.path.basename(l) != repo_name]
+                    with open(WATCHED, 'w') as f:
+                        f.write('\n'.join(lines) + '\n' if lines else '')
+                if SCRIPT:
+                    subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self.send_response(204)
+            self.end_headers()
+            return
         if parsed.path == '/_open':
             qs = urllib.parse.parse_qs(parsed.query)
             fp = qs.get('path', [''])[0]
             if fp and os.path.isfile(fp):
                 # Signal loading state
                 open(os.path.join(DIR, 'loading'), 'w').close()
-                # Detect if file is a git change — add to correct tab file
+                # Detect if file is already in any git tab file
                 target_tabs = TABS
-                # Check if already in tabs.git
-                if os.path.exists(TABS_GIT):
-                    with open(TABS_GIT) as f:
-                        if fp in [l.strip() for l in f.readlines()]:
-                            target_tabs = TABS_GIT
-                # If not already tracked, check if it's a git-changed file
+                for gtf in _all_git_tab_files():
+                    if os.path.exists(gtf):
+                        with open(gtf) as f:
+                            if fp in [l.strip() for l in f.readlines()]:
+                                target_tabs = gtf
+                                break
+                # If not already in a git tab file, check if it's a git-changed file
                 if target_tabs == TABS:
                     git_root = self._get_git_root()
                     if git_root:
@@ -317,7 +343,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                                     if l.strip():
                                         changed.add(os.path.normpath(os.path.join(git_root, l.strip())))
                             if fp in changed:
-                                target_tabs = TABS_GIT
+                                rname = os.path.basename(git_root)
+                                target_tabs = os.path.join(DIR, 'tabs.git.' + rname)
                         except Exception:
                             pass
                 # Add to the correct tab file

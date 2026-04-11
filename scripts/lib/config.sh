@@ -15,8 +15,14 @@ SERVER_PID_FILE="$_FV_SESSION_DIR/server.pid"
 SERVER_PORT_FILE="$_FV_SESSION_DIR/server_port"
 CWD_FILE="$_FV_SESSION_DIR/cwd"
 SEARCH_ROOT_FILE="$_FV_SESSION_DIR/search_root"
-TABS_GIT_FILE="$_FV_SESSION_DIR/tabs.git"
+WATCHED_FILE="$_FV_SESSION_DIR/watched"
 COLLAPSED_FILE="$_FV_SESSION_DIR/collapsed"
+
+# Returns the tab file path for a watched repo (basename of git root)
+_git_tabs_file() {
+  local repo_name="$1"
+  echo "$_FV_SESSION_DIR/tabs.git.${repo_name}"
+}
 PANE_SESSION_ID_FILE="$_FV_SESSION_DIR/pane_session_id"
 mkdir -p /tmp/fileview
 

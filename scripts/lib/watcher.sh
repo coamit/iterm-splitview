@@ -1,5 +1,6 @@
 #!/bin/bash
 # watcher.sh — File change watcher + live git tracking for auto-reload
+# shellcheck disable=SC2153  # Variables are defined in config.sh
 
 stop_watcher() {
   if [ -f "$WATCHER_PID" ]; then
@@ -12,39 +13,38 @@ stop_watcher() {
 
 _collect_mtimes() {
   local result=""
-  for tabfile in "$TABS_FILE" "$TABS_GIT_FILE"; do
-    [ -f "$tabfile" ] && [ -s "$tabfile" ] || continue
+  # Collect from files tab
+  if [ -f "$TABS_FILE" ] && [ -s "$TABS_FILE" ]; then
     while IFS= read -r fp; do
       [ -z "$fp" ] && continue
       result="${result}$(stat -f %m "$fp" 2>/dev/null || echo 0):"
-    done < "$tabfile"
+    done < "$TABS_FILE"
+  fi
+  # Collect from all git tab files
+  for gtf in "$_FV_SESSION_DIR"/tabs.git.*; do
+    [ -f "$gtf" ] && [ -s "$gtf" ] || continue
+    while IFS= read -r fp; do
+      [ -z "$fp" ] && continue
+      result="${result}$(stat -f %m "$fp" 2>/dev/null || echo 0):"
+    done < "$gtf"
   done
   echo "$result"
 }
 
-_detect_git_root() {
-  # Try active file dir, then CWD
-  local active_path=""
-  [ -f "$ACTIVE_FILE" ] && active_path=$(cat "$ACTIVE_FILE" 2>/dev/null)
-  local dirs_to_try=()
-  [ -n "$active_path" ] && dirs_to_try+=("$(dirname "$active_path")")
-  [ -f "$CWD_FILE" ] && dirs_to_try+=("$(cat "$CWD_FILE" 2>/dev/null)")
-  for d in "${dirs_to_try[@]}"; do
-    [ -d "$d" ] || continue
-    local root
-    root=$(git -C "$d" rev-parse --show-toplevel 2>/dev/null) && { echo "$root"; return; }
-  done
-}
-
-_sync_git_tabs() {
-  local git_root="$1"
+_sync_repo_tabs() {
+  local git_root="$1" tabs_file="$2"
   [ -z "$git_root" ] && return 1
+  [ -z "$tabs_file" ] && return 1
 
-  # Get current git changes
+  # Get current git changes: unstaged + staged + untracked + committed-not-pushed
   local changed
   changed=$({ git -C "$git_root" diff --name-only 2>/dev/null
               git -C "$git_root" diff --name-only --cached 2>/dev/null
               git -C "$git_root" ls-files --others --exclude-standard 2>/dev/null
+              local branch; branch=$(git -C "$git_root" rev-parse --abbrev-ref HEAD 2>/dev/null)
+              if [ -n "$branch" ]; then
+                git -C "$git_root" diff --name-only "origin/${branch}..HEAD" 2>/dev/null
+              fi
             } | sort -u)
 
   # Build set of absolute paths of changed files
@@ -57,12 +57,12 @@ _sync_git_tabs() {
   done <<< "$changed"
   new_set=$(echo "$new_set" | sort -u | sed '/^$/d')
 
-  # Compare with existing tabs.git
+  # Compare with existing tabs file
   local existing=""
-  [ -f "$TABS_GIT_FILE" ] && existing=$(sort "$TABS_GIT_FILE" | sed '/^$/d')
+  [ -f "$tabs_file" ] && existing=$(sort "$tabs_file" | sed '/^$/d')
 
   if [ "$new_set" != "$existing" ]; then
-    echo "$new_set" > "$TABS_GIT_FILE"
+    echo "$new_set" > "$tabs_file"
     return 0  # changed
   fi
   return 1  # no change
@@ -73,17 +73,28 @@ start_watcher() {
   (
     local last_mtimes
     last_mtimes=$(_collect_mtimes)
-    local git_root
-    git_root=$(_detect_git_root)
     local git_poll_counter=0
 
-    # Initial git sync
-    [ -n "$git_root" ] && _sync_git_tabs "$git_root" && generate_tabbed_html
+    # Initial git sync for all watched repos
+    if [ -f "$WATCHED_FILE" ] && [ -s "$WATCHED_FILE" ]; then
+      local any_changed=false
+      while IFS= read -r repo_root; do
+        [ -z "$repo_root" ] && continue
+        local rname
+        rname=$(basename "$repo_root")
+        local rtf
+        rtf=$(_git_tabs_file "$rname")
+        if _sync_repo_tabs "$repo_root" "$rtf"; then
+          any_changed=true
+        fi
+      done < "$WATCHED_FILE"
+      [ "$any_changed" = true ] && generate_tabbed_html
+    fi
 
     while true; do
       sleep 2
 
-      # Check file content changes
+      # Check file content changes across all tab files
       local cur_mtimes
       cur_mtimes=$(_collect_mtimes)
       local needs_regen=false
@@ -92,17 +103,22 @@ start_watcher() {
         needs_regen=true
       fi
 
-      # Poll git status every ~6s (every 3rd cycle)
+      # Poll git status for each watched repo every ~6s (every 3rd cycle)
       git_poll_counter=$((git_poll_counter + 1))
       if [ $git_poll_counter -ge 3 ]; then
         git_poll_counter=0
-        # Re-detect git root in case active file changed
-        git_root=$(_detect_git_root)
-        if [ -n "$git_root" ]; then
-          if _sync_git_tabs "$git_root"; then
-            needs_regen=true
-            last_mtimes=$(_collect_mtimes)
-          fi
+        if [ -f "$WATCHED_FILE" ] && [ -s "$WATCHED_FILE" ]; then
+          while IFS= read -r repo_root; do
+            [ -z "$repo_root" ] && continue
+            local rname
+            rname=$(basename "$repo_root")
+            local rtf
+            rtf=$(_git_tabs_file "$rname")
+            if _sync_repo_tabs "$repo_root" "$rtf"; then
+              needs_regen=true
+              last_mtimes=$(_collect_mtimes)
+            fi
+          done < "$WATCHED_FILE"
         fi
       fi
 
