@@ -22,11 +22,15 @@ https://github.com/user-attachments/assets/ecc7991d-fb5a-4e77-8dfa-ff2a2666c683
 
 - **fileview** — read-only styled HTML rendering (markdown, tables, reports, plans)
 - **fileedit** — editable terminal editor in split pane (code, config, notes)
+- **Multi-tab** — open multiple files as tabs in the same pane, close individual tabs
+- **Search modal** — Ctrl+P for file search, Ctrl+F for text search across files
+- **Diff viewer** — `fileview diff` shows git changes with add/remove highlighting and hunk navigation
 - **Dark/light mode** — adapts automatically to macOS system preference
 - **Tables** — styled borders, dynamic column widths, hover effects
 - **Mermaid diagrams** — flowcharts, sequence diagrams, Gantt charts, ERD
 - **Syntax highlighting** — highlight.js with `atom-one-dark` / `atom-one-light` themes, auto-switching with system dark/light mode
 - **Code files** — IDE-style rendering for `.ts`, `.js`, `.py`, `.go`, `.sh`, and [more](scripts/fileview): macOS window dots, filename header, language badge, and line numbers
+- **Live auto-reload** — built-in HTTP server watches files and reloads the browser automatically
 - **Session isolation** — each iTerm tab gets its own independent split pane
 - **AI integration** — Claude Code uses these tools autonomously
 
@@ -36,7 +40,7 @@ https://github.com/user-attachments/assets/ecc7991d-fb5a-4e77-8dfa-ff2a2666c683
 curl -fsSL https://raw.githubusercontent.com/coamit/iterm-splitview/main/install.sh | bash
 ```
 
-This clones the repo, symlinks scripts to `~/.local/bin/`, and optionally installs the Claude Code skill.
+This clones the repo to `~/.local/share/iterm-splitview/`, symlinks scripts to `~/.local/bin/`, and optionally installs the Claude Code skill. If run from a local checkout, it symlinks directly to that repo instead of cloning.
 
 ### Dependencies
 
@@ -51,14 +55,26 @@ This clones the repo, symlinks scripts to `~/.local/bin/`, and optionally instal
 ## Quick Start
 
 ```bash
-# View a markdown file in styled HTML split pane
+# View a file in styled HTML split pane
 fileview open README.md
 
-# Close the viewer
+# Open multiple files as tabs
+fileview open file1.md file2.ts file3.py
+
+# Add a tab to existing pane
+fileview open another-file.md
+
+# Close a specific tab
+fileview close file1.md
+
+# Close pane and all tabs
 fileview close
 
-# Refresh after editing (universal pattern)
-fileview close && fileview open README.md
+# View git diff with change highlighting
+fileview diff
+
+# List open tabs
+fileview list
 
 # Reopen the active plan file
 fileview-plan
@@ -70,15 +86,20 @@ fileedit open src/main.js
 fileedit close
 ```
 
+**Keyboard shortcuts** (in the browser pane):
+- `Ctrl+P` — search files by name
+- `Ctrl+F` — search text across all open files
+- `Ctrl+]` / `Ctrl+[` — next/previous tab
+- `Ctrl+W` — close active tab
+
 ## How It Works
 
 ### fileview
 
-1. Converts markdown to HTML via pandoc with an embedded dark/light mode CSS template
-2. Creates an iTerm2 DynamicProfile pointing to the rendered HTML
+1. Converts files to HTML via pandoc (markdown) or highlight.js (code) with an embedded dark/light mode template
+2. Starts a local HTTP server and creates an iTerm2 DynamicProfile pointing to it
 3. Splits iTerm2 vertically with a browser pane on the right
-4. Background watcher regenerates HTML when source file changes
-5. Use `fileview close && fileview open <path>` to refresh (browser doesn't auto-reload)
+4. Background watcher detects file changes and regenerates HTML — browser auto-reloads
 
 ### fileedit
 
@@ -97,6 +118,16 @@ cp claude-code/SKILL.md ~/.claude/skills/iterm-splitview/SKILL.md
 ```
 
 ## Changelog
+
+### 2026-04-11 — Multi-Tab, Search Modal, Diff Navigation & Installer Update
+
+- **Multi-tab support** — open multiple files as tabs in the same pane (`fileview open f1 f2 f3`), close individual tabs, tab bar with scroll
+- **Search modal** — Ctrl+P to search/filter files by name, Ctrl+F to search text content across all open files with match highlighting
+- **Diff navigation** — arrow buttons to jump between diff hunks, no auto-jump on load (user controls navigation)
+- **Keyboard shortcuts** — Ctrl+]/[ to cycle tabs, Ctrl+W to close active tab
+- **Built-in HTTP server** — auto-reload on file changes (no manual refresh needed)
+- **Template caching** — faster opens by reusing the HTML template
+- **Installer improvements** — detects local repo checkout and symlinks directly (no redundant clone); cleans up old `~/.local/share` clone; migrates from old `iterm-fileview` plugin
 
 ### 2026-03-29 — Syntax Highlighting & Code File Rendering
 
