@@ -62,8 +62,8 @@ _render_code_file() {
   printf '  <div class="code-file-header">\n'
   printf '    <span class="filename">%s</span>\n' "$filename"
   [ -n "$diff_stats" ] && printf '    %s\n' "$diff_stats"
-  printf '    <span class="diff-view-mode">collapsed</span>\n'
   printf '    <span class="lang-badge">%s</span>\n' "$lang_display"
+  printf '    <span class="diff-view-mode">collapsed</span>\n'
   printf '  </div>\n'
   printf '  <pre><code class="language-%s"%s>' "$lang" "$diff_attrs"
   sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g' "$src_file"
