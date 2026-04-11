@@ -1022,6 +1022,13 @@ $body$
         }
       });
     });
+    // Sort: exact substring matches first, then by match tightness
+    results.sort(function(a, b) {
+      var al = a.content.toLowerCase(), bl = b.content.toLowerCase();
+      var aExact = al.indexOf(q) !== -1 ? 1 : 0;
+      var bExact = bl.indexOf(q) !== -1 ? 1 : 0;
+      return bExact - aExact;
+    });
     return results;
   }
 
