@@ -30,11 +30,11 @@ _git_file_status() {
 _build_diff_stats_html() {
   local added="$1" removed="$2" file_status="$3"
   if [ "$file_status" = "new" ]; then
-    printf '<span class="diff-stats"><span class="diff-stat-add">new</span></span>'
+    printf '<span class="diff-stats">± <span class="diff-stat-add">new</span></span>'
     return
   fi
   if [ "$file_status" = "deleted" ]; then
-    printf '<span class="diff-stats"><span class="diff-stat-rem">deleted</span></span>'
+    printf '<span class="diff-stats">± <span class="diff-stat-rem">deleted</span></span>'
     return
   fi
   local add_count=0 rem_count=0

@@ -442,21 +442,30 @@ $body$
     return hunks;
   }
 
+  var _diffCounterDismiss = null;
+
+  function _clearDiffCounterListeners() {
+    if (_diffCounterDismiss) {
+      document.removeEventListener('click', _diffCounterDismiss);
+      document.removeEventListener('keydown', _diffCounterDismiss);
+      _diffCounterDismiss = null;
+    }
+  }
+
   function showDiffCounter() {
     var hunks = getDiffHunks();
     if (hunks.length === 0 || currentDiffIdx < 0) return;
     diffCounterBadge.textContent = (currentDiffIdx + 1) + '/' + hunks.length;
     diffCounterBadge.classList.add('visible');
-    function dismiss() {
+    _clearDiffCounterListeners();
+    _diffCounterDismiss = function(e) {
+      if (e.type === 'keydown' && e.ctrlKey && e.key === 'd') return;
       diffCounterBadge.classList.remove('visible');
-      document.removeEventListener('click', dismiss);
-      document.removeEventListener('keydown', dismiss);
-    }
-    document.removeEventListener('click', dismiss);
-    document.removeEventListener('keydown', dismiss);
+      _clearDiffCounterListeners();
+    };
     setTimeout(function() {
-      document.addEventListener('click', dismiss, { once: true });
-      document.addEventListener('keydown', dismiss, { once: true });
+      document.addEventListener('click', _diffCounterDismiss);
+      document.addEventListener('keydown', _diffCounterDismiss);
     }, 100);
   }
 
