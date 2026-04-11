@@ -89,9 +89,14 @@ fileedit close
 **Keyboard shortcuts** (in the browser pane):
 
 - `Ctrl+P` — search files by name
-- `Ctrl+F` — search text across all open files
+- `Ctrl+F` — search text across all files
+- `Ctrl+G` — search text in active file
+- `Ctrl+D` — jump to next diff
+- `Ctrl+C` — copy file path
+- `Ctrl+J` — open in Cursor
 - `Ctrl+]` / `Ctrl+[` — next/previous tab
 - `Ctrl+W` — close active tab
+- `Ctrl+/` — show all shortcuts
 
 ## How It Works
 
@@ -120,6 +125,13 @@ cp claude-code/SKILL.md ~/.claude/skills/iterm-splitview/SKILL.md
 ```
 
 ## Changelog
+
+### 2026-04-16 — Keyboard Shortcuts, Diff Stats & UI Polish
+
+- **New shortcuts** — Ctrl+D (next diff), Ctrl+G (search active file), Ctrl+C (copy path), Ctrl+J (open in Cursor), Ctrl+/ (show shortcuts)
+- **Diff stats in file header** — `+N -N` additions/removals shown per file, removed floating arrow nav
+- **Persistent search highlight** — text search results stay highlighted until click or keypress
+- **Modal scrollbar** — visible thin scrollbar when results overflow
 
 ### 2026-04-11 — Multi-Tab, Search Modal, Diff Navigation & Installer Update
 
