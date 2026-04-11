@@ -42,7 +42,7 @@ fi
 _close_all() {
   stop_watcher
   stop_server
-  rm -f "$TABS_FILE" "$ACTIVE_FILE"
+  rm -f "$TABS_FILE" "$ACTIVE_FILE" "$CWD_FILE" "$SEARCH_ROOT_FILE"
   rm -f "$_FV_SESSION_DIR/plan" "$_FV_SESSION_DIR/mode"
   _close_fileview_pane
 }
@@ -66,13 +66,15 @@ _generate_and_launch() {
 # --- CLI Commands ---
 
 cmd_open() {
-  if [ $# -eq 0 ]; then
-    echo "Usage: fileview open <file> [file2] ..." >&2
-    return 1
-  fi
-
   _show_loading
   touch "$TABS_FILE"
+  echo "$PWD" > "$CWD_FILE"
+
+  if [ $# -eq 0 ]; then
+    # No files — just open the pane with existing tabs (or empty)
+    _generate_and_launch
+    return
+  fi
 
   local last_file=""
   for src_file in "$@"; do
@@ -140,6 +142,7 @@ cmd_diff() {
 
   _show_loading
   echo "diff" > "$_FV_SESSION_DIR/mode"
+  echo "$PWD" > "$CWD_FILE"
   touch "$TABS_FILE"
 
   while IFS= read -r f; do
@@ -182,13 +185,29 @@ cmd_list() {
   done < "$TABS_FILE"
 }
 
+cmd_search_root() {
+  if [ $# -eq 0 ]; then
+    if [ -f "$SEARCH_ROOT_FILE" ]; then
+      cat "$SEARCH_ROOT_FILE"
+    else
+      echo "$HOME"
+    fi
+    return 0
+  fi
+  local root
+  root=$(cd "$1" 2>/dev/null && pwd || echo "$1")
+  echo "$root" > "$SEARCH_ROOT_FILE"
+  echo "Search root: $root"
+}
+
 # --- Dispatch ---
 
 case "$1" in
-  open)    shift; cmd_open "$@" ;;
-  close)   shift; cmd_close "$@" ;;
-  diff)    cmd_diff ;;
-  list)    cmd_list ;;
-  _regen)  generate_tabbed_html ;;
-  *)       echo "Usage: fileview {open|close|diff|list} [file ...]" >&2; exit 1 ;;
+  open)         shift; cmd_open "$@" ;;
+  close)        shift; cmd_close "$@" ;;
+  diff)         cmd_diff ;;
+  list)         cmd_list ;;
+  search-root)  shift; cmd_search_root "$@" ;;
+  _regen)       generate_tabbed_html ;;
+  *)            echo "Usage: fileview {open|close|diff|list|search-root} [file ...]" >&2; exit 1 ;;
 esac

@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" id="hljs-dark-theme">
+<style id="fv-init-hide">.fv-tab-content.active { opacity: 0 !important; }</style>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; }
@@ -62,18 +63,13 @@ body {
   background: #73b8f0;
 }
 .fv-tab-spacer { flex: 1; }
-.fv-tab-ts {
-  position: fixed;
-  bottom: 8px;
-  right: 12px;
-  font-size: 10px;
-  color: #4b5263;
-  white-space: nowrap;
-  user-select: none;
-  z-index: 150;
-}
+.fv-tab-action { padding: 6px 10px; color: #4b5263; cursor: pointer; display: flex; align-items: center; position: sticky; right: 0; background: inherit; }
+.fv-tab-action:hover { color: #ccd0d4; }
+.fv-tab-ts { display: none; }
 .fv-tab-content { display: none; padding: 14px 18px; }
 .fv-tab-content.active { display: block; }
+.fv-tab-content.fv-hidden { opacity: 0; }
+.fv-tab-content.fv-reveal { transition: opacity 0.08s ease-in; opacity: 1; }
 /* Content styles */
 h1, h2, h3 { color: #e8ecf0; border-bottom: 1px solid #353b4a; padding-bottom: 4px; margin-top: 16px; margin-bottom: 8px; }
 h1 { font-size: 1.35em; } h2 { font-size: 1.15em; } h3 { font-size: 1em; }
@@ -91,6 +87,7 @@ div.sourceCode { margin: 8px 0; }
 .code-line.diff-removed .lc { opacity: 0.6; text-decoration: line-through; }
 .code-line.diff-focus { outline: 1px solid rgba(115, 184, 240, 0.5); outline-offset: -1px; box-shadow: inset 3px 0 0 #73b8f0; }
 .code-line.search-highlight { background: rgba(226, 196, 108, 0.2); box-shadow: inset 3px 0 0 #e2c46c; }
+.search-highlight:not(.code-line) { background: rgba(226, 196, 108, 0.25); border-radius: 3px; box-shadow: 0 0 0 3px rgba(226, 196, 108, 0.25); }
 /* Diff navigation arrows */
 /* Collapsed diff mode — hide non-change lines */
 .diff-collapsed .code-line { display: none; }
@@ -117,7 +114,7 @@ div.sourceCode { margin: 8px 0; }
 /* Quick-open modal (Cmd+P) */
 .fv-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; }
 .fv-modal-overlay.visible { display: flex; justify-content: center; padding-top: 60px; }
-.fv-modal { width: 420px; max-height: 360px; background: #1f2430; border: 1px solid #353b4a; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); display: flex; flex-direction: column; overflow: hidden; }
+.fv-modal { width: 640px; max-height: 380px; background: #1f2430; border: 1px solid #353b4a; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); display: flex; flex-direction: column; overflow: hidden; }
 .fv-modal-input { background: #171b24; border: none; border-bottom: 1px solid #353b4a; padding: 12px 14px; font-size: 14px; color: #e8ecf0; outline: none; font-family: -apple-system, sans-serif; }
 .fv-modal-input::placeholder { color: #8a90a0; }
 .fv-modal-list { list-style: none; overflow-y: auto; flex: 1; padding: 0; margin: 0; scrollbar-width: thin; scrollbar-color: #4b5263 transparent; }
@@ -129,7 +126,7 @@ div.sourceCode { margin: 8px 0; }
 .fv-modal-item:hover, .fv-modal-item.selected { background: #2a3040; }
 .fv-modal-item.selected { border-left-color: #73b8f0; }
 .fv-modal-item .fv-modal-fname { color: #e8ecf0; }
-.fv-modal-item .fv-modal-fpath { color: #4b5263; font-size: 11px; margin-left: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; direction: rtl; text-align: right; }
+.fv-modal-item .fv-modal-fpath { color: #4b5263; font-size: 11px; margin-left: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fv-modal-item .fv-modal-line { color: #4b5263; font-size: 11px; font-family: "JetBrains Mono", monospace; }
 .fv-modal-item .fv-modal-content { color: #ccd0d4; font-size: 12px; font-family: "JetBrains Mono", monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fv-modal-item .fv-modal-content mark { background: #e2c46c33; color: #ffcc66; }
@@ -138,7 +135,39 @@ div.sourceCode { margin: 8px 0; }
 .fv-modal-item.shortcut-item:hover { background: transparent; }
 .fv-shortcut-key { display: inline-block; background: #2a3040; border: 1px solid #353b4a; border-radius: 4px; padding: 1px 7px; font-size: 11px; font-family: -apple-system, sans-serif; color: #ccd0d4; min-width: 60px; text-align: center; }
 .fv-shortcut-desc { color: #8a90a0; font-size: 12px; font-family: -apple-system, sans-serif; }
-.fv-modal-mode { padding: 6px 14px; font-size: 11px; color: #4b5263; border-bottom: 1px solid #353b4a; font-family: -apple-system, sans-serif; }
+.fv-modal-mode { padding: 6px 14px; font-size: 11px; color: #4b5263; border-bottom: 1px solid #353b4a; font-family: -apple-system, sans-serif; display: flex; align-items: center; gap: 6px; }
+.fv-modal-mode-text { flex: 1; }
+.fv-modal-root { cursor: pointer; color: #6a7080; font-size: 10px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: right; border: 1px solid transparent; border-radius: 3px; padding: 1px 5px; }
+.fv-modal-root:hover { color: #8a90a0; border-color: #353b4a; }
+.fv-modal-root-input { background: #171b24; border: 1px solid #73b8f0; border-radius: 3px; padding: 1px 5px; font-size: 10px; color: #e8ecf0; outline: none; font-family: -apple-system, sans-serif; width: 180px; }
+.fv-modal-loading { padding: 20px; text-align: center; color: #6a7080; font-size: 12px; font-family: -apple-system, sans-serif; }
+.fv-modal-loading::after { content: ''; display: inline-block; width: 12px; height: 12px; border: 2px solid #4b5263; border-top-color: #73b8f0; border-radius: 50%; animation: fv-spin 0.6s linear infinite; margin-left: 8px; vertical-align: middle; }
+.fv-modal-empty { padding: 20px; text-align: center; color: #6a7080; font-size: 12px; font-family: -apple-system, sans-serif; }
+@keyframes fv-spin { to { transform: rotate(360deg); } }
+.fv-tab-loading-content { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: calc(100vh - 50px); color: #6a7080; font-size: 14px; font-family: -apple-system, sans-serif; gap: 16px; margin: -14px -18px; }
+.fv-tab-loading-content::before { content: ''; display: block; width: 32px; height: 32px; border: 3px solid #353b4a; border-top-color: #73b8f0; border-radius: 50%; animation: fv-spin 0.8s linear infinite; }
+.fv-tab.loading .fv-tab-close { display: none; }
+.fv-toast { position: fixed; top: 50px; left: 50%; transform: translateX(-50%) translateY(-10px); background: #2a3040; border: 1px solid #353b4a; border-radius: 6px; padding: 8px 18px; font-size: 12px; color: #e8ecf0; font-family: -apple-system, sans-serif; z-index: 400; opacity: 0; transition: opacity 0.15s, transform 0.15s; pointer-events: none; white-space: nowrap; }
+.fv-toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* Settings modal */
+.fv-settings-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 500; }
+.fv-settings-overlay.visible { display: flex; justify-content: center; padding-top: 50px; }
+.fv-settings { width: 520px; max-height: 420px; background: #1f2430; border: 1px solid #353b4a; border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; overflow: hidden; }
+.fv-settings-header { padding: 14px 18px; font-size: 13px; font-weight: 600; color: #e8ecf0; border-bottom: 1px solid #353b4a; font-family: -apple-system, sans-serif; display: flex; align-items: center; }
+.fv-settings-header span { flex: 1; }
+.fv-settings-close { cursor: pointer; color: #6a7080; font-size: 16px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
+.fv-settings-close:hover { color: #e8ecf0; background: #353b4a; }
+.fv-settings-section { padding: 14px 0 8px; font-size: 11px; color: #6a7080; text-transform: uppercase; letter-spacing: 0.5px; font-family: -apple-system, sans-serif; }
+.fv-settings-body { overflow-y: auto; flex: 1; padding: 0 18px 18px; }
+.fv-theme-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.fv-theme-card { border: 2px solid #353b4a; border-radius: 8px; cursor: pointer; overflow: hidden; transition: border-color 0.1s; }
+.fv-theme-card:hover { border-color: #6a7080; }
+.fv-theme-card.active { border-color: #73b8f0; }
+.fv-theme-preview { height: 56px; display: flex; flex-direction: column; padding: 6px 8px; gap: 3px; }
+.fv-theme-preview-bar { height: 6px; border-radius: 2px; display: flex; gap: 3px; }
+.fv-theme-preview-tab { height: 100%; border-radius: 2px; flex: 1; }
+.fv-theme-preview-line { height: 4px; border-radius: 1px; }
+.fv-theme-label { padding: 6px 8px; font-size: 11px; font-family: -apple-system, sans-serif; text-align: center; }
 .ln { display: table-cell; width: 1px; user-select: none; text-align: right; color: #4b5263; border-right: 1px solid #353b4a; padding: 0 12px 0 16px; vertical-align: top; white-space: nowrap; font-size: 0.88em; font-family: "JetBrains Mono","Fira Code","SF Mono",Menlo,monospace; line-height: 1.6; -webkit-user-select: none; }
 .ln::before { content: attr(data-ln); }
 .lc { display: table-cell; padding: 0 16px; white-space: pre; vertical-align: top; font-size: 0.88em; font-family: "JetBrains Mono","Fira Code","SF Mono",Menlo,monospace; line-height: 1.6; }
@@ -168,7 +197,21 @@ div.sourceCode { margin: 8px 0; }
   .fv-modal-item .fv-modal-content { color: #24292e; }
   .fv-modal-item .fv-modal-content mark { background: #fff3b0; color: #24292e; }
   .fv-modal-mode { border-bottom-color: #d0d7de; color: #9ca3af; }
+  .fv-modal-root { color: #6a737d; }
+  .fv-modal-root:hover { color: #24292e; border-color: #d0d7de; }
+  .fv-modal-root-input { background: #f6f8fa; border-color: #0366d6; color: #24292e; }
+  .fv-modal-loading { color: #6a737d; }
+  .fv-modal-loading::after { border-color: #d0d7de; border-top-color: #0366d6; }
+  .fv-tab-loading-content { color: #6a737d; }
+  .fv-tab-loading-content::before { border-color: #d0d7de; border-top-color: #0366d6; }
+  .fv-toast { background: #ffffff; border-color: #d0d7de; color: #24292e; }
   .fv-shortcut-key { background: #e1e4e8; border-color: #d0d7de; color: #24292e; }
+  .fv-settings { background: #ffffff; border-color: #d0d7de; }
+  .fv-settings-header { color: #24292e; border-bottom-color: #d0d7de; }
+  .fv-settings-close:hover { color: #24292e; background: #e1e4e8; }
+  .fv-theme-card { border-color: #d0d7de; }
+  .fv-theme-card:hover { border-color: #9ca3af; }
+  .fv-theme-card.active { border-color: #0366d6; }
 }
 .code-file-wrapper { border-radius: 8px; overflow: hidden; border: 1px solid #353b4a; margin: 0; }
 .code-file-header { background: #2a2f3d; padding: 8px 14px; font-size: 11px; color: #8a90a0; font-family: -apple-system, sans-serif; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #353b4a; }
@@ -215,14 +258,25 @@ tr:hover { background: #2a3040; }
   .code-file-header .lang-badge { background: #e1e4e8; color: #6a737d; }
 }
 </style>
+$theme_style$
 </head>
 <body>
 $body$
 <div class="diff-counter-badge" id="diff-counter-badge"></div>
+<div class="fv-toast" id="fv-toast"></div>
+<div class="fv-settings-overlay" id="fv-settings-overlay">
+  <div class="fv-settings">
+    <div class="fv-settings-header"><span>Settings</span><div class="fv-settings-close" id="fv-settings-close">&times;</div></div>
+    <div class="fv-settings-body">
+      <div class="fv-settings-section">Theme</div>
+      <div class="fv-theme-grid" id="fv-theme-grid"></div>
+    </div>
+  </div>
+</div>
 <div class="fv-modal-overlay" id="fv-modal-overlay">
   <div class="fv-modal">
     <input class="fv-modal-input" id="fv-modal-input" type="text" placeholder="Search files..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    <div class="fv-modal-mode" id="fv-modal-mode">Files &middot; Ctrl+F for text search</div>
+    <div class="fv-modal-mode" id="fv-modal-mode"><span class="fv-modal-mode-text" id="fv-modal-mode-text">Files &middot; Ctrl+F for text search</span><span class="fv-modal-root" id="fv-modal-root" style="display:none" title="Click to change search root"></span></div>
     <ul class="fv-modal-list" id="fv-modal-list"></ul>
   </div>
 </div>
@@ -233,6 +287,209 @@ $body$
   var isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   var pendingCloses = 0;
   var lastCloseCompleted = 0;
+  var lastOpenTriggered = 0;
+  var pageLoadTime = Date.now();
+
+  // --- Theme system ---
+  var themes = {
+    midnight: { name: 'Midnight', dark: true, bg: '#1f2430', bgAlt: '#171b24', bgHover: '#2a3040', bgCode: '#282c34', bgHead: '#2a2f3d',
+      text: '#ccd0d4', textBright: '#e8ecf0', textMuted: '#6a7080', textDim: '#4b5263', textPlaceholder: '#8a90a0',
+      border: '#353b4a', borderAlt: '#252a35', accent: '#73b8f0', accentAlt: '#ffcc66', accentCode: '#ffcc66',
+      link: '#73b8f0', tableBg: '#2d3748', tableBorder: '#4a5568', blockquote: '#87d96c',
+      diffAdd: 'rgba(40,200,64,0.22)', diffRem: 'rgba(255,95,87,0.22)', diffAddLn: '#28c840', diffRemLn: '#ff5f57',
+      hljsTheme: 'atom-one-dark' },
+    obsidian: { name: 'Obsidian', dark: true, bg: '#1b1b1f', bgAlt: '#151518', bgHover: '#232327', bgCode: '#1e1e22', bgHead: '#222226',
+      text: '#cccccc', textBright: '#e0e0e0', textMuted: '#6e6e7a', textDim: '#4e4e58', textPlaceholder: '#7a7a86',
+      border: '#2d2d33', borderAlt: '#232328', accent: '#a78bfa', accentAlt: '#d4a051', accentCode: '#d4a051',
+      link: '#a78bfa', tableBg: '#222226', tableBorder: '#2d2d33', blockquote: '#a78bfa',
+      diffAdd: 'rgba(74,222,128,0.14)', diffRem: 'rgba(248,113,113,0.14)', diffAddLn: '#3fb950', diffRemLn: '#f47067',
+      hljsTheme: 'vs2015',
+      hljsOverride: '.hljs{color:#cccccc;background:#1e1e22}.hljs-keyword,.hljs-selector-tag,.hljs-built_in,.hljs-type,.hljs-tag,.hljs-attr,.hljs-name{color:#a78bfa}.hljs-string,.hljs-symbol,.hljs-bullet,.hljs-addition,.hljs-variable,.hljs-template-tag,.hljs-template-variable,.hljs-function,.hljs-title,.hljs-section{color:#cccccc}.hljs-comment,.hljs-quote,.hljs-deletion,.hljs-meta{color:#6e6e7a}.hljs-literal,.hljs-number{color:#b4a4e0}.hljs-attribute{color:#cccccc}' },
+    evergreen: { name: 'Evergreen', dark: true, bg: '#1a2320', bgAlt: '#141d1a', bgHover: '#243530', bgCode: '#1c2824', bgHead: '#213029',
+      text: '#c8d4cc', textBright: '#e2ece6', textMuted: '#6b8275', textDim: '#4a6358', textPlaceholder: '#7f9a8c',
+      border: '#2d4038', borderAlt: '#233029', accent: '#6ee7b7', accentAlt: '#fcd34d', accentCode: '#fcd34d',
+      link: '#6ee7b7', tableBg: '#213029', tableBorder: '#2d4038', blockquote: '#6ee7b7',
+      diffAdd: 'rgba(52,211,153,0.2)', diffRem: 'rgba(251,146,60,0.2)', diffAddLn: '#34d399', diffRemLn: '#fb923c',
+      hljsTheme: 'atom-one-dark' },
+    paper: { name: 'Paper', dark: false, bg: '#ffffff', bgAlt: '#eaecef', bgHover: '#f6f8fa', bgCode: '#fafafa', bgHead: '#f6f8fa',
+      text: '#24292e', textBright: '#24292e', textMuted: '#6a737d', textDim: '#9ca3af', textPlaceholder: '#6a737d',
+      border: '#d0d7de', borderAlt: '#d0d7de', accent: '#0366d6', accentAlt: '#c45100', accentCode: '#c45100',
+      link: '#0366d6', tableBg: '#f6f8fa', tableBorder: '#d0d7de', blockquote: '#3fb950',
+      diffAdd: 'rgba(40,200,64,0.15)', diffRem: 'rgba(255,95,87,0.15)', diffAddLn: '#1a7f37', diffRemLn: '#d1242f',
+      hljsTheme: 'atom-one-light' },
+    latte: { name: 'Latte', dark: false, bg: '#faf8f5', bgAlt: '#efe9e0', bgHover: '#f3ede5', bgCode: '#f5f0ea', bgHead: '#f0ebe3',
+      text: '#3d3929', textBright: '#2d2517', textMuted: '#8a7e6b', textDim: '#b0a48e', textPlaceholder: '#8a7e6b',
+      border: '#ddd4c4', borderAlt: '#ddd4c4', accent: '#b45309', accentAlt: '#92400e', accentCode: '#92400e',
+      link: '#b45309', tableBg: '#f0ebe3', tableBorder: '#ddd4c4', blockquote: '#65a30d',
+      diffAdd: 'rgba(101,163,13,0.15)', diffRem: 'rgba(220,38,38,0.15)', diffAddLn: '#4d7c0f', diffRemLn: '#dc2626',
+      hljsTheme: 'atom-one-light' },
+    arctic: { name: 'Arctic', dark: false, bg: '#f0f4f8', bgAlt: '#dce4ed', bgHover: '#e4eaf2', bgCode: '#e8eef5', bgHead: '#e1e8f0',
+      text: '#1e3a5f', textBright: '#0f2440', textMuted: '#5a7a9a', textDim: '#8faabe', textPlaceholder: '#5a7a9a',
+      border: '#c5d3e0', borderAlt: '#c5d3e0', accent: '#2563eb', accentAlt: '#c2410c', accentCode: '#c2410c',
+      link: '#2563eb', tableBg: '#e1e8f0', tableBorder: '#c5d3e0', blockquote: '#059669',
+      diffAdd: 'rgba(5,150,105,0.15)', diffRem: 'rgba(225,29,72,0.15)', diffAddLn: '#047857', diffRemLn: '#e11d48',
+      hljsTheme: 'atom-one-light' }
+  };
+
+  var themeStyleEl = document.createElement('style');
+  themeStyleEl.id = 'fv-theme-override';
+  document.head.appendChild(themeStyleEl);
+  var currentThemeId = '';
+
+  function applyTheme(id) {
+    var t = themes[id];
+    if (!t) return;
+    currentThemeId = id;
+    fetch('/_theme?set=' + encodeURIComponent(id));
+    // Update hljs theme
+    var hljsLink = document.getElementById('hljs-dark-theme');
+    if (hljsLink) hljsLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/' + t.hljsTheme + '.min.css';
+    // Apply hljs color overrides if theme defines them
+    var hljsOvr = document.getElementById('fv-hljs-override');
+    if (t.hljsOverride) {
+      if (!hljsOvr) { hljsOvr = document.createElement('style'); hljsOvr.id = 'fv-hljs-override'; document.head.appendChild(hljsOvr); }
+      hljsOvr.textContent = t.hljsOverride;
+    } else if (hljsOvr) { hljsOvr.textContent = ''; }
+    // Generate CSS overrides
+    themeStyleEl.textContent =
+      'body { color: ' + t.text + '; background: ' + t.bg + '; }' +
+      '.fv-tab-bar { background: ' + t.bgAlt + '; border-bottom-color: ' + t.border + '; }' +
+      '.fv-tab-bar::-webkit-scrollbar-thumb { background: ' + t.border + '; }' +
+      '.fv-tab { color: ' + t.textMuted + '; border-right-color: ' + t.borderAlt + '; }' +
+      '.fv-tab:hover { color: ' + t.text + '; background: ' + t.bg + '; }' +
+      '.fv-tab.active { color: ' + t.textBright + '; background: ' + t.bg + '; }' +
+      '.fv-tab.active::after { background: ' + t.accent + '; }' +
+      '.fv-tab-close { color: ' + t.textDim + '; }' +
+      'h1, h2, h3 { color: ' + t.textBright + '; border-bottom-color: ' + t.border + '; }' +
+      'code { background: ' + t.bgHover + '; color: ' + t.accentCode + '; }' +
+      'pre { background: ' + t.bgCode + '; border-color: ' + t.border + '; }' +
+      '.code-line:hover { background: ' + (t.dark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)') + '; }' +
+      '.code-line.diff-added { background: ' + t.diffAdd + '; }' +
+      '.code-line.diff-added .ln { color: ' + t.diffAddLn + '; }' +
+      '.code-line.diff-removed { background: ' + t.diffRem + '; }' +
+      '.code-line.diff-removed .ln { color: ' + t.diffRemLn + '; }' +
+      '.code-line.diff-focus { box-shadow: inset 3px 0 0 ' + t.accent + '; }' +
+      '.diff-stat-add { color: ' + t.diffAddLn + '; }' +
+      '.diff-stat-rem { color: ' + t.diffRemLn + '; }' +
+      '.diff-counter-badge { background: ' + t.bg + '; border-color: ' + t.border + '; color: ' + t.text + '; }' +
+      '.diff-collapsed .code-line.diff-separator .ln, .diff-collapsed .code-line.diff-separator .lc { border-bottom-color: ' + t.textDim + '; }' +
+      '.ln { color: ' + t.textDim + '; border-right-color: ' + t.border + '; }' +
+      '.code-file-wrapper { border-color: ' + t.border + '; }' +
+      '.code-file-header { background: ' + t.bgHead + '; border-bottom-color: ' + t.border + '; color: ' + t.textMuted + '; }' +
+      '.code-file-header .filename { color: ' + t.text + '; }' +
+      '.code-file-header .lang-badge { background: ' + t.border + '; color: ' + t.textMuted + '; }' +
+      'a { color: ' + t.link + '; }' +
+      'strong { color: ' + t.textBright + '; }' +
+      'blockquote { border-left-color: ' + t.blockquote + '; color: ' + t.textMuted + '; }' +
+      'hr { border-top-color: ' + t.border + '; }' +
+      'table { border-color: ' + t.tableBorder + '; }' +
+      'th { background: ' + t.tableBg + '; border-color: ' + t.tableBorder + '; }' +
+      'td { border-color: ' + t.tableBorder + '; }' +
+      'tr:hover { background: ' + t.bgHover + '; }' +
+      '.fv-modal { background: ' + t.bg + '; border-color: ' + t.border + '; }' +
+      '.fv-modal-input { background: ' + t.bgAlt + '; border-bottom-color: ' + t.border + '; color: ' + t.textBright + '; }' +
+      '.fv-modal-input::placeholder { color: ' + t.textPlaceholder + '; }' +
+      '.fv-modal-item { color: ' + t.text + '; }' +
+      '.fv-modal-item:hover, .fv-modal-item.selected { background: ' + t.bgHover + '; }' +
+      '.fv-modal-item.selected { border-left-color: ' + t.accent + '; }' +
+      '.fv-modal-item .fv-modal-fname { color: ' + t.textBright + '; }' +
+      '.fv-modal-item .fv-modal-fpath { color: ' + t.textDim + '; }' +
+      '.fv-modal-item .fv-modal-content { color: ' + t.text + '; }' +
+      '.fv-modal-item .fv-modal-content mark { background: ' + (t.dark ? '#e2c46c33' : '#fff3b0') + '; color: ' + (t.dark ? t.accentAlt : t.text) + '; }' +
+      '.fv-modal-mode { border-bottom-color: ' + t.border + '; color: ' + t.textDim + '; }' +
+      '.fv-modal-root { color: ' + t.textMuted + '; }' +
+      '.fv-modal-root:hover { color: ' + t.textBright + '; border-color: ' + t.border + '; }' +
+      '.fv-modal-root-input { background: ' + t.bgAlt + '; border-color: ' + t.accent + '; color: ' + t.textBright + '; }' +
+      '.fv-modal-loading { color: ' + t.textMuted + '; }' +
+      '.fv-modal-loading::after { border-color: ' + t.border + '; border-top-color: ' + t.accent + '; }' +
+      '.fv-tab-loading-content { color: ' + t.textMuted + '; }' +
+      '.fv-tab-loading-content::before { border-color: ' + t.border + '; border-top-color: ' + t.accent + '; }' +
+      '.fv-toast { background: ' + t.bgHover + '; border-color: ' + t.border + '; color: ' + t.textBright + '; }' +
+      '.fv-shortcut-key { background: ' + t.bgHover + '; border-color: ' + t.border + '; color: ' + t.text + '; }' +
+      '.fv-shortcut-desc { color: ' + t.textMuted + '; }' +
+      '.fv-settings { background: ' + t.bg + '; border-color: ' + t.border + '; }' +
+      '.fv-settings-header { color: ' + t.textBright + '; border-bottom-color: ' + t.border + '; }' +
+      '.fv-settings-close:hover { color: ' + t.textBright + '; background: ' + t.border + '; }' +
+      '.fv-settings-section { color: ' + t.textMuted + '; }' +
+      '.fv-theme-card { border-color: ' + t.border + '; }' +
+      '.fv-theme-card:hover { border-color: ' + t.textMuted + '; }' +
+      '.fv-theme-card.active { border-color: ' + t.accent + '; }' +
+      '.fv-theme-label { color: ' + t.text + '; }' +
+      '.fv-modal-overlay { background: rgba(0,0,0,' + (t.dark ? '0.5' : '0.2') + '); }' +
+      '.fv-settings-overlay { background: rgba(0,0,0,' + (t.dark ? '0.5' : '0.2') + '); }';
+  }
+
+  // Settings modal
+  var settingsOverlay = document.getElementById('fv-settings-overlay');
+  var themeGrid = document.getElementById('fv-theme-grid');
+
+  function renderThemeGrid() {
+    var current = currentThemeId || 'midnight';
+    var darkThemes = [], lightThemes = [];
+    Object.keys(themes).forEach(function(id) {
+      var t = themes[id];
+      (t.dark ? darkThemes : lightThemes).push(id);
+    });
+    themeGrid.innerHTML =
+      '<div style="grid-column:1/-1;font-size:10px;color:#6a7080;text-transform:uppercase;letter-spacing:0.5px;padding:4px 0;font-family:-apple-system,sans-serif">Dark</div>' +
+      darkThemes.map(function(id) { return renderThemeCard(id, current); }).join('') +
+      '<div style="grid-column:1/-1;font-size:10px;color:#6a7080;text-transform:uppercase;letter-spacing:0.5px;padding:8px 0 4px;font-family:-apple-system,sans-serif">Light</div>' +
+      lightThemes.map(function(id) { return renderThemeCard(id, current); }).join('');
+  }
+
+  function renderThemeCard(id, current) {
+    var t = themes[id];
+    return '<div class="fv-theme-card' + (id === current ? ' active' : '') + '" data-theme="' + id + '">' +
+      '<div class="fv-theme-preview" style="background:' + t.bg + '">' +
+        '<div class="fv-theme-preview-bar" style="background:' + t.bgAlt + '">' +
+          '<div class="fv-theme-preview-tab" style="background:' + t.textDim + ';opacity:0.5"></div>' +
+          '<div class="fv-theme-preview-tab" style="background:' + t.accent + '"></div>' +
+          '<div class="fv-theme-preview-tab" style="background:' + t.textDim + ';opacity:0.3"></div>' +
+        '</div>' +
+        '<div class="fv-theme-preview-line" style="background:' + t.text + ';width:70%;opacity:0.6;margin-top:4px"></div>' +
+        '<div class="fv-theme-preview-line" style="background:' + t.diffAddLn + ';width:55%;opacity:0.5"></div>' +
+        '<div class="fv-theme-preview-line" style="background:' + t.text + ';width:80%;opacity:0.4"></div>' +
+        '<div class="fv-theme-preview-line" style="background:' + t.diffRemLn + ';width:40%;opacity:0.5"></div>' +
+      '</div>' +
+      '<div class="fv-theme-label" style="background:' + t.bgAlt + ';color:' + t.text + '">' + t.name + '</div>' +
+    '</div>';
+  }
+
+  function openSettings() {
+    renderThemeGrid();
+    settingsOverlay.classList.add('visible');
+  }
+
+  function closeSettings() {
+    settingsOverlay.classList.remove('visible');
+  }
+
+  document.getElementById('fv-settings-close').addEventListener('click', closeSettings);
+  settingsOverlay.addEventListener('click', function(e) {
+    if (e.target === settingsOverlay) closeSettings();
+  });
+  themeGrid.addEventListener('click', function(e) {
+    var card = e.target.closest('.fv-theme-card');
+    if (card) {
+      applyTheme(card.getAttribute('data-theme'));
+      renderThemeGrid();
+    }
+  });
+
+  // Refresh button
+  var refreshBtn = document.getElementById('fv-refresh');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', function() {
+      fetch('/_refresh');
+    });
+  }
+
+  // Apply saved theme on load (synchronous from embedded data attribute)
+  var themeMarker = document.querySelector('[data-fv-theme]');
+  var savedTheme = themeMarker ? themeMarker.getAttribute('data-fv-theme') : '';
+  if (savedTheme && themes[savedTheme]) {
+    applyTheme(savedTheme);
+  }
 
   // Switch hljs theme for light mode
   if (!isDark) {
@@ -369,62 +626,122 @@ $body$
   document.body.appendChild(fvStyle);
   document.body.appendChild(loadingToast);
 
-  // Poll loading state fast (every 300ms)
-  setInterval(function() {
+  // --- Polling infrastructure ---
+  // Each poller: { id, xhr } — id is the setInterval handle, xhr is the in-flight request
+  var pollers = { loading: { id: null, xhr: null }, reload: { id: null, xhr: null }, timestamp: { id: null, xhr: null } };
+
+  function abortPoller(name) {
+    var p = pollers[name];
+    if (p.xhr) { p.xhr.abort(); p.xhr = null; }
+  }
+
+  function stopPoller(name) {
+    var p = pollers[name];
+    if (p.id) { clearInterval(p.id); p.id = null; }
+    abortPoller(name);
+  }
+
+  function stopAllPollers() {
+    stopPoller('loading');
+    stopPoller('reload');
+    stopPoller('timestamp');
+  }
+
+  // --- Loading toast poller (stops itself once loading is done) ---
+  function pollLoading() {
+    abortPoller('loading');
     try {
-      var lr = new XMLHttpRequest();
-      lr.open('GET', '/_loading?t=' + Date.now(), true);
-      lr.onload = function() {
+      var xhr = new XMLHttpRequest();
+      pollers.loading.xhr = xhr;
+      xhr.open('GET', '/_loading?t=' + Date.now(), true);
+      xhr.onload = function() {
+        pollers.loading.xhr = null;
         try {
-          var d = JSON.parse(lr.responseText);
+          var d = JSON.parse(xhr.responseText);
           loadingToast.style.display = d.loading ? 'flex' : 'none';
+          if (!d.loading) stopPoller('loading');
         } catch(e) {}
       };
-      lr.send();
+      xhr.send();
     } catch(e) {}
-  }, 300);
+  }
 
-  // Auto-reload: poll for HTML regeneration
+  function startLoadingPoll() {
+    if (pollers.loading.id) return;
+    pollers.loading.id = setInterval(pollLoading, 300);
+  }
+
+  // --- Auto-reload poller (lightweight /_gen endpoint) ---
   var marker = document.querySelector('[data-fv-gen]');
-  if (marker) {
-    var genTime = marker.getAttribute('data-fv-gen');
-    var tabCount = parseInt(marker.getAttribute('data-fv-tabs') || '0', 10);
-    setInterval(function() {
-      try {
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', window.location.pathname + '?t=' + Date.now(), true);
-        xhr.onload = function() {
-          var gm = xhr.responseText.match(/data-fv-gen="(\d+)"/);
-          if (gm && gm[1] !== genTime) {
-            if (pendingCloses > 0 || (Date.now() - lastCloseCompleted) < 2000) return;
-            var tm = xhr.responseText.match(/data-fv-tabs="(\d+)"/);
-            if (tm && parseInt(tm[1], 10) !== tabCount) {
+  var genTime = marker ? marker.getAttribute('data-fv-gen') : null;
+  var tabCount = marker ? parseInt(marker.getAttribute('data-fv-tabs') || '0', 10) : 0;
+
+  function pollReload() {
+    abortPoller('reload');
+    try {
+      var xhr = new XMLHttpRequest();
+      pollers.reload.xhr = xhr;
+      xhr.open('GET', '/_gen?t=' + Date.now(), true);
+      xhr.onload = function() {
+        pollers.reload.xhr = null;
+        try {
+          var d = JSON.parse(xhr.responseText);
+          if (d.gen && d.gen !== genTime) {
+            if (pendingCloses > 0 || (Date.now() - lastCloseCompleted) < 3000 || (Date.now() - lastOpenTriggered) < 3000 || (Date.now() - pageLoadTime) < 2000) return;
+            if (d.tabs !== String(tabCount)) {
               history.replaceState(null, '', window.location.pathname);
             }
+            var ac = document.querySelector('.fv-tab-content.active');
+            if (ac) { ac.style.opacity = '0'; }
             window.location.reload();
           }
-        };
-        xhr.send();
-      } catch(e) {}
-    }, 1500);
+        } catch(e) {}
+      };
+      xhr.send();
+    } catch(e) {}
   }
 
-  // Updated timestamp
-  var tsEl = document.getElementById('fv-ts');
-  if (tsEl) {
-    var gen = parseInt(tsEl.getAttribute('data-generated'), 10);
-    function updateTs() {
-      var diff = Math.floor(Date.now()/1000) - gen;
-      var text;
-      if (diff < 60) text = diff + 's ago';
-      else if (diff < 3600) text = Math.floor(diff/60) + 'm ago';
-      else if (diff < 86400) text = Math.floor(diff/3600) + 'h ago';
-      else text = Math.floor(diff/86400) + 'd ago';
-      tsEl.textContent = 'Updated ' + text;
-    }
-    updateTs();
-    setInterval(updateTs, 1000);
+  function startReloadPoll() {
+    if (!marker || pollers.reload.id) return;
+    pollers.reload.id = setInterval(pollReload, 1500);
   }
+
+  // --- Timestamp poller ---
+  var tsEl = document.getElementById('fv-ts');
+  var tsGenEpoch = tsEl ? parseInt(tsEl.getAttribute('data-generated'), 10) : 0;
+
+  function updateTimestamp() {
+    if (!tsEl) return;
+    var diff = Math.floor(Date.now() / 1000) - tsGenEpoch;
+    var text;
+    if (diff < 60) text = diff + 's ago';
+    else if (diff < 3600) text = Math.floor(diff / 60) + 'm ago';
+    else if (diff < 86400) text = Math.floor(diff / 3600) + 'h ago';
+    else text = Math.floor(diff / 86400) + 'd ago';
+    tsEl.textContent = 'Updated ' + text;
+  }
+
+  function startTimestampPoll() {
+    if (!tsEl || pollers.timestamp.id) return;
+    updateTimestamp();
+    pollers.timestamp.id = setInterval(updateTimestamp, 1000);
+  }
+
+  // --- Start all pollers ---
+  startLoadingPoll();
+  startReloadPoll();
+  startTimestampPoll();
+
+  // Pause when page is hidden, resume when visible
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+      stopAllPollers();
+    } else {
+      startLoadingPoll();
+      startReloadPoll();
+      startTimestampPoll();
+    }
+  });
 
   // Diff navigation — jump between changes with Ctrl+D
   var currentDiffIdx = -1;
@@ -574,7 +891,15 @@ $body$
   function toggleDiffCollapse() {
     var panel = document.querySelector('.fv-tab-content.active');
     if (!panel) return;
-    panel.classList.toggle('diff-collapsed');
+    var hasDiffs = panel.querySelector('.code-line.diff-added, .code-line.diff-removed');
+    if (!hasDiffs) return;
+    var codeBlocks = panel.querySelectorAll('pre, .code-lines');
+    codeBlocks.forEach(function(b) { b.style.transition = 'opacity 0.06s ease-out'; b.style.opacity = '0'; });
+    setTimeout(function() {
+      panel.classList.toggle('diff-collapsed');
+      codeBlocks.forEach(function(b) { b.style.transition = 'opacity 0.08s ease-in'; b.style.opacity = '1'; });
+      setTimeout(function() { codeBlocks.forEach(function(b) { b.style.transition = ''; }); }, 80);
+    }, 60);
   }
 
   // Initialize collapsed diff mode on load
@@ -589,7 +914,12 @@ $body$
       }
     });
   }
-  setTimeout(initDiffCollapse, 300);
+  // Init diffs, then reveal content (hidden by #fv-init-hide style)
+  initDiffCollapse();
+  var initHide = document.getElementById('fv-init-hide');
+  if (initHide) initHide.remove();
+  var activeContent = document.querySelector('.fv-tab-content.active');
+  if (activeContent) activeContent.classList.add('fv-reveal');
 
   // Reset diff index on tab switch
   document.querySelectorAll('.fv-tab').forEach(function(tab) {
@@ -604,10 +934,40 @@ $body$
   var modalInput = document.getElementById('fv-modal-input');
   var modalList = document.getElementById('fv-modal-list');
   var modalModeEl = document.getElementById('fv-modal-mode');
+  var modalModeText = document.getElementById('fv-modal-mode-text');
+  var modalRootEl = document.getElementById('fv-modal-root');
   var modalSelectedIdx = 0;
   var modalItems = [];
   var modalMode = 'files';
   var searchTimer = null;
+  var currentSearchRoot = '';
+
+  function fuzzyMatch(text, query) {
+    var tl = text.toLowerCase();
+    var ql = query.toLowerCase();
+    var qi = 0;
+    for (var ti = 0; ti < tl.length && qi < ql.length; ti++) {
+      if (tl[ti] === ql[qi]) qi++;
+    }
+    return qi === ql.length;
+  }
+
+  function fuzzyHighlight(text, query) {
+    var escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    if (!query) return escaped;
+    var ql = query.toLowerCase();
+    var result = '';
+    var qi = 0;
+    for (var i = 0; i < escaped.length && qi < ql.length; i++) {
+      if (escaped[i].toLowerCase() === ql[qi]) {
+        result += '<mark>' + escaped[i] + '</mark>';
+        qi++;
+      } else {
+        result += escaped[i];
+      }
+    }
+    return result + escaped.slice(i);
+  }
 
   function getTabData() {
     var tabs = document.querySelectorAll('.fv-tab[data-tab]');
@@ -635,108 +995,276 @@ $body$
       var tabId = panel.id;
       var tab = tabMap[tabId];
       if (!tab) return;
+      // Search code lines
       var lines = panel.querySelectorAll('.code-line');
       lines.forEach(function(line) {
         if (results.length >= 50) return;
         var lc = line.querySelector('.lc');
         if (!lc) return;
         var text = lc.textContent;
-        if (text.toLowerCase().indexOf(q) !== -1) {
+        if (fuzzyMatch(text, q)) {
           var ln = line.querySelector('.ln');
           var lineNum = ln ? ln.textContent.trim() : '?';
           results.push({ tabId: tabId, fname: tab.fname, lineNum: lineNum, lineEl: line, content: text });
+        }
+      });
+      // Search rendered markdown content (headers, paragraphs, list items, etc.)
+      var mdEls = panel.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li, td, th, blockquote, a, strong, em, code:not(.code-line code)');
+      var seen = new Set();
+      mdEls.forEach(function(el) {
+        if (results.length >= 50) return;
+        if (el.closest('.code-line') || el.closest('.code-file-header')) return;
+        var text = el.textContent;
+        if (seen.has(text)) return;
+        seen.add(text);
+        if (fuzzyMatch(text, q)) {
+          results.push({ tabId: tabId, fname: tab.fname, lineNum: '\u2014', lineEl: el, content: text.substring(0, 200) });
         }
       });
     });
     return results;
   }
 
-  function renderShortcutsModal() {
+  function renderShortcutsModal(query) {
+    var q = (query || '');
+    var filtered = q ? shortcutsList.filter(function(s) {
+      return fuzzyMatch(s.key, q) || fuzzyMatch(s.desc, q);
+    }) : shortcutsList;
     modalItems = [];
-    modalList.innerHTML = shortcutsList.map(function(s) {
+    modalList.innerHTML = filtered.length ? filtered.map(function(s) {
       return '<li class="fv-modal-item shortcut-item">' +
-        '<span class="fv-shortcut-key">' + s.key + '</span>' +
-        '<span class="fv-shortcut-desc">' + s.desc + '</span></li>';
-    }).join('');
+        '<span class="fv-shortcut-key">' + (q ? fuzzyHighlight(s.key, q) : s.key) + '</span>' +
+        '<span class="fv-shortcut-desc">' + (q ? fuzzyHighlight(s.desc, q) : s.desc) + '</span></li>';
+    }).join('') : emptyState('No matching shortcuts');
   }
 
   function renderTextSearchModal(query) {
+    if (!query || query.length < 2) { modalItems = []; modalList.innerHTML = emptyState('Type to search\u2026'); return; }
     var results = searchText(query, modalMode === 'text-active');
     modalItems = results;
     modalSelectedIdx = Math.min(modalSelectedIdx, Math.max(0, modalItems.length - 1));
-    var q = (query || '').toLowerCase();
-    modalList.innerHTML = modalItems.map(function(item, i) {
+    modalList.innerHTML = modalItems.length ? modalItems.map(function(item, i) {
       var cls = 'fv-modal-item text-result' + (i === modalSelectedIdx ? ' selected' : '');
-      var escapedContent = item.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      if (q) {
-        var re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
-        escapedContent = escapedContent.replace(re, '<mark>$1</mark>');
-      }
+      var highlighted = fuzzyHighlight(item.content, query);
       return '<li class="' + cls + '" data-idx="' + i + '">' +
         '<span class="fv-modal-fname">' + item.fname + '<span class="fv-modal-line">:' + item.lineNum + '</span></span>' +
-        '<span class="fv-modal-content">' + escapedContent.trim() + '</span></li>';
-    }).join('');
+        '<span class="fv-modal-content">' + highlighted.trim() + '</span></li>';
+    }).join('') : emptyState('No results');
   }
 
   function renderFileSearchModal(query) {
     var tabs = getTabData();
-    var q = (query || '').toLowerCase();
+    var q = (query || '');
     modalItems = q ? tabs.filter(function(t) {
-      return t.fname.toLowerCase().indexOf(q) !== -1 || t.fpath.toLowerCase().indexOf(q) !== -1;
+      return fuzzyMatch(t.fname, q) || fuzzyMatch(t.fpath, q);
     }) : tabs;
     modalSelectedIdx = Math.min(modalSelectedIdx, Math.max(0, modalItems.length - 1));
-    modalList.innerHTML = modalItems.map(function(item, i) {
+    modalList.innerHTML = modalItems.length ? modalItems.map(function(item, i) {
       var cls = 'fv-modal-item' + (i === modalSelectedIdx ? ' selected' : '');
       return '<li class="' + cls + '" data-idx="' + i + '"><span class="fv-modal-fname">' +
-        item.fname + '</span><span class="fv-modal-fpath">' + item.fpath + '</span></li>';
-    }).join('');
+        (q ? fuzzyHighlight(item.fname, q) : item.fname) + '</span><span class="fv-modal-fpath">' + item.fpath + '</span></li>';
+    }).join('') : emptyState(q ? 'No matching tabs' : 'No tabs open');
+  }
+
+  var fsSearchAbort = null;
+
+  function showLoading() {
+    modalList.innerHTML = '<li class="fv-modal-loading">Searching</li>';
+  }
+  function emptyState(msg) {
+    return '<li class="fv-modal-empty">' + msg + '</li>';
+  }
+
+  function fetchFsTextSearch(query) {
+    if (fsSearchAbort) fsSearchAbort.abort();
+    if (!query || query.length < 2) { modalItems = []; modalList.innerHTML = emptyState('Type to search\u2026'); return; }
+    showLoading();
+    fsSearchAbort = new AbortController();
+    fetch('/_search-text?q=' + encodeURIComponent(query) + '&limit=50', { signal: fsSearchAbort.signal })
+      .then(function(r) { return r.json(); })
+      .then(function(results) {
+        var openPaths = getOpenFilePaths();
+        modalItems = results.filter(function(item) {
+          return !openPaths[item.file.toLowerCase()];
+        });
+        modalSelectedIdx = Math.min(modalSelectedIdx, Math.max(0, modalItems.length - 1));
+        var q = query.toLowerCase();
+        modalList.innerHTML = modalItems.length ? modalItems.map(function(item, i) {
+          var cls = 'fv-modal-item text-result' + (i === modalSelectedIdx ? ' selected' : '');
+          var escapedContent = item.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          if (q) {
+            var re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+            escapedContent = escapedContent.replace(re, '<mark>$1</mark>');
+          }
+          return '<li class="' + cls + '" data-idx="' + i + '">' +
+            '<span class="fv-modal-fname">' + item.fname + '<span class="fv-modal-line">:' + item.line + '</span></span>' +
+            '<span class="fv-modal-content">' + escapedContent.trim() + '</span></li>';
+        }).join('') : '<li class="fv-modal-empty">No results</li>';
+      })
+      .catch(function() {});
+  }
+
+  function relPath(fullPath) {
+    if (currentSearchRoot && fullPath.indexOf(currentSearchRoot) === 0) {
+      var rel = fullPath.slice(currentSearchRoot.length);
+      if (rel.charAt(0) === '/') rel = rel.slice(1);
+      return rel;
+    }
+    return fullPath;
+  }
+
+  var fsFileQuery = '';
+  function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function renderFsFileItem(item, i) {
+    var cls = 'fv-modal-item' + (i === modalSelectedIdx ? ' selected' : '');
+    var rel = relPath(item.fpath);
+    var dir = rel.lastIndexOf('/') >= 0 ? rel.slice(0, rel.lastIndexOf('/')) : '';
+    var fname = fsFileQuery ? fuzzyHighlight(item.fname, fsFileQuery) : escHtml(item.fname);
+    return '<li class="' + cls + '" data-idx="' + i + '"><span class="fv-modal-fname">' +
+      fname + '</span>' + (dir ? '<span class="fv-modal-fpath">' + escHtml(dir) + '</span>' : '') + '</li>';
+  }
+
+  function getOpenFilePaths() {
+    var paths = {};
+    document.querySelectorAll('.fv-tab[data-tab]').forEach(function(tab) {
+      var p = (tab.getAttribute('title') || '').toLowerCase();
+      if (p) paths[p] = true;
+    });
+    return paths;
+  }
+
+  function fetchFsFileSearch(query) {
+    if (fsSearchAbort) fsSearchAbort.abort();
+    showLoading();
+    fsFileQuery = query || '';
+    fsSearchAbort = new AbortController();
+    fetch('/_search-files?q=' + encodeURIComponent(query) + '&limit=50', { signal: fsSearchAbort.signal })
+      .then(function(r) { return r.json(); })
+      .then(function(results) {
+        var openPaths = getOpenFilePaths();
+        modalItems = results.filter(function(item) {
+          return !openPaths[item.file.toLowerCase()];
+        });
+        modalSelectedIdx = Math.min(modalSelectedIdx, Math.max(0, modalItems.length - 1));
+        modalList.innerHTML = modalItems.length ? modalItems.map(renderFsFileItem).join('')
+          : '<li class="fv-modal-empty">No results</li>';
+      })
+      .catch(function() {});
   }
 
   function renderModal(query) {
-    if (modalMode === 'shortcuts') return renderShortcutsModal();
+    if (modalMode === 'shortcuts') return renderShortcutsModal(query);
+    if (modalMode === 'fs-text') return fetchFsTextSearch(query);
+    if (modalMode === 'fs-files') return fetchFsFileSearch(query);
     if (modalMode === 'text' || modalMode === 'text-active') return renderTextSearchModal(query);
     renderFileSearchModal(query);
   }
 
   var shortcutsList = [
-    { key: 'Ctrl+P', desc: 'Search files by name' },
-    { key: 'Ctrl+F', desc: 'Search text in all files' },
-    { key: 'Ctrl+G', desc: 'Search text in active file' },
+    { key: 'Ctrl+F', desc: 'Find text in current tab' },
+    { key: 'Ctrl+G', desc: 'Find text in all open tabs' },
+    { key: 'Ctrl+H', desc: 'Find text and open file' },
+    { key: 'Ctrl+O', desc: 'Open file by name' },
+    { key: 'Ctrl+P', desc: 'Find tab by name' },
     { key: 'Ctrl+D', desc: 'Jump to next diff' },
     { key: 'Ctrl+X', desc: 'Toggle collapsed/expanded diff' },
     { key: 'Ctrl+C', desc: 'Copy file path' },
-    { key: 'Ctrl+J', desc: 'Open in Cursor' },
+    { key: 'Ctrl+J', desc: 'Open file in Cursor' },
+    { key: 'Ctrl+K', desc: 'Open workspace in Cursor' },
     { key: 'Ctrl+]', desc: 'Next tab' },
     { key: 'Ctrl+[', desc: 'Previous tab' },
     { key: 'Ctrl+W', desc: 'Close tab' },
+    { key: 'Ctrl+.', desc: 'Settings' },
     { key: 'Ctrl+/', desc: 'Show shortcuts' },
     { key: 'Esc', desc: 'Close dialog' }
   ];
 
   var modalModeConfig = {
-    'files':       { placeholder: 'Search files...',          label: '<span style="color:#ffcc66">Files</span> \u00b7 Ctrl+F for text search' },
-    'text':        { placeholder: 'Search in all files...',   label: '<span style="color:#ffcc66">All Files</span> \u00b7 Ctrl+G for active file' },
-    'text-active': { placeholder: 'Search in active file...', label: '<span style="color:#ffcc66">Active File</span> \u00b7 Ctrl+F for all files' },
-    'shortcuts':   { placeholder: '',                         label: 'Keyboard Shortcuts' }
+    'fs-text':     { placeholder: 'Find text and open...',     label: '<span style="color:#ffcc66">Find &amp; Open</span> \u00b7 Ctrl+O to open file' },
+    'fs-files':    { placeholder: 'Open file...',             label: '<span style="color:#ffcc66">Open</span> \u00b7 Ctrl+H to find text' },
+    'files':       { placeholder: 'Find tab...',              label: '<span style="color:#ffcc66">Tabs</span> \u00b7 Ctrl+F to find text' },
+    'text':        { placeholder: 'Find in all tabs...',      label: '<span style="color:#ffcc66">All Tabs</span> \u00b7 Ctrl+F for current tab' },
+    'text-active': { placeholder: 'Find in current tab...',   label: '<span style="color:#ffcc66">Current Tab</span> \u00b7 Ctrl+G for all tabs' },
+    'shortcuts':   { placeholder: 'Filter shortcuts...',       label: 'Keyboard Shortcuts' }
   };
+
+  function isFsMode(m) { return m === 'fs-text' || m === 'fs-files'; }
+
+  function updateSearchRootDisplay() {
+    if (!isFsMode(modalMode)) {
+      modalRootEl.style.display = 'none';
+      return;
+    }
+    modalRootEl.style.display = '';
+    modalRootEl.textContent = currentSearchRoot || '~';
+    modalRootEl.title = 'Search root: ' + (currentSearchRoot || '~') + ' (click to change)';
+  }
+
+  function fetchSearchRoot() {
+    fetch('/_search-root')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        currentSearchRoot = data.root;
+        updateSearchRootDisplay();
+      })
+      .catch(function() {});
+  }
+
+  function startEditSearchRoot() {
+    var input = document.createElement('input');
+    input.className = 'fv-modal-root-input';
+    input.value = currentSearchRoot || '';
+    input.placeholder = '~/path/to/project';
+    modalRootEl.style.display = 'none';
+    modalRootEl.parentNode.appendChild(input);
+    input.focus();
+    input.select();
+    function commit() {
+      var val = input.value.trim();
+      if (val && val !== currentSearchRoot) {
+        fetch('/_search-root?path=' + encodeURIComponent(val))
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            currentSearchRoot = data.root;
+            updateSearchRootDisplay();
+          });
+      }
+      input.remove();
+      modalRootEl.style.display = '';
+      modalInput.focus();
+    }
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); commit(); }
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); input.remove(); modalRootEl.style.display = ''; modalInput.focus(); }
+    });
+    input.addEventListener('blur', commit);
+  }
+
+  modalRootEl.addEventListener('click', function(e) {
+    e.stopPropagation();
+    startEditSearchRoot();
+  });
 
   function openModal(mode) {
     modalMode = mode || 'files';
     modalInput.value = '';
     modalSelectedIdx = 0;
     var cfg = modalModeConfig[modalMode] || modalModeConfig['files'];
-    modalInput.style.display = modalMode === 'shortcuts' ? 'none' : '';
+    modalInput.style.display = '';
     modalInput.placeholder = cfg.placeholder;
-    modalModeEl.innerHTML = cfg.label;
+    modalModeText.innerHTML = cfg.label;
+    if (isFsMode(modalMode)) {
+      fetchSearchRoot();
+    }
+    updateSearchRootDisplay();
     renderModal('');
     modalOverlay.classList.add('visible');
-    if (modalMode !== 'shortcuts') {
-      setTimeout(function() { modalInput.focus(); }, 50);
-    }
+    setTimeout(function() { modalInput.focus(); }, 50);
   }
 
   function closeModal() {
     clearTimeout(searchTimer);
+    if (fsSearchAbort) { fsSearchAbort.abort(); fsSearchAbort = null; }
     modalOverlay.classList.remove('visible');
   }
 
@@ -744,7 +1272,7 @@ $body$
     lineEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
     lineEl.classList.add('search-highlight');
     function clear() {
-      document.querySelectorAll('.code-line.search-highlight').forEach(function(el) { el.classList.remove('search-highlight'); });
+      document.querySelectorAll('.search-highlight').forEach(function(el) { el.classList.remove('search-highlight'); });
       document.removeEventListener('click', clear);
       document.removeEventListener('keydown', clear);
     }
@@ -754,9 +1282,56 @@ $body$
     }, 100);
   }
 
+  function updateModalSelection() {
+    var items = modalList.querySelectorAll('.fv-modal-item');
+    items.forEach(function(el, i) {
+      el.classList.toggle('selected', i === modalSelectedIdx);
+    });
+    var sel = modalList.querySelector('.fv-modal-item.selected');
+    if (sel) sel.scrollIntoView({ block: 'nearest' });
+  }
+
+  function createLoadingTab(filePath) {
+    var fname = filePath.split('/').pop();
+    var tabBar = document.querySelector('.fv-tab-bar');
+    var spacer = tabBar.querySelector('.fv-tab-spacer');
+    var tabId = 'fv-tab-loading-' + Date.now();
+
+    // Deactivate all tabs
+    document.querySelectorAll('.fv-tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.fv-tab-content').forEach(function(c) { c.classList.remove('active'); });
+
+    // Create tab element
+    var tab = document.createElement('div');
+    tab.className = 'fv-tab active loading';
+    tab.setAttribute('data-tab', tabId);
+    tab.setAttribute('title', filePath);
+    var safeFname = escHtml(fname);
+    tab.innerHTML = safeFname + '<span class="fv-tab-close" data-close-path="' + escHtml(filePath) + '">\u00d7</span>';
+    tabBar.insertBefore(tab, spacer);
+
+    // Create loading content panel
+    var panel = document.createElement('div');
+    panel.className = 'fv-tab-content active';
+    panel.id = tabId;
+    panel.innerHTML = '<div class="fv-tab-loading-content">Loading ' + safeFname + '</div>';
+    document.querySelector('.fv-tab-bar').parentNode.appendChild(panel);
+
+    tab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+  }
+
   function selectModalItem() {
     if (modalItems.length === 0) return;
     var item = modalItems[modalSelectedIdx];
+    if (modalMode === 'fs-text' || modalMode === 'fs-files') {
+      var filePath = item.file;
+      closeModal();
+      createLoadingTab(filePath);
+      history.replaceState(null, '', window.location.pathname);
+      lastOpenTriggered = Date.now();
+      fetch('/_open?path=' + encodeURIComponent(filePath));
+      return;
+    }
     var wasText = modalMode === 'text' || modalMode === 'text-active';
     activateTab(item.tabId);
     history.replaceState(null, '', '#' + item.tabId);
@@ -770,6 +1345,15 @@ $body$
   function getActiveFilePath() {
     var tab = document.querySelector('.fv-tab.active');
     return tab ? tab.getAttribute('title') : '';
+  }
+
+  var toastEl = document.getElementById('fv-toast');
+  var toastTimer = null;
+  function showToast(msg) {
+    clearTimeout(toastTimer);
+    toastEl.textContent = msg;
+    toastEl.classList.add('visible');
+    toastTimer = setTimeout(function() { toastEl.classList.remove('visible'); }, 1500);
   }
 
   function copyToClipboard(text) {
@@ -812,29 +1396,43 @@ $body$
   document.addEventListener('keydown', function(e) {
     if (e.ctrlKey) {
       switch (e.key) {
+        case 't': e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); return;
+        case 'b': e.preventDefault(); window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); return;
+        case 'f': e.preventDefault(); toggleModal('text-active'); return;
+        case 'g': e.preventDefault(); toggleModal('text'); return;
+        case 'h': e.preventDefault(); toggleModal('fs-text'); return;
+        case 'o': e.preventDefault(); toggleModal('fs-files'); return;
         case 'p': e.preventDefault(); toggleModal('files'); return;
-        case 'f': e.preventDefault(); toggleModal('text'); return;
-        case 'g': e.preventDefault(); toggleModal('text-active'); return;
+        case 's': e.preventDefault(); return;
+        case '.': e.preventDefault(); if (settingsOverlay.classList.contains('visible')) closeSettings(); else openSettings(); return;
         case '/': e.preventDefault(); toggleModal('shortcuts'); return;
         case 'd': e.preventDefault(); jumpToDiff(1); return;
         case 'x': e.preventDefault(); toggleDiffCollapse(); return;
         case 'c': e.preventDefault(); var fp = getActiveFilePath(); if (fp) copyToClipboard(fp); return;
-        case 'j': e.preventDefault(); var fp2 = getActiveFilePath(); if (fp2) fetch('/_open-in-editor?path=' + encodeURIComponent(fp2)); return;
+        case 'j': e.preventDefault(); var fp2 = getActiveFilePath(); if (fp2) { fetch('/_open-in-editor?path=' + encodeURIComponent(fp2)); showToast('Opened file in Cursor \u2713'); } return;
+        case 'k': e.preventDefault(); var fp3 = getActiveFilePath(); if (fp3) { fetch('/_open-workspace?path=' + encodeURIComponent(fp3)); showToast('Opened workspace in Cursor \u2713'); } return;
         case ']': e.preventDefault(); cycleTab(1); return;
         case '[': e.preventDefault(); cycleTab(-1); return;
         case 'w': e.preventDefault(); closeActiveTab(); return;
       }
     }
+    if (settingsOverlay.classList.contains('visible')) {
+      if (e.key === 'Escape') { closeSettings(); e.preventDefault(); }
+      return;
+    }
     if (!modalOverlay.classList.contains('visible')) return;
     if (e.key === 'Escape') { closeModal(); e.preventDefault(); }
-    if (e.key === 'ArrowDown') { modalSelectedIdx = Math.min(modalSelectedIdx + 1, modalItems.length - 1); renderModal(modalInput.value); e.preventDefault(); }
-    if (e.key === 'ArrowUp') { modalSelectedIdx = Math.max(modalSelectedIdx - 1, 0); renderModal(modalInput.value); e.preventDefault(); }
+    if (e.key === 'ArrowDown') { modalSelectedIdx = Math.min(modalSelectedIdx + 1, modalItems.length - 1); updateModalSelection(); e.preventDefault(); }
+    if (e.key === 'ArrowUp') { modalSelectedIdx = Math.max(modalSelectedIdx - 1, 0); updateModalSelection(); e.preventDefault(); }
     if (e.key === 'Enter') { selectModalItem(); e.preventDefault(); }
   });
 
   modalInput.addEventListener('input', function() {
     modalSelectedIdx = 0;
-    if (modalMode === 'text' || modalMode === 'text-active') {
+    if (modalMode === 'fs-text' || modalMode === 'fs-files') {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(function() { renderModal(modalInput.value); }, 250);
+    } else if (modalMode === 'text' || modalMode === 'text-active') {
       clearTimeout(searchTimer);
       searchTimer = setTimeout(function() { renderModal(modalInput.value); }, 150);
     } else {
