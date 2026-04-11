@@ -305,7 +305,7 @@ $body$
     var lines = highlighted.split('\n');
     if (lines[lines.length - 1] === '') lines.pop();
     var html = lines.map(function(line, i) {
-      return '<div class="code-line"><span class="lc">' + (line || '\u00a0') + '</span></div>';
+      return '<div class="code-line"><span class="ln">' + (i + 1) + '</span><span class="lc">' + (line || '\u00a0') + '</span></div>';
     }).join('');
     var wrapper = document.createElement('div');
     wrapper.className = 'code-lines';
