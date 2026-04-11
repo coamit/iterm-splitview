@@ -151,6 +151,9 @@ cp claude-code/SKILL.md ~/.claude/skills/iterm-splitview/SKILL.md
 - **Threaded server** — HTTP server uses `ThreadingMixIn` for non-blocking search
 - **Aliases** — `fv` (fileview open), `fvp` (fileview-plan)
 - **Security** — HTML escaping for filenames, localhost-only binding, input validation, line length caps
+- **Session GC** — automatically cleans up stale fileview sessions from dead iTerm tabs (runs in background on open/diff)
+- **Binary file handling** — detects binary files via MIME encoding and shows a message instead of crashing pandoc; 10s pandoc timeout for large files
+- **Search ranking** — exact substring matches sorted above fuzzy matches in Ctrl+F/G results
 
 ### 2026-04-10 — Keyboard Shortcuts, Collapsed Diff, Line Numbers & UI Polish
 
