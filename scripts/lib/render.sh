@@ -100,8 +100,10 @@ generate_file_body() {
     fi
 
     _render_code_file "$src_file" "$lang" "$diff_attrs" "$diff_stats"
+  elif _is_text_file "$src_file"; then
+    timeout 10 pandoc "$src_file" 2>/dev/null | sed '/<colgroup>/,/<\/colgroup>/d'
   else
-    pandoc "$src_file" 2>/dev/null | sed '/<colgroup>/,/<\/colgroup>/d'
+    printf '<p style="color:#6a7080;font-style:italic">Binary file — cannot render</p>\n'
   fi
 }
 

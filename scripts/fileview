@@ -37,6 +37,76 @@ if [ ! -f "$VIEW_TEMPLATE" ]; then
   cp "$SCRIPT_DIR/templates/viewer.html" "$VIEW_TEMPLATE"
 fi
 
+# --- GC: clean up stale sessions from dead iTerm tabs ---
+
+_gc_stale_sessions() {
+  local base="/tmp/fileview"
+  [ -d "$base" ] || return 0
+  for session_dir in "$base"/*/; do
+    [ -d "$session_dir" ] || continue
+    local name
+    name=$(basename "$session_dir")
+    [ "$name" = "$_FV_SESSION_ID" ] && continue  # skip our own session
+
+    # Check if the session's watcher or server is still alive
+    local has_live_process=false
+    for pidfile in "$session_dir/watcher.pid" "$session_dir/server.pid"; do
+      if [ -f "$pidfile" ]; then
+        local pid
+        pid=$(cat "$pidfile")
+        if kill -0 "$pid" 2>/dev/null; then
+          has_live_process=true
+          break
+        fi
+      fi
+    done
+    $has_live_process || continue  # no processes → already dead, skip
+
+    # Has live processes — check if the iTerm pane still exists
+    local pane_id=""
+    [ -f "$session_dir/pane_session_id" ] && pane_id=$(cat "$session_dir/pane_session_id")
+    if [ -z "$pane_id" ]; then
+      _gc_kill_session "$session_dir"
+      continue
+    fi
+
+    local pane_exists
+    pane_exists=$(osascript -e "
+      tell application \"iTerm2\"
+        repeat with w in windows
+          repeat with t in tabs of w
+            repeat with s in sessions of t
+              if unique ID of s is \"$pane_id\" then return \"yes\"
+            end repeat
+          end repeat
+        end repeat
+        return \"no\"
+      end tell" 2>/dev/null)
+
+    if [ "$pane_exists" != "yes" ]; then
+      _gc_kill_session "$session_dir"
+    fi
+  done
+}
+
+_gc_kill_session() {
+  local session_dir="$1"
+  for pidfile in "$session_dir/watcher.pid" "$session_dir/server.pid"; do
+    if [ -f "$pidfile" ]; then
+      local pid
+      pid=$(cat "$pidfile")
+      kill "$pid" 2>/dev/null || true
+      rm -f "$pidfile"
+    fi
+  done
+  rm -rf "$session_dir"
+}
+
+# Run GC in background on open/diff (non-blocking)
+if [ "${1:-}" = "open" ] || [ "${1:-}" = "diff" ]; then
+  _gc_stale_sessions &
+fi
+
 # --- Shared helpers ---
 
 _close_all() {
