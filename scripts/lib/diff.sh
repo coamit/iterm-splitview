@@ -7,7 +7,7 @@ _get_diff_added() {
   git diff --unified=0 -- "$file" 2>/dev/null | \
     grep -oE '^\@\@ [^ ]+ \+[0-9]+(,[0-9]+)?' | \
     sed -E 's/.*\+([0-9]+)(,([0-9]+))?/\1 \3/' | \
-    while read s c; do
+    while read -r s c; do
       c=${c:-1}
       for ((i=0; i<c; i++)); do echo $((s+i)); done
     done | paste -sd, -
@@ -21,6 +21,7 @@ _get_diff_removed() {
   [ -z "$diff_output" ] && return
 
   # Parse unified diff to extract removed lines with their position
+  # shellcheck disable=SC2259  # pipe provides data, heredoc provides script
   echo "$diff_output" | python3 - << 'PYEOF'
 import sys, json, re
 new_line = 0

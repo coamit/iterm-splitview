@@ -1,5 +1,6 @@
 #!/bin/bash
 # config.sh — Session directories, paths, and constants
+# shellcheck disable=SC2034  # Variables are used by sourcing scripts
 
 _FV_SESSION_ID="${ITERM_SESSION_ID%%:*}"
 _FV_SESSION_DIR="/tmp/fileview/${_FV_SESSION_ID:-default}"

@@ -1,5 +1,6 @@
 #!/bin/bash
 # render.sh — HTML generation for file content and tabbed pages
+# shellcheck disable=SC2153  # Variables (ACTIVE_FILE etc.) are defined in config.sh
 
 # Generate body HTML for a single file (output to stdout, no template wrapper)
 generate_file_body() {
@@ -27,7 +28,7 @@ generate_file_body() {
       if [ -n "$removed" ] && [ "$removed" != "{}" ]; then
         # Escape for HTML attribute
         local removed_escaped
-        removed_escaped=$(echo "$removed" | sed "s/'/\\&#39;/g")
+        removed_escaped="${removed//\'/\&#39;}"
         diff_attrs="$diff_attrs data-diff-removed='$removed_escaped'"
       fi
     fi

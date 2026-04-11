@@ -15,13 +15,21 @@ _FV_ENTRYPOINT="$0"
 SCRIPT_DIR="$(cd "$(dirname "$(realpath "$0")")" && pwd)"
 
 # Source libraries
+# shellcheck source=lib/config.sh
 source "$SCRIPT_DIR/lib/config.sh"
+# shellcheck source=lib/paths.sh
 source "$SCRIPT_DIR/lib/paths.sh"
+# shellcheck source=lib/filetypes.sh
 source "$SCRIPT_DIR/lib/filetypes.sh"
+# shellcheck source=lib/diff.sh
 source "$SCRIPT_DIR/lib/diff.sh"
+# shellcheck source=lib/render.sh
 source "$SCRIPT_DIR/lib/render.sh"
+# shellcheck source=lib/server.sh
 source "$SCRIPT_DIR/lib/server.sh"
+# shellcheck source=lib/watcher.sh
 source "$SCRIPT_DIR/lib/watcher.sh"
+# shellcheck source=lib/iterm.sh
 source "$SCRIPT_DIR/lib/iterm.sh"
 
 # Copy template to cache if not present
