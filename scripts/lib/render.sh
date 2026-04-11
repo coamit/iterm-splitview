@@ -60,9 +60,6 @@ _render_code_file() {
 
   printf '<div class="code-file-wrapper">\n'
   printf '  <div class="code-file-header">\n'
-  printf '    <span class="dot dot-red"></span>\n'
-  printf '    <span class="dot dot-yellow"></span>\n'
-  printf '    <span class="dot dot-green"></span>\n'
   printf '    <span class="filename">%s</span>\n' "$filename"
   [ -n "$diff_stats" ] && printf '    %s\n' "$diff_stats"
   printf '    <span class="lang-badge">%s</span>\n' "$lang_display"
