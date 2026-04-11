@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" id="hljs-dark-theme">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  padding: 0;
+  font-size: 13px; line-height: 1.5;
+  color: #ccd0d4; background: #1f2430;
+}
+/* Tab bar */
+.fv-tab-bar {
+  display: flex;
+  align-items: stretch;
+  background: #171b24;
+  border-bottom: 1px solid #353b4a;
+  overflow-x: auto;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.fv-tab-bar::-webkit-scrollbar { height: 3px; }
+.fv-tab-bar::-webkit-scrollbar-track { background: transparent; }
+.fv-tab-bar::-webkit-scrollbar-thumb { background: #353b4a; border-radius: 3px; }
+.fv-tab-bar::-webkit-scrollbar-thumb:hover { background: #4b5263; }
+.fv-tab {
+  padding: 8px 16px;
+  font-size: 12px;
+  font-family: -apple-system, sans-serif;
+  color: #6a7080;
+  cursor: pointer;
+  border-right: 1px solid #252a35;
+  white-space: nowrap;
+  user-select: none;
+  position: relative;
+  flex-shrink: 0;
+}
+.fv-tab:hover { color: #ccd0d4; background: #1f2430; }
+.fv-tab-close {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 14px;
+  line-height: 1;
+  color: #4b5263;
+  cursor: pointer;
+  border-radius: 3px;
+  width: 16px; height: 16px;
+  text-align: center;
+  vertical-align: middle;
+}
+.fv-tab-close:hover { color: #ff5f57; background: rgba(255,95,87,0.15); }
+.fv-tab.active { color: #e8ecf0; background: #1f2430; }
+.fv-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 2px;
+  background: #73b8f0;
+}
+.fv-tab-spacer { flex: 1; }
+.fv-tab-ts {
+  position: fixed;
+  bottom: 8px;
+  right: 12px;
+  font-size: 10px;
+  color: #4b5263;
+  white-space: nowrap;
+  user-select: none;
+  z-index: 150;
+}
+.fv-tab-content { display: none; padding: 14px 18px; }
+.fv-tab-content.active { display: block; }
+/* Content styles */
+h1, h2, h3 { color: #e8ecf0; border-bottom: 1px solid #353b4a; padding-bottom: 4px; margin-top: 16px; margin-bottom: 8px; }
+h1 { font-size: 1.35em; } h2 { font-size: 1.15em; } h3 { font-size: 1em; }
+code { background: #2a3040; padding: 1px 5px; border-radius: 3px; font-size: 0.9em; color: #ffcc66; font-family: "JetBrains Mono", "Fira Code", "SF Mono", Menlo, monospace; }
+pre { background: #282c34; border-radius: 6px; overflow-x: auto; margin: 8px 0; border: 1px solid #353b4a; padding: 0 !important; }
+pre code { padding: 0 !important; background: none !important; font-size: 0.88em; font-family: "JetBrains Mono", "Fira Code", "SF Mono", Menlo, monospace; }
+div.sourceCode { margin: 8px 0; }
+.code-lines { display: table; width: 100%; border-collapse: collapse; margin: 8px 0; }
+.code-line { display: table-row; }
+.code-line:hover { background: rgba(255,255,255,0.03); }
+.code-line.diff-added { background: rgba(40, 200, 64, 0.22); }
+.code-line.diff-added .ln { color: #28c840; }
+.code-line.diff-removed { background: rgba(255, 95, 87, 0.22); }
+.code-line.diff-removed .ln { color: #ff5f57; }
+.code-line.diff-removed .lc { opacity: 0.6; text-decoration: line-through; }
+.code-line.diff-focus { outline: 1px solid rgba(115, 184, 240, 0.5); outline-offset: -1px; box-shadow: inset 3px 0 0 #73b8f0; }
+/* Diff navigation arrows */
+.diff-nav { position: fixed; right: 28px; top: 95px; display: none; flex-direction: column; gap: 6px; z-index: 200; }
+.diff-nav.visible { display: flex; }
+.diff-nav button { width: 36px; height: 36px; border: 1px solid #353b4a; border-radius: 6px; background: #1f2430; color: #ccd0d4; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0.85; }
+.diff-nav button:hover { background: #2a3040; opacity: 1; }
+.diff-nav .diff-counter { font-size: 10px; color: #6a7080; text-align: center; user-select: none; }
+/* Quick-open modal (Cmd+P) */
+.fv-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; }
+.fv-modal-overlay.visible { display: flex; justify-content: center; padding-top: 60px; }
+.fv-modal { width: 420px; max-height: 360px; background: #1f2430; border: 1px solid #353b4a; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); display: flex; flex-direction: column; overflow: hidden; }
+.fv-modal-input { background: #171b24; border: none; border-bottom: 1px solid #353b4a; padding: 12px 14px; font-size: 14px; color: #e8ecf0; outline: none; font-family: -apple-system, sans-serif; }
+.fv-modal-input::placeholder { color: #4b5263; }
+.fv-modal-list { list-style: none; overflow-y: auto; flex: 1; padding: 0; margin: 0; }
+.fv-modal-item { padding: 8px 10px 8px 8px; cursor: pointer; font-size: 13px; font-family: -apple-system, sans-serif; color: #ccd0d4; display: flex; align-items: center; gap: 8px; border-left: 2px solid transparent; }
+.fv-modal-item:hover, .fv-modal-item.selected { background: #2a3040; }
+.fv-modal-item.selected { border-left-color: #73b8f0; }
+.fv-modal-item .fv-modal-fname { color: #e8ecf0; }
+.fv-modal-item .fv-modal-fpath { color: #4b5263; font-size: 11px; margin-left: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; direction: rtl; text-align: right; }
+.fv-modal-item .fv-modal-line { color: #4b5263; font-size: 11px; font-family: "JetBrains Mono", monospace; }
+.fv-modal-item .fv-modal-content { color: #ccd0d4; font-size: 12px; font-family: "JetBrains Mono", monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fv-modal-item .fv-modal-content mark { background: #e2c46c33; color: #ffcc66; }
+.fv-modal-item.text-result { flex-direction: column; align-items: flex-start; gap: 2px; }
+.fv-modal-mode { padding: 6px 14px; font-size: 11px; color: #4b5263; border-bottom: 1px solid #353b4a; font-family: -apple-system, sans-serif; }
+.ln { display: table-cell; width: 1px; user-select: none; text-align: right; color: #4b5263; border-right: 1px solid #353b4a; padding: 0 12px 0 16px; vertical-align: top; white-space: nowrap; font-size: 0.88em; font-family: "JetBrains Mono","Fira Code","SF Mono",Menlo,monospace; line-height: 1.6; }
+.lc { display: table-cell; padding: 0 16px; white-space: pre; vertical-align: top; font-size: 0.88em; font-family: "JetBrains Mono","Fira Code","SF Mono",Menlo,monospace; line-height: 1.6; }
+@media (prefers-color-scheme: light) {
+  .ln { color: #bbb; border-right-color: #e1e4e8; }
+  .code-line:hover { background: rgba(0,0,0,0.02); }
+  .code-line.diff-added { background: rgba(40, 200, 64, 0.15); }
+  .code-line.diff-added .ln { color: #1a7f37; }
+  .code-line.diff-removed { background: rgba(255, 95, 87, 0.15); }
+  .code-line.diff-removed .ln { color: #d1242f; }
+  .diff-nav button { background: #ffffff; border-color: #d0d7de; color: #24292e; }
+  .diff-nav button:hover { background: #f6f8fa; }
+  .diff-nav .diff-counter { color: #6a737d; }
+  .fv-modal { background: #ffffff; border-color: #d0d7de; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
+  .fv-modal-input { background: #f6f8fa; border-bottom-color: #d0d7de; color: #24292e; }
+  .fv-modal-input::placeholder { color: #9ca3af; }
+  .fv-modal-item { color: #24292e; }
+  .fv-modal-item:hover, .fv-modal-item.selected { background: #f6f8fa; }
+  .fv-modal-item .fv-modal-fname { color: #24292e; }
+  .fv-modal-item .fv-modal-fpath { color: #6a737d; }
+  .fv-modal-overlay { background: rgba(0,0,0,0.2); }
+  .fv-modal-item .fv-modal-content { color: #24292e; }
+  .fv-modal-item .fv-modal-content mark { background: #fff3b0; color: #24292e; }
+  .fv-modal-mode { border-bottom-color: #d0d7de; color: #9ca3af; }
+}
+.code-file-wrapper { border-radius: 8px; overflow: hidden; border: 1px solid #353b4a; margin: 0; }
+.code-file-header { background: #2a2f3d; padding: 8px 14px; font-size: 11px; color: #8a90a0; font-family: -apple-system, sans-serif; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #353b4a; }
+.code-file-header .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.dot-red { background: #ff5f57; } .dot-yellow { background: #febc2e; } .dot-green { background: #28c840; }
+.code-file-header .filename { color: #ccd0d4; font-weight: 500; margin-left: 4px; }
+.code-file-header .lang-badge { margin-left: auto; background: #353b4a; padding: 2px 8px; border-radius: 4px; font-size: 10px; color: #8a90a0; text-transform: uppercase; letter-spacing: 0.5px; }
+.code-file-wrapper pre { border: none; border-radius: 0; margin: 0; }
+blockquote { border-left: 3px solid #87d96c; padding-left: 10px; color: #8a90a0; margin: 6px 0; }
+ul, ol { padding-left: 20px; margin: 6px 0; } li { margin-bottom: 2px; }
+a { color: #73b8f0; } hr { border: none; border-top: 1px solid #353b4a; margin: 10px 0; }
+p { margin: 5px 0; }
+strong { color: #e8ecf0; }
+table { width: auto; border-collapse: collapse; margin: 10px 0; border: 1px solid #4a5568; table-layout: auto; }
+th { background: #2d3748; padding: 8px 12px; text-align: left !important; border: 1px solid #4a5568; font-weight: 600; }
+td { padding: 8px 12px; border: 1px solid #4a5568; text-align: left !important; }
+tr:hover { background: #2a3040; }
+
+@media (prefers-color-scheme: light) {
+  body { color: #24292e; background: #ffffff; }
+  .fv-tab-bar { background: #eaecef; border-bottom-color: #d0d7de; }
+  .fv-tab { color: #6a737d; border-right-color: #d0d7de; }
+  .fv-tab:hover { color: #24292e; background: #ffffff; }
+  .fv-tab.active { color: #24292e; background: #ffffff; }
+  .fv-tab.active::after { background: #0366d6; }
+  .fv-tab-close { color: #9ca3af; }
+  .fv-tab-close:hover { color: #d1242f; background: rgba(209,36,47,0.1); }
+  .fv-tab-ts { color: #9ca3af; }
+  h1, h2, h3 { color: #1a1a1a; border-bottom-color: #e1e4e8; }
+  code { background: #f0f2f5; color: #c45100; }
+  pre { background: #fafafa; border-color: #e1e4e8; }
+  blockquote { border-left-color: #3fb950; color: #6a737d; }
+  a { color: #0366d6; }
+  hr { border-top-color: #e1e4e8; }
+  strong { color: #1a1a1a; }
+  table { border-color: #d0d7de; }
+  th { background: #f6f8fa; border-color: #d0d7de; }
+  td { border-color: #d0d7de; }
+  tr:hover { background: #f6f8fa; }
+  .code-file-wrapper { border-color: #e1e4e8; }
+  .code-file-header { background: #f6f8fa; border-bottom-color: #e1e4e8; }
+  .code-file-header .filename { color: #24292e; }
+  .code-file-header .lang-badge { background: #e1e4e8; color: #6a737d; }
+}
+</style>
+</head>
+<body>
+$body$
+<div class="fv-modal-overlay" id="fv-modal-overlay">
+  <div class="fv-modal">
+    <input class="fv-modal-input" id="fv-modal-input" type="text" placeholder="Search files..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+    <div class="fv-modal-mode" id="fv-modal-mode">Files &middot; Ctrl+F for text search</div>
+    <ul class="fv-modal-list" id="fv-modal-list"></ul>
+  </div>
+</div>
+<div class="diff-nav" id="diff-nav">
+  <button id="diff-prev" title="Previous change">&#x25B2;</button>
+  <div class="diff-counter" id="diff-counter"></div>
+  <button id="diff-next" title="Next change">&#x25BC;</button>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+(function(){
+  var isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var pendingCloses = 0;
+  var lastCloseCompleted = 0;
+
+  // Switch hljs theme for light mode
+  if (!isDark) {
+    document.getElementById('hljs-dark-theme').href =
+      'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css';
+  }
+
+  // Tab switching
+  function activateTab(tabId) {
+    document.querySelectorAll('.fv-tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.fv-tab-content').forEach(function(c) { c.classList.remove('active'); });
+    var tab = document.querySelector('[data-tab="' + tabId + '"]');
+    if (tab) {
+      tab.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+      tab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
+  }
+  document.querySelectorAll('.fv-tab').forEach(function(tab) {
+    tab.addEventListener('click', function(e) {
+      if (e.target.classList.contains('fv-tab-close')) return;
+      var tabId = tab.getAttribute('data-tab');
+      activateTab(tabId);
+      history.replaceState(null, '', '#' + tabId);
+    });
+  });
+  // Close tab button
+  document.querySelectorAll('.fv-tab-close').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var filePath = btn.getAttribute('data-close-path');
+      var tab = btn.closest('.fv-tab');
+      var tabId = tab.getAttribute('data-tab');
+      var content = document.getElementById(tabId);
+      var wasActive = tab.classList.contains('active');
+      var nextTab = tab.nextElementSibling;
+      if (nextTab && !nextTab.classList.contains('fv-tab')) nextTab = null;
+      var prevTab = tab.previousElementSibling;
+      if (prevTab && !prevTab.classList.contains('fv-tab')) prevTab = null;
+      var newActiveTarget = wasActive ? (nextTab || prevTab) : document.querySelector('.fv-tab.active');
+      var newActivePath = newActiveTarget ? (newActiveTarget.getAttribute('title') || '') : '';
+      tab.remove();
+      if (content) content.remove();
+      if (wasActive && newActiveTarget) {
+        var newTabId = newActiveTarget.getAttribute('data-tab');
+        activateTab(newTabId);
+        history.replaceState(null, '', '#' + newTabId);
+      }
+      pendingCloses++;
+      fetch('/_close?path=' + encodeURIComponent(filePath) + '&active=' + encodeURIComponent(newActivePath))
+        .finally(function() {
+          pendingCloses--;
+          lastCloseCompleted = Date.now();
+        });
+    });
+  });
+  // Restore active tab from URL hash (survives auto-reload)
+  var hash = window.location.hash.substring(1);
+  if (hash && document.getElementById(hash) && document.querySelector('[data-tab="' + hash + '"]')) {
+    activateTab(hash);
+  }
+
+  // Highlight + add line numbers
+  document.querySelectorAll('pre code').forEach(function(block) {
+    if (block.closest('pre.mermaid') || block.classList.contains('mermaid')) return;
+    var plainText = block.textContent;
+    var lang = (block.className.match(/language-(\S+)/) || block.className.match(/sourceCode\s+(\S+)/) || [])[1] || '';
+    var highlighted = lang && hljs.getLanguage(lang)
+      ? hljs.highlight(plainText, { language: lang }).value
+      : plainText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    var lines = highlighted.split('\n');
+    if (lines[lines.length - 1] === '') lines.pop();
+    var html = lines.map(function(line, i) {
+      return '<div class="code-line"><span class="lc">' + (line || '\u00a0') + '</span></div>';
+    }).join('');
+    var wrapper = document.createElement('div');
+    wrapper.className = 'code-lines';
+    wrapper.innerHTML = html;
+    // Apply diff highlighting if data attributes present
+    var diffAdded = block.getAttribute('data-diff-added');
+    var diffRemoved = block.getAttribute('data-diff-removed');
+    if (diffAdded) {
+      var addedSet = new Set(diffAdded.split(',').map(Number));
+      wrapper.querySelectorAll('.code-line').forEach(function(line, i) {
+        if (addedSet.has(i + 1)) line.classList.add('diff-added');
+      });
+    }
+    if (diffRemoved) {
+      try {
+        var removedMap = JSON.parse(diffRemoved);
+        var codeLines = wrapper.querySelectorAll('.code-line');
+        var insertions = [];
+        Object.keys(removedMap).forEach(function(afterLine) {
+          var removedLines = removedMap[afterLine];
+          var targetIdx = parseInt(afterLine, 10);
+          var targetEl = codeLines[targetIdx] || null;
+          removedLines.forEach(function(text) {
+            var row = document.createElement('div');
+            row.className = 'code-line diff-removed';
+            row.innerHTML = '<span class="ln"></span><span class="lc">' + text + '</span>';
+            insertions.push({ before: targetEl, el: row });
+          });
+        });
+        insertions.reverse().forEach(function(ins) {
+          if (ins.before) wrapper.insertBefore(ins.el, ins.before);
+          else wrapper.appendChild(ins.el);
+        });
+      } catch(e) {}
+    }
+
+    block.innerHTML = '';
+    block.style.padding = '0';
+    block.style.background = 'none';
+    block.parentElement.style.padding = '0';
+    block.appendChild(wrapper);
+  });
+
+  // Mermaid
+  document.querySelectorAll('pre.mermaid').forEach(function(pre){
+    var div = document.createElement('div');
+    div.className = 'mermaid';
+    div.textContent = pre.textContent;
+    pre.replaceWith(div);
+  });
+  mermaid.initialize({ startOnLoad: true, theme: isDark ? 'dark' : 'default' });
+
+  // Loading toast
+  var loadingToast = document.createElement('div');
+  loadingToast.id = 'fv-loading';
+  loadingToast.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#171b24;border:1px solid #353b4a;border-radius:8px;padding:8px 16px;display:none;align-items:center;gap:8px;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,0.4)';
+  loadingToast.innerHTML = '<div style="width:14px;height:14px;border:2px solid #353b4a;border-top-color:#73b8f0;border-radius:50%;animation:fvspin 0.8s linear infinite"></div><span style="font-size:12px;color:#6a7080;font-family:-apple-system,sans-serif">Loading...</span>';
+  var fvStyle = document.createElement('style');
+  fvStyle.textContent = '@keyframes fvspin{to{transform:rotate(360deg)}}';
+  document.body.appendChild(fvStyle);
+  document.body.appendChild(loadingToast);
+
+  // Poll loading state fast (every 300ms)
+  setInterval(function() {
+    try {
+      var lr = new XMLHttpRequest();
+      lr.open('GET', '/_loading?t=' + Date.now(), true);
+      lr.onload = function() {
+        try {
+          var d = JSON.parse(lr.responseText);
+          loadingToast.style.display = d.loading ? 'flex' : 'none';
+        } catch(e) {}
+      };
+      lr.send();
+    } catch(e) {}
+  }, 300);
+
+  // Auto-reload: poll for HTML regeneration
+  var marker = document.querySelector('[data-fv-gen]');
+  if (marker) {
+    var genTime = marker.getAttribute('data-fv-gen');
+    var tabCount = parseInt(marker.getAttribute('data-fv-tabs') || '0', 10);
+    setInterval(function() {
+      try {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', window.location.pathname + '?t=' + Date.now(), true);
+        xhr.onload = function() {
+          var gm = xhr.responseText.match(/data-fv-gen="(\d+)"/);
+          if (gm && gm[1] !== genTime) {
+            if (pendingCloses > 0 || (Date.now() - lastCloseCompleted) < 2000) return;
+            var tm = xhr.responseText.match(/data-fv-tabs="(\d+)"/);
+            if (tm && parseInt(tm[1], 10) !== tabCount) {
+              history.replaceState(null, '', window.location.pathname);
+            }
+            window.location.reload();
+          }
+        };
+        xhr.send();
+      } catch(e) {}
+    }, 1500);
+  }
+
+  // Updated timestamp
+  var tsEl = document.getElementById('fv-ts');
+  if (tsEl) {
+    var gen = parseInt(tsEl.getAttribute('data-generated'), 10);
+    function updateTs() {
+      var diff = Math.floor(Date.now()/1000) - gen;
+      var text;
+      if (diff < 60) text = diff + 's ago';
+      else if (diff < 3600) text = Math.floor(diff/60) + 'm ago';
+      else if (diff < 86400) text = Math.floor(diff/3600) + 'h ago';
+      else text = Math.floor(diff/86400) + 'd ago';
+      tsEl.textContent = 'Updated ' + text;
+    }
+    updateTs();
+    setInterval(updateTs, 1000);
+  }
+
+  // Diff navigation — jump between changes
+  var diffNav = document.getElementById('diff-nav');
+  var diffCounter = document.getElementById('diff-counter');
+  var currentDiffIdx = -1;
+
+  function getDiffHunks() {
+    var activePanel = document.querySelector('.fv-tab-content.active');
+    if (!activePanel) activePanel = document;
+    var lines = activePanel.querySelectorAll('.code-line.diff-added, .code-line.diff-removed');
+    // Group consecutive diff lines into hunks (return first line of each hunk)
+    var hunks = [];
+    var lastIdx = -2;
+    lines.forEach(function(line) {
+      var allLines = Array.from(line.closest('.code-lines').querySelectorAll('.code-line'));
+      var idx = allLines.indexOf(line);
+      if (idx - lastIdx > 1) hunks.push(line);
+      lastIdx = idx;
+    });
+    return hunks;
+  }
+
+  function updateDiffNav() {
+    var hunks = getDiffHunks();
+    if (hunks.length > 0) {
+      diffNav.classList.add('visible');
+      diffCounter.textContent = (currentDiffIdx + 1) + '/' + hunks.length;
+    } else {
+      diffNav.classList.remove('visible');
+    }
+  }
+
+  function jumpToDiff(direction) {
+    var hunks = getDiffHunks();
+    if (hunks.length === 0) return;
+    currentDiffIdx += direction;
+    if (currentDiffIdx >= hunks.length) currentDiffIdx = 0;
+    if (currentDiffIdx < 0) currentDiffIdx = hunks.length - 1;
+    // Clear previous focus
+    document.querySelectorAll('.code-line.diff-focus').forEach(function(el) { el.classList.remove('diff-focus'); });
+    // Highlight all consecutive diff lines in this hunk
+    var hunk = hunks[currentDiffIdx];
+    var allLines = Array.from(hunk.closest('.code-lines').querySelectorAll('.code-line'));
+    var startIdx = allLines.indexOf(hunk);
+    for (var i = startIdx; i < allLines.length; i++) {
+      if (allLines[i].classList.contains('diff-added') || allLines[i].classList.contains('diff-removed')) {
+        allLines[i].classList.add('diff-focus');
+      } else break;
+    }
+    hunk.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    diffCounter.textContent = (currentDiffIdx + 1) + '/' + hunks.length;
+  }
+
+  document.getElementById('diff-prev').addEventListener('click', function() { jumpToDiff(-1); });
+  document.getElementById('diff-next').addEventListener('click', function() { jumpToDiff(1); });
+
+  // Show nav after tab switch and jump to first change
+  document.querySelectorAll('.fv-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      currentDiffIdx = -1;
+      setTimeout(function() { updateDiffNav(); }, 100);
+    });
+  });
+  // Initial
+  setTimeout(function() { updateDiffNav(); }, 500);
+
+  // Search modal (Ctrl+P files, Ctrl+F text)
+  var modalOverlay = document.getElementById('fv-modal-overlay');
+  var modalInput = document.getElementById('fv-modal-input');
+  var modalList = document.getElementById('fv-modal-list');
+  var modalModeEl = document.getElementById('fv-modal-mode');
+  var modalSelectedIdx = 0;
+  var modalItems = [];
+  var modalMode = 'files';
+  var searchTimer = null;
+
+  function getTabData() {
+    var tabs = document.querySelectorAll('.fv-tab[data-tab]');
+    var data = [];
+    tabs.forEach(function(tab) {
+      var title = tab.getAttribute('title') || '';
+      var fname = title.split('/').pop();
+      var fpath = title;
+      data.push({ tabId: tab.getAttribute('data-tab'), fname: fname, fpath: fpath });
+    });
+    return data;
+  }
+
+  function searchText(query) {
+    if (!query || query.length < 2) return [];
+    var results = [];
+    var q = query.toLowerCase();
+    var tabs = getTabData();
+    var tabMap = {};
+    tabs.forEach(function(t) { tabMap[t.tabId] = t; });
+    var panels = document.querySelectorAll('.fv-tab-content');
+    panels.forEach(function(panel) {
+      var tabId = panel.id;
+      var tab = tabMap[tabId];
+      if (!tab) return;
+      var lines = panel.querySelectorAll('.code-line');
+      lines.forEach(function(line) {
+        if (results.length >= 50) return;
+        var lc = line.querySelector('.lc');
+        if (!lc) return;
+        var text = lc.textContent;
+        if (text.toLowerCase().indexOf(q) !== -1) {
+          var ln = line.querySelector('.ln');
+          var lineNum = ln ? ln.textContent.trim() : '?';
+          results.push({ tabId: tabId, fname: tab.fname, lineNum: lineNum, lineEl: line, content: text });
+        }
+      });
+    });
+    return results;
+  }
+
+  function renderModal(query) {
+    if (modalMode === 'text') {
+      var results = searchText(query);
+      modalItems = results;
+      modalSelectedIdx = Math.min(modalSelectedIdx, Math.max(0, modalItems.length - 1));
+      var q = (query || '').toLowerCase();
+      modalList.innerHTML = modalItems.map(function(item, i) {
+        var cls = 'fv-modal-item text-result' + (i === modalSelectedIdx ? ' selected' : '');
+        var escapedContent = item.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        if (q) {
+          var re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+          escapedContent = escapedContent.replace(re, '<mark>$1</mark>');
+        }
+        return '<li class="' + cls + '" data-idx="' + i + '">' +
+          '<span class="fv-modal-fname">' + item.fname + '<span class="fv-modal-line">:' + item.lineNum + '</span></span>' +
+          '<span class="fv-modal-content">' + escapedContent.trim() + '</span></li>';
+      }).join('');
+    } else {
+      var tabs = getTabData();
+      var q = (query || '').toLowerCase();
+      modalItems = q ? tabs.filter(function(t) {
+        return t.fname.toLowerCase().indexOf(q) !== -1 || t.fpath.toLowerCase().indexOf(q) !== -1;
+      }) : tabs;
+      modalSelectedIdx = Math.min(modalSelectedIdx, Math.max(0, modalItems.length - 1));
+      modalList.innerHTML = modalItems.map(function(item, i) {
+        var cls = 'fv-modal-item' + (i === modalSelectedIdx ? ' selected' : '');
+        return '<li class="' + cls + '" data-idx="' + i + '"><span class="fv-modal-fname">' +
+          item.fname + '</span><span class="fv-modal-fpath">' + item.fpath + '</span></li>';
+      }).join('');
+    }
+  }
+
+  function openModal(mode) {
+    modalMode = mode || 'files';
+    modalInput.value = '';
+    modalSelectedIdx = 0;
+    modalInput.placeholder = modalMode === 'text' ? 'Search in files...' : 'Search files...';
+    modalModeEl.textContent = modalMode === 'text'
+      ? 'Text \u00b7 Ctrl+P for file search'
+      : 'Files \u00b7 Ctrl+F for text search';
+    renderModal('');
+    modalOverlay.classList.add('visible');
+    setTimeout(function() { modalInput.focus(); }, 50);
+  }
+
+  function closeModal() {
+    clearTimeout(searchTimer);
+    modalOverlay.classList.remove('visible');
+  }
+
+  function selectModalItem() {
+    if (modalItems.length === 0) return;
+    var item = modalItems[modalSelectedIdx];
+    var wasText = modalMode === 'text';
+    activateTab(item.tabId);
+    history.replaceState(null, '', '#' + item.tabId);
+    closeModal();
+    if (wasText && item.lineEl) {
+      setTimeout(function() {
+        item.lineEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        item.lineEl.classList.add('diff-focus');
+        setTimeout(function() { item.lineEl.classList.remove('diff-focus'); }, 2000);
+      }, 50);
+    }
+    currentDiffIdx = -1;
+    setTimeout(function() { updateDiffNav(); }, 100);
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 'p') {
+      e.preventDefault();
+      if (modalOverlay.classList.contains('visible') && modalMode === 'files') closeModal();
+      else openModal('files');
+    }
+    if (e.ctrlKey && e.key === 'f') {
+      e.preventDefault();
+      if (modalOverlay.classList.contains('visible') && modalMode === 'text') closeModal();
+      else openModal('text');
+    }
+    if (e.ctrlKey && e.key === 'j') {
+      e.preventDefault();
+      var activeTab = document.querySelector('.fv-tab.active');
+      if (activeTab) {
+        var fpath = activeTab.getAttribute('title');
+        if (fpath) fetch('/_open-in-editor?path=' + encodeURIComponent(fpath));
+      }
+    }
+    if (e.ctrlKey && (e.key === ']' || e.key === '[')) {
+      e.preventDefault();
+      var tabs = Array.from(document.querySelectorAll('.fv-tab[data-tab]'));
+      if (tabs.length < 2) return;
+      var activeIdx = tabs.findIndex(function(t) { return t.classList.contains('active'); });
+      var newIdx = e.key === ']' ? (activeIdx + 1) % tabs.length : (activeIdx - 1 + tabs.length) % tabs.length;
+      var newTabId = tabs[newIdx].getAttribute('data-tab');
+      activateTab(newTabId);
+      history.replaceState(null, '', '#' + newTabId);
+      currentDiffIdx = -1;
+      setTimeout(function() { updateDiffNav(); }, 100);
+    }
+    if (e.ctrlKey && e.key === 'w') {
+      e.preventDefault();
+      var activeTab = document.querySelector('.fv-tab.active');
+      if (activeTab) {
+        var closeBtn = activeTab.querySelector('.fv-tab-close');
+        if (closeBtn) closeBtn.click();
+      }
+    }
+    if (!modalOverlay.classList.contains('visible')) return;
+    if (e.key === 'Escape') { closeModal(); e.preventDefault(); }
+    if (e.key === 'ArrowDown') { modalSelectedIdx = Math.min(modalSelectedIdx + 1, modalItems.length - 1); renderModal(modalInput.value); e.preventDefault(); }
+    if (e.key === 'ArrowUp') { modalSelectedIdx = Math.max(modalSelectedIdx - 1, 0); renderModal(modalInput.value); e.preventDefault(); }
+    if (e.key === 'Enter') { selectModalItem(); e.preventDefault(); }
+  });
+
+  modalInput.addEventListener('input', function() {
+    modalSelectedIdx = 0;
+    if (modalMode === 'text') {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(function() { renderModal(modalInput.value); }, 150);
+    } else {
+      renderModal(modalInput.value);
+    }
+  });
+
+  modalList.addEventListener('click', function(e) {
+    var li = e.target.closest('.fv-modal-item');
+    if (li) { modalSelectedIdx = parseInt(li.getAttribute('data-idx'), 10); selectModalItem(); }
+  });
+
+  modalOverlay.addEventListener('click', function(e) {
+    if (e.target === modalOverlay) closeModal();
+  });
+})();
+</script>
+</body>
+</html>
