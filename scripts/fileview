@@ -622,6 +622,14 @@ $body$
       if (modalOverlay.classList.contains('visible') && modalMode === 'text') closeModal();
       else openModal('text');
     }
+    if (e.ctrlKey && e.key === 'j') {
+      e.preventDefault();
+      var activeTab = document.querySelector('.fv-tab.active');
+      if (activeTab) {
+        var fpath = activeTab.getAttribute('title');
+        if (fpath) window.location.href = 'cursor://file//' + fpath;
+      }
+    }
     if (e.ctrlKey && (e.key === ']' || e.key === '[')) {
       e.preventDefault();
       var tabs = Array.from(document.querySelectorAll('.fv-tab[data-tab]'));
