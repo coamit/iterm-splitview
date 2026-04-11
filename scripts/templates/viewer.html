@@ -99,13 +99,15 @@ div.sourceCode { margin: 8px 0; }
 .diff-collapsed .code-line.diff-context { display: table-row; }
 .diff-collapsed .code-line.diff-separator { display: table-row; }
 .diff-collapsed .code-line.diff-separator .ln,
-.diff-collapsed .code-line.diff-separator .lc { background: #252a35; color: #4b5263; font-size: 10px; padding-top: 2px; padding-bottom: 2px; border-top: 1px dashed #353b4a; border-bottom: 1px dashed #353b4a; }
+.diff-collapsed .code-line.diff-separator .lc { background: transparent; padding: 0; height: 1px; border: none; border-bottom: 1px dotted #4b5263; }
 .diff-collapsed .code-line.diff-separator .lc { width: 100%; }
 .diff-collapsed pre { overflow-x: hidden; }
 .diff-collapsed .code-lines { table-layout: fixed; }
 /* Diff counter badge */
 .diff-counter-badge { position: fixed; bottom: 16px; left: 16px; background: #2a3040; border: 1px solid #353b4a; border-radius: 6px; padding: 4px 12px; font-size: 12px; font-family: "JetBrains Mono", monospace; color: #ccd0d4; z-index: 200; display: none; user-select: none; }
 .diff-counter-badge.visible { display: block; }
+.diff-view-mode { display: none; margin-left: auto; font-size: 10px; color: #4b5263; font-family: -apple-system, sans-serif; padding: 2px 8px; border: 1px solid #353b4a; border-radius: 4px; }
+.diff-collapsed .diff-view-mode { display: inline-block; }
 .diff-stats { display: inline-flex; gap: 6px; margin-left: 8px; font-size: 11px; font-family: "JetBrains Mono", monospace; }
 .diff-stat-add { color: #28c840; }
 .diff-stat-rem { color: #ff5f57; }
@@ -145,10 +147,10 @@ div.sourceCode { margin: 8px 0; }
   .code-line.diff-removed .ln { color: #d1242f; }
   .diff-stat-add { color: #1a7f37; }
   .diff-stat-rem { color: #d1242f; }
-  .diff-collapsed .code-line.diff-separator td,
   .diff-collapsed .code-line.diff-separator .ln,
-  .diff-collapsed .code-line.diff-separator .lc { background: #f6f8fa; color: #9ca3af; border-color: #d0d7de; }
+  .diff-collapsed .code-line.diff-separator .lc { border-bottom-color: #d0d7de; }
   .diff-counter-badge { background: #ffffff; border-color: #d0d7de; color: #24292e; }
+  .diff-view-mode { color: #9ca3af; border-color: #d0d7de; }
   .fv-modal { background: #ffffff; border-color: #d0d7de; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
   .fv-modal-input { background: #f6f8fa; border-bottom-color: #d0d7de; color: #24292e; }
   .fv-modal-input::placeholder { color: #6a737d; }
@@ -437,14 +439,22 @@ $body$
     return hunks;
   }
 
-  function updateDiffCounter() {
+  function showDiffCounter() {
     var hunks = getDiffHunks();
-    if (hunks.length > 0 && currentDiffIdx >= 0) {
-      diffCounterBadge.textContent = (currentDiffIdx + 1) + '/' + hunks.length;
-      diffCounterBadge.classList.add('visible');
-    } else {
+    if (hunks.length === 0 || currentDiffIdx < 0) return;
+    diffCounterBadge.textContent = (currentDiffIdx + 1) + '/' + hunks.length;
+    diffCounterBadge.classList.add('visible');
+    function dismiss() {
       diffCounterBadge.classList.remove('visible');
+      document.removeEventListener('click', dismiss);
+      document.removeEventListener('keydown', dismiss);
     }
+    document.removeEventListener('click', dismiss);
+    document.removeEventListener('keydown', dismiss);
+    setTimeout(function() {
+      document.addEventListener('click', dismiss, { once: true });
+      document.addEventListener('keydown', dismiss, { once: true });
+    }, 100);
   }
 
   function jumpToDiff(direction) {
@@ -463,7 +473,7 @@ $body$
       } else break;
     }
     hunk.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    updateDiffCounter();
+    showDiffCounter();
   }
 
   // Mark context lines around diff changes for collapsed mode
@@ -499,7 +509,7 @@ $body$
           if (sepLine) {
             var sep = document.createElement('div');
             sep.className = 'code-line diff-separator';
-            sep.innerHTML = '<span class="ln">\u22EF</span><span class="lc"></span>';
+            sep.innerHTML = '<span class="ln"></span><span class="lc"></span>';
             sepLine.parentNode.insertBefore(sep, sepLine);
           }
         }
@@ -537,7 +547,7 @@ $body$
   document.querySelectorAll('.fv-tab').forEach(function(tab) {
     tab.addEventListener('click', function() {
       currentDiffIdx = -1;
-      updateDiffCounter();
+      diffCounterBadge.classList.remove('visible');
     });
   });
 
