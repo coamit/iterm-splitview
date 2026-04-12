@@ -687,9 +687,6 @@ $body$
       refreshBtn.style.opacity = '0.3';
       refreshBtn.style.pointerEvents = 'none';
       showToast('Refreshing\u2026', true, true);
-      // Clear all suppression so reload happens on next poll cycle
-      suppressReloadUntil = 0;
-      if (_syncInterval) { clearInterval(_syncInterval); _syncInterval = null; }
       lastOpenTriggered = 0;
       fetch('/_refresh');
     });
@@ -790,8 +787,6 @@ $body$
         // Show loading state, clear suppression, trigger fresh regen
         switchGroup(groupName);
         showGroupLoading(groupName, label + ' changes');
-        suppressReloadUntil = 0;
-        if (_syncInterval) { clearInterval(_syncInterval); _syncInterval = null; }
         lastOpenTriggered = 0;
         fetch('/_refresh');
         return;
@@ -911,8 +906,7 @@ $body$
       if (groupEmptied) {
         document.querySelectorAll('.fv-tab-content.active').forEach(function(c) { c.classList.remove('active'); });
         switchGroup(closedGroup);
-        // Suppress reload — client empty state is authoritative
-        suppressReloadFor(10000);
+        // No reload suppression needed — content hash prevents spurious reloads
       }
       pendingCloses++;
       fetch('/_close?path=' + encodeURIComponent(filePath) + '&active=' + encodeURIComponent(newActivePath))
@@ -935,9 +929,6 @@ $body$
         activateTab(firstTab.getAttribute('data-tab'));
       }
     }
-    // Content is fresh from watch reload — suppress further reloads for 15s
-    // to absorb watcher regen cycles that would cause flickering
-    suppressReloadFor(15000);
     // Clear the group hash so future reloads use path-based tracking
     history.replaceState(null, '', window.location.pathname);
   } else if (hash && hash.indexOf('fv-path:') === 0) {
@@ -951,8 +942,6 @@ $body$
       }
       activateTab(matchTab.getAttribute('data-tab'));
     }
-    // Suppress further reloads — content just loaded
-    suppressReloadFor(15000);
     history.replaceState(null, '', window.location.pathname);
   } else if (hash && document.getElementById(hash) && document.querySelector('[data-tab="' + hash + '"]')) {
     activateTab(hash);
@@ -1085,30 +1074,7 @@ $body$
 
   // Sync genTime from server after a delay — prevents reload when the client
   // has already applied the DOM change (watch/unwatch) and the regen is cosmetic
-  // Suppress auto-reload for a duration (used after watch/unwatch)
-  var suppressReloadUntil = 0;
-  var _syncInterval = null;
-
-  function suppressReloadFor(ms) {
-    suppressReloadUntil = Date.now() + ms;
-    // Keep genTime synced during suppression so reload doesn't fire after it expires
-    if (_syncInterval) clearInterval(_syncInterval);
-    _syncInterval = setInterval(function() {
-      if (Date.now() > suppressReloadUntil) { clearInterval(_syncInterval); _syncInterval = null; return; }
-      try {
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', '/_gen?t=' + Date.now(), true);
-        xhr.onload = function() {
-          try {
-            var d = JSON.parse(xhr.responseText);
-            if (d.gen) genTime = d.gen;
-            if (d.tabs) tabCount = parseInt(d.tabs, 10);
-          } catch(e) {}
-        };
-        xhr.send();
-      } catch(e) {}
-    }, 2000);
-  }
+  // No longer needed — content hash prevents spurious reloads
 
   function pollReload() {
     abortPoller('reload');
@@ -1121,7 +1087,6 @@ $body$
         try {
           var d = JSON.parse(xhr.responseText);
           if (d.gen && d.gen !== genTime) {
-            if (Date.now() < suppressReloadUntil) return;
             if (pendingCloses > 0 || (Date.now() - lastCloseCompleted) < 5000 || (Date.now() - pageLoadTime) < 2000) return;
             if (lastOpenTriggered > 0) {
               // File is being opened — wait for loading to complete AND a minimum cooldown
@@ -1473,8 +1438,6 @@ $body$
     switchGroup(targetGroup);
     var first = document.querySelector('.fv-tab.fv-group-visible[data-tab]');
     if (first) activateTab(first.getAttribute('data-tab'));
-    // Tell server — suppress reload for 12s to absorb server regen + watcher cycles
-    suppressReloadFor(12000);
     fetch('/_unwatch?name=' + encodeURIComponent(repoName));
     showToast('Stopped watching ' + repoName + ' \u2713');
   }
@@ -1972,9 +1935,6 @@ $body$
       var filePath = item.file;
       closeModal();
       createLoadingTab(filePath);
-      // Clear any reload suppression so the regen can trigger a reload
-      suppressReloadUntil = 0;
-      if (_syncInterval) { clearInterval(_syncInterval); _syncInterval = null; }
       // Keep current hash — user stays on their current tab after reload
       lastOpenTriggered = Date.now();
       fetch('/_open?path=' + encodeURIComponent(filePath));
