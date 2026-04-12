@@ -951,6 +951,20 @@ $body$
         diffCounterBadge.classList.remove('visible');
       });
     });
+    // Toolbar buttons (inside body container, lost on swap)
+    var af = root.querySelector('#fv-add-file');
+    if (af) af.addEventListener('click', function() { toggleModal('fs-files'); });
+    var ag = root.querySelector('#fv-add-git');
+    if (ag) ag.addEventListener('click', function() { openGitWatch(); });
+    var sb = root.querySelector('#fv-settings-btn');
+    if (sb) sb.addEventListener('click', function() { openSettings(); });
+    var rb = root.querySelector('#fv-refresh');
+    if (rb) rb.addEventListener('click', function() {
+      rb.style.opacity = '0.3'; rb.style.pointerEvents = 'none';
+      showToast('Refreshing\u2026', true, true);
+      lastOpenTriggered = 0;
+      fetch('/_refresh');
+    });
   }
   attachBodyListeners(document.getElementById('fv-body-container'));
   // Restore active tab from URL hash (survives auto-reload)
@@ -1140,6 +1154,17 @@ $body$
     // 4. Attach event listeners to new content
     attachBodyListeners(container);
 
+    // 4b. Clear resolved loading groups BEFORE tab restore
+    // (switchGroup checks loadingGroups and early-returns with loading panel if set)
+    updateGroupCounts();
+    Object.keys(loadingGroups).forEach(function(gn) {
+      if (document.querySelectorAll('.fv-tab[data-group="' + gn + '"][data-tab]').length > 0) {
+        var lp = document.getElementById(loadingGroups[gn]);
+        if (lp) lp.remove();
+        delete loadingGroups[gn];
+      }
+    });
+
     // 5. Restore active tab
     if (wasOnLoadingGroup) {
       // Was on a loading group (spinner) — switch to that group's first real tab
@@ -1191,17 +1216,7 @@ $body$
       if (newEpoch) tsGenEpoch = newEpoch;
     }
 
-    // 9. Update group counts + clear resolved loading groups
-    updateGroupCounts();
-    Object.keys(loadingGroups).forEach(function(gn) {
-      if (document.querySelectorAll('.fv-tab[data-group="' + gn + '"][data-tab]').length > 0) {
-        var lp = document.getElementById(loadingGroups[gn]);
-        if (lp) lp.remove();
-        delete loadingGroups[gn];
-      }
-    });
-
-    // 10. Hide loading indicators
+    // 9. Hide loading indicators
     loadingToast.style.display = 'none';
     swapInProgress = false;
   }
