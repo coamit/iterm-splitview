@@ -32,6 +32,7 @@ WATCHED = os.path.join(DIR, 'watched')
 COLLAPSED = os.path.join(DIR, 'collapsed')
 SEARCH_ROOT = os.path.join(DIR, 'search_root')
 SCRIPT = os.environ.get('FILEVIEW_SCRIPT', '')
+TABS_LOCK = threading.Lock()
 
 def _all_git_tab_files():
     return sorted(glob.glob(os.path.join(DIR, 'tabs.git.*')))
@@ -123,21 +124,22 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             fp = qs.get('path', [''])[0]
             new_active = qs.get('active', [''])[0]
             if fp:
-                all_remaining = []
-                for tabfile in _all_tab_files():
-                    if os.path.exists(tabfile):
-                        with open(tabfile) as f:
-                            lines = [l for l in f.read().splitlines() if l and l != fp]
-                        with open(tabfile, 'w') as f:
-                            f.write('\n'.join(lines) + '\n' if lines else '')
-                        all_remaining.extend(lines)
-                active_file = os.path.join(DIR, 'active')
-                if new_active:
-                    with open(active_file, 'w') as f:
-                        f.write(new_active)
-                elif all_remaining:
-                    with open(active_file, 'w') as f:
-                        f.write(all_remaining[0])
+                with TABS_LOCK:
+                    all_remaining = []
+                    for tabfile in _all_tab_files():
+                        if os.path.exists(tabfile):
+                            with open(tabfile) as f:
+                                lines = [l for l in f.read().splitlines() if l and l != fp]
+                            with open(tabfile, 'w') as f:
+                                f.write('\n'.join(lines) + '\n' if lines else '')
+                            all_remaining.extend(lines)
+                    active_file = os.path.join(DIR, 'active')
+                    if new_active:
+                        with open(active_file, 'w') as f:
+                            f.write(new_active)
+                    elif all_remaining:
+                        with open(active_file, 'w') as f:
+                            f.write(all_remaining[0])
                 if SCRIPT:
                     subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self.send_response(204)
@@ -454,15 +456,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                                 target_tabs = os.path.join(DIR, 'tabs.git.' + rname)
                         except Exception:
                             pass
-                # Add to the correct tab file
-                tabs_lines = []
-                if os.path.exists(target_tabs):
-                    with open(target_tabs) as f:
-                        tabs_lines = [l for l in f.read().splitlines() if l]
-                if fp not in tabs_lines:
-                    tabs_lines.append(fp)
-                    with open(target_tabs, 'w') as f:
-                        f.write('\n'.join(tabs_lines) + '\n')
+                # Add to the correct tab file (locked to prevent race with concurrent opens)
+                with TABS_LOCK:
+                    tabs_lines = []
+                    if os.path.exists(target_tabs):
+                        with open(target_tabs) as f:
+                            tabs_lines = [l for l in f.read().splitlines() if l]
+                    if fp not in tabs_lines:
+                        tabs_lines.append(fp)
+                        with open(target_tabs, 'w') as f:
+                            f.write('\n'.join(tabs_lines) + '\n')
                 # Don't change active file — client handles activation via URL hash
                 # Regenerate HTML
                 if SCRIPT:
