@@ -375,9 +375,35 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 with open(WATCHED) as f:
                     watched_repos = [l.strip() for l in f.readlines() if l.strip()]
             settings['watched'] = [os.path.basename(r) for r in watched_repos]
+            # Include per-repo tab counts
+            repo_counts = {}
+            for r in watched_repos:
+                rname = os.path.basename(r)
+                tf = os.path.join(DIR, 'tabs.git.' + rname)
+                if os.path.exists(tf):
+                    with open(tf) as f:
+                        repo_counts[rname] = len([l for l in f.read().splitlines() if l.strip()])
+                else:
+                    repo_counts[rname] = 0
+            settings['repo_counts'] = repo_counts
             self._json_response(settings)
             return
         if parsed.path == '/_refresh':
+            # Hard refresh: resync all watched repos, then regen
+            open(os.path.join(DIR, 'loading'), 'w').close()
+            # Read current diff mode
+            settings_file = os.path.join(os.path.expanduser('~/.config/fileview'), 'git_settings')
+            diff_mode = 'branch'
+            if os.path.exists(settings_file):
+                try:
+                    diff_mode = json.loads(open(settings_file).read()).get('diff_mode', 'branch')
+                except Exception:
+                    pass
+            self._resync_all_repos(diff_mode)
+            # Clear debounce so regen runs immediately
+            regen_ts = os.path.join(DIR, 'regen.ts')
+            if os.path.exists(regen_ts):
+                os.remove(regen_ts)
             if SCRIPT:
                 subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self.send_response(204)
@@ -406,18 +432,27 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if fp and os.path.isfile(fp):
                 # Signal loading state
                 open(os.path.join(DIR, 'loading'), 'w').close()
-                # Detect if file is already in any git tab file
+                # Only route to git tab files for repos that are actively watched
+                watched_repos = set()
+                if os.path.exists(WATCHED):
+                    with open(WATCHED) as f:
+                        watched_repos = set(l.strip() for l in f.readlines() if l.strip())
+                watched_names = set(os.path.basename(r) for r in watched_repos)
                 target_tabs = TABS
                 for gtf in _all_git_tab_files():
+                    # Only check git tab files for watched repos
+                    gtf_name = os.path.basename(gtf).replace('tabs.git.', '', 1)
+                    if gtf_name not in watched_names:
+                        continue
                     if os.path.exists(gtf):
                         with open(gtf) as f:
                             if fp in [l.strip() for l in f.readlines()]:
                                 target_tabs = gtf
                                 break
-                # If not already in a git tab file, check if it's a git-changed file
-                if target_tabs == TABS:
+                # If not already in a git tab file, check if it's a git-changed file in a watched repo
+                if target_tabs == TABS and watched_repos:
                     git_root = self._get_git_root()
-                    if git_root:
+                    if git_root and git_root in watched_repos:
                         try:
                             changed = set()
                             for cmd in [['git','diff','--name-only'],['git','diff','--name-only','--cached'],['git','ls-files','--others','--exclude-standard']]:
@@ -439,9 +474,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     tabs_lines.append(fp)
                     with open(target_tabs, 'w') as f:
                         f.write('\n'.join(tabs_lines) + '\n')
-                # Set as active
-                with open(os.path.join(DIR, 'active'), 'w') as f:
-                    f.write(fp)
+                # Don't change active file — client handles activation via URL hash
                 # Regenerate HTML
                 if SCRIPT:
                     subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

@@ -32,10 +32,8 @@ source "$SCRIPT_DIR/lib/watcher.sh"
 # shellcheck source=lib/iterm.sh
 source "$SCRIPT_DIR/lib/iterm.sh"
 
-# Copy template to cache if not present
-if [ ! -f "$VIEW_TEMPLATE" ]; then
-  cp "$SCRIPT_DIR/templates/viewer.html" "$VIEW_TEMPLATE"
-fi
+# Copy template to cache (always sync — source may have changed)
+cp "$SCRIPT_DIR/templates/viewer.html" "$VIEW_TEMPLATE"
 
 # --- GC: clean up stale sessions from dead iTerm tabs ---
 
@@ -363,6 +361,6 @@ case "$1" in
   unwatch)      shift; cmd_unwatch "$@" ;;
   list)         cmd_list ;;
   search-root)  shift; cmd_search_root "$@" ;;
-  _regen)       generate_tabbed_html ;;
+  _regen)       generate_tabbed_html force ;;
   *)            echo "Usage: fileview {open|close|diff|unwatch|list|search-root} [file ...]" >&2; exit 1 ;;
 esac

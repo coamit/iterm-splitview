@@ -3,13 +3,13 @@
 # shellcheck disable=SC2153  # Variables (ACTIVE_FILE etc.) are defined in config.sh
 
 _build_diff_attrs() {
-  local src_file="$1" diff_base="${2:-}"
+  local src_file="$1" diff_base="${2:-}" git_root="${3:-}"
   local added removed removed_escaped
-  added=$(_get_diff_added "$src_file" "$diff_base")
+  added=$(_get_diff_added "$src_file" "$diff_base" "$git_root")
   if [ -n "$added" ]; then
     printf ' data-diff-added="%s"' "$added"
   fi
-  removed=$(_get_diff_removed "$src_file" "$diff_base")
+  removed=$(_get_diff_removed "$src_file" "$diff_base" "$git_root")
   if [ -n "$removed" ] && [ "$removed" != "{}" ]; then
     removed_escaped="${removed//\'/\&#39;}"
     printf " data-diff-removed='%s'" "$removed_escaped"
@@ -73,6 +73,7 @@ _render_code_file() {
   printf '    <span class="diff-view-mode">collapsed</span>\n'
   printf '    <span class="lang-badge">%s</span>\n' "$lang_display"
   printf '  </div>\n'
+
   printf '  <pre><code class="language-%s"%s>' "$lang" "$diff_attrs"
   sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g' "$src_file"
   printf '</code></pre>\n'
@@ -83,6 +84,7 @@ generate_file_body() {
   local src_file="$1"
   local mode="${2:-}"
   local diff_base="${3:-}"
+  local git_root="${4:-}"
 
   # In diff mode, render all files as code (with line numbers + diff highlighting)
   if _is_code_file "$src_file" || [ "$mode" = "diff" ]; then
@@ -90,12 +92,12 @@ generate_file_body() {
     lang=$(_lang_from_ext "$src_file")
 
     if [ "$mode" = "diff" ]; then
+      [ -z "$git_root" ] && git_root=$(git -C "$(dirname "$src_file")" rev-parse --show-toplevel 2>/dev/null)
       local added removed file_status
-      added=$(_get_diff_added "$src_file" "$diff_base")
-      removed=$(_get_diff_removed "$src_file" "$diff_base")
-      diff_attrs=$(_build_diff_attrs "$src_file" "$diff_base")
-      local git_root rel_path
-      git_root=$(git -C "$(dirname "$src_file")" rev-parse --show-toplevel 2>/dev/null)
+      added=$(_get_diff_added "$src_file" "$diff_base" "$git_root")
+      removed=$(_get_diff_removed "$src_file" "$diff_base" "$git_root")
+      diff_attrs=$(_build_diff_attrs "$src_file" "$diff_base" "$git_root")
+      local rel_path
       rel_path=$(git -C "$git_root" ls-files --full-name -- "$src_file" 2>/dev/null)
       if [ -z "$rel_path" ]; then
         # Untracked file — strip git root prefix (case-insensitive for macOS)
@@ -124,8 +126,8 @@ generate_file_body() {
       printf '  <div class="code-file-header">\n'
       printf '    <span class="filename">%s</span>\n' "$filename"
       [ -n "$diff_stats" ] && printf '    %s\n' "$diff_stats"
-      printf '    <span class="diff-view-mode">collapsed</span>\n'
       printf '    <span class="fv-md-toggle"><span class="fv-md-toggle-btn active" data-view="raw">Raw</span><span class="fv-md-toggle-btn" data-view="preview">Preview</span></span>\n'
+      printf '    <span class="diff-view-mode">collapsed</span>\n'
       printf '    <span class="lang-badge">%s</span>\n' "$lang_display"
       printf '  </div>\n'
       printf '  <div class="fv-raw-view">\n'
@@ -324,8 +326,9 @@ _generate_tab_bar() {
       "$git_active" "$group_id" "$rname" "$rcount" "$rname"
   done
 
+  printf '<span class="fv-group-add" id="fv-add-git" title="Watch repository (Ctrl+I)">&#9095;</span>\n'
   printf '<div class="fv-tab-spacer"></div>'
-  printf '<div class="fv-tab-action" id="fv-git-settings" title="Git settings">&#9095;</div>'
+  printf '<div class="fv-tab-action" id="fv-settings-btn" title="Settings (Ctrl+/)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>'
   printf '<div class="fv-tab-action" id="fv-refresh" title="Refresh"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></div>'
   printf '</div>\n'
 
@@ -339,13 +342,14 @@ _generate_tab_bar() {
     local rtf="${repo_tab_files[$i]}"
     _render_tab_group_tabs "git.${rname}" "$rtf" "$active_file" "diff"
   done
+  printf '<span class="fv-group-add" id="fv-add-file" title="Open file (Ctrl+O)">+</span>\n'
   printf '<div class="fv-tab-spacer"></div>'
   printf '</div>\n'
   printf '<div class="fv-tab-ts" id="fv-ts" data-generated="%s"></div>\n' "$gen_epoch"
 }
 
 _generate_panels_for_group() {
-  local group_id="$1" tabs_src="$2" active_file="$3" body_tmp="$4" mode="$5" diff_base="${6:-}"
+  local group_id="$1" tabs_src="$2" active_file="$3" body_tmp="$4" mode="$5" diff_base="${6:-}" git_root="${7:-}"
   local idx=0
   while IFS= read -r fp; do
     [ -z "$fp" ] || [ ! -f "$fp" ] && continue
@@ -353,7 +357,7 @@ _generate_panels_for_group() {
     [ "$fp" = "$active_file" ] && active_class=" active"
     {
       printf '<div class="fv-tab-content%s" id="fv-tab-%s-%d">\n' "$active_class" "$group_id" "$idx"
-      generate_file_body "$fp" "$mode" "$diff_base"
+      generate_file_body "$fp" "$mode" "$diff_base" "$git_root"
       printf '</div>\n'
     } >> "$body_tmp"
     idx=$((idx + 1))
@@ -376,32 +380,87 @@ _generate_tab_panels() {
       rname=$(basename "$repo_root")
       rtf=$(_git_tabs_file "$rname")
       if [ -f "$rtf" ] && [ -s "$rtf" ]; then
-        # Compute merge base for this repo
+        # Compute merge base for this repo (reset per repo)
+        diff_base=""
         for candidate in main master; do
           if git -C "$repo_root" rev-parse --verify "origin/$candidate" &>/dev/null; then
-            diff_base=$(git -C "$repo_root" merge-base "origin/$candidate" HEAD 2>/dev/null)
+            local mb head_sha
+            mb=$(git -C "$repo_root" merge-base "origin/$candidate" HEAD 2>/dev/null)
+            head_sha=$(git -C "$repo_root" rev-parse HEAD 2>/dev/null)
+            # If merge-base equals HEAD (on the base branch), use local mode (no base)
+            if [ -n "$mb" ] && [ "$mb" != "$head_sha" ]; then
+              diff_base="$mb"
+            fi
             break
           fi
         done
-        _generate_panels_for_group "git.${rname}" "$rtf" "$active_file" "$body_tmp" "diff" "$diff_base"
+        _generate_panels_for_group "git.${rname}" "$rtf" "$active_file" "$body_tmp" "diff" "$diff_base" "$repo_root"
       fi
     done < "$WATCHED_FILE"
   fi
 }
 
 generate_tabbed_html() {
+  local force="${1:-}"
+  # Debounce: skip if a regen completed within the last 3 seconds (unless forced)
+  local last_regen_file="$_FV_SESSION_DIR/regen.ts"
+  if [ "$force" != "force" ] && [ -f "$last_regen_file" ]; then
+    local last_ts now_ts
+    last_ts=$(cat "$last_regen_file" 2>/dev/null)
+    now_ts=$(date +%s)
+    if [ -n "$last_ts" ] && [ $((now_ts - last_ts)) -lt 8 ]; then
+      return 0
+    fi
+  fi
+
+  # Lock to prevent concurrent regen (watcher + _regen subprocess)
+  local lockfile="$_FV_SESSION_DIR/regen.lock"
+  local waited=0
+  while [ -f "$lockfile" ]; do
+    local lock_pid
+    lock_pid=$(cat "$lockfile" 2>/dev/null)
+    if ! kill -0 "$lock_pid" 2>/dev/null; then
+      rm -f "$lockfile"
+      break
+    fi
+    waited=$((waited + 1))
+    [ $waited -ge 10 ] && { rm -f "$lockfile"; break; }
+    sleep 0.5
+  done
+  echo $$ > "$lockfile"
+
   local active_file gen_epoch tab_count body_tmp saved_theme
   gen_epoch=$(date +%s)
   body_tmp=$(mktemp)
   saved_theme=""
   [ -f "$HOME/.config/fileview/theme" ] && saved_theme=$(cat "$HOME/.config/fileview/theme" 2>/dev/null)
 
+  # Clean up orphaned git tab files (repos no longer in WATCHED_FILE)
+  for gtf in "$_FV_SESSION_DIR"/tabs.git.*; do
+    [ -f "$gtf" ] || continue
+    local gtf_name
+    gtf_name=$(basename "$gtf" | sed 's/^tabs\.git\.//')
+    local is_watched=false
+    if [ -f "$WATCHED_FILE" ] && [ -s "$WATCHED_FILE" ]; then
+      while IFS= read -r wr; do
+        [ "$(basename "$wr")" = "$gtf_name" ] && { is_watched=true; break; }
+      done < "$WATCHED_FILE"
+    fi
+    [ "$is_watched" = false ] && rm -f "$gtf"
+  done
+
   local has_files=false has_any_git=false
   [ -f "$TABS_FILE" ] && [ -s "$TABS_FILE" ] && has_files=true
-  # Check if any watched repo has tabs
-  for gtf in "$_FV_SESSION_DIR"/tabs.git.*; do
-    [ -f "$gtf" ] && [ -s "$gtf" ] && { has_any_git=true; break; }
-  done
+  # Check if any watched repo has tabs (only consider repos in WATCHED_FILE)
+  if [ -f "$WATCHED_FILE" ] && [ -s "$WATCHED_FILE" ]; then
+    while IFS= read -r repo_root; do
+      [ -z "$repo_root" ] && continue
+      local rname gtf
+      rname=$(basename "$repo_root")
+      gtf=$(_git_tabs_file "$rname")
+      [ -f "$gtf" ] && [ -s "$gtf" ] && { has_any_git=true; break; }
+    done < "$WATCHED_FILE"
+  fi
 
   if [ "$has_files" = false ] && [ "$has_any_git" = false ]; then
     # Empty state — generate minimal page with tab bar (no tabs)
@@ -431,6 +490,7 @@ generate_tabbed_html() {
     arctic)    theme_css='<style id="fv-theme-inline">body{color:#1e3a5f;background:#f0f4f8}.fv-tab-bar{background:#dce4ed;border-bottom-color:#c5d3e0}.fv-tab{color:#5a7a9a;border-right-color:#c5d3e0}.fv-tab.active{color:#0f2440;background:#f0f4f8}.fv-tab.active::after{background:#2563eb}code{background:#e4eaf2;color:#c2410c}pre{background:#e8eef5;border-color:#c5d3e0}.code-file-header{background:#e1e8f0;border-bottom-color:#c5d3e0;color:#5a7a9a}.code-file-header .filename{color:#1e3a5f}.code-file-header .lang-badge{background:#c5d3e0;color:#5a7a9a}.ln{color:#8faabe;border-right-color:#c5d3e0}h1,h2,h3{color:#0f2440;border-bottom-color:#c5d3e0}a{color:#2563eb}strong{color:#0f2440}</style><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css">' ;;
   esac
 
+  local html_tmp="${VIEW_HTML}.tmp.$$"
   awk -v bodyfile="$body_tmp" -v themecss="$theme_css" '
     /\$theme_style\$/ {
       if (themecss != "") print themecss
@@ -442,6 +502,8 @@ generate_tabbed_html() {
       next
     }
     { print }
-  ' "$VIEW_TEMPLATE" > "$VIEW_HTML"
-  rm -f "$body_tmp" "$_FV_SESSION_DIR/loading"
+  ' "$VIEW_TEMPLATE" > "$html_tmp"
+  mv "$html_tmp" "$VIEW_HTML"
+  date +%s > "$last_regen_file"
+  rm -f "$body_tmp" "$_FV_SESSION_DIR/loading" "$lockfile"
 }

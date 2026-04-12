@@ -3,8 +3,10 @@
 
 # Get comma-separated list of added/modified line numbers from git diff
 _get_diff_added() {
-  local file="$1" base="${2:-}"
-  local diff_cmd=(git diff --unified=0)
+  local file="$1" base="${2:-}" git_root="${3:-}"
+  local diff_cmd=(git)
+  [ -n "$git_root" ] && diff_cmd+=(-C "$git_root")
+  diff_cmd+=(diff --unified=0)
   [ -n "$base" ] && diff_cmd+=("$base")
   diff_cmd+=(-- "$file")
   "${diff_cmd[@]}" 2>/dev/null | \
@@ -18,9 +20,11 @@ _get_diff_added() {
 
 # Get JSON map of removed lines: {"afterLineIdx": ["escaped content", ...]}
 _get_diff_removed() {
-  local file="$1" base="${2:-}"
+  local file="$1" base="${2:-}" git_root="${3:-}"
   local diff_output
-  local diff_cmd=(git diff)
+  local diff_cmd=(git)
+  [ -n "$git_root" ] && diff_cmd+=(-C "$git_root")
+  diff_cmd+=(diff)
   [ -n "$base" ] && diff_cmd+=("$base")
   diff_cmd+=(-- "$file")
   diff_output=$("${diff_cmd[@]}" 2>/dev/null)

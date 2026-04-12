@@ -20,14 +20,20 @@ _collect_mtimes() {
       result="${result}$(stat -f %m "$fp" 2>/dev/null || echo 0):"
     done < "$TABS_FILE"
   fi
-  # Collect from all git tab files
-  for gtf in "$_FV_SESSION_DIR"/tabs.git.*; do
-    [ -f "$gtf" ] && [ -s "$gtf" ] || continue
-    while IFS= read -r fp; do
-      [ -z "$fp" ] && continue
-      result="${result}$(stat -f %m "$fp" 2>/dev/null || echo 0):"
-    done < "$gtf"
-  done
+  # Collect from watched git tab files only
+  if [ -f "$WATCHED_FILE" ] && [ -s "$WATCHED_FILE" ]; then
+    while IFS= read -r repo_root; do
+      [ -z "$repo_root" ] && continue
+      local rname gtf
+      rname=$(basename "$repo_root")
+      gtf=$(_git_tabs_file "$rname")
+      [ -f "$gtf" ] && [ -s "$gtf" ] || continue
+      while IFS= read -r fp; do
+        [ -z "$fp" ] && continue
+        result="${result}$(stat -f %m "$fp" 2>/dev/null || echo 0):"
+      done < "$gtf"
+    done < "$WATCHED_FILE"
+  fi
   echo "$result"
 }
 
