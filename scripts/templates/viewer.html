@@ -696,6 +696,8 @@ $body$
 
   // Track which groups are in loading state
   var loadingGroups = {};
+  // Track last active tab per group (file path) for group switching
+  var groupLastTab = {};
 
   function showGroupLoading(groupName, label) {
     // Remove existing tabs for this group
@@ -915,12 +917,22 @@ $body$
         if (e.target.classList.contains('fv-group-close')) return;
         var group = sel.getAttribute('data-group');
         switchGroup(group);
-        var visibleActive = document.querySelector('.fv-tab.fv-group-visible.active');
-        if (!visibleActive) {
-          var first = document.querySelector('.fv-tab.fv-group-visible[data-tab]');
-          if (first) {
-            activateTab(first.getAttribute('data-tab'));
-            history.replaceState(null, '', '#' + first.getAttribute('data-tab'));
+        // Restore last active tab in this group, or fall back to first
+        var restored = false;
+        if (groupLastTab[group]) {
+          var savedTab = document.querySelector('.fv-tab.fv-group-visible[title="' + groupLastTab[group].replace(/"/g, '\\"') + '"]');
+          if (savedTab) {
+            activateTab(savedTab.getAttribute('data-tab'));
+            restored = true;
+          }
+        }
+        if (!restored) {
+          var visibleActive = document.querySelector('.fv-tab.fv-group-visible.active');
+          if (!visibleActive) {
+            var first = document.querySelector('.fv-tab.fv-group-visible[data-tab]');
+            if (first) {
+              activateTab(first.getAttribute('data-tab'));
+            }
           }
         }
       });
@@ -1516,6 +1528,13 @@ $body$
 
   // Group selector bar — switch visible group
   function switchGroup(groupName) {
+    // Save current group's active tab before switching
+    var curGroupSel = document.querySelector('.fv-group-sel.active');
+    if (curGroupSel) {
+      var curGroup = curGroupSel.getAttribute('data-group');
+      var curActive = document.querySelector('.fv-tab.active[data-group="' + curGroup + '"]');
+      if (curActive) groupLastTab[curGroup] = curActive.getAttribute('title');
+    }
     document.querySelectorAll('.fv-group-sel').forEach(function(s) {
       s.classList.toggle('active', s.getAttribute('data-group') === groupName);
     });
