@@ -296,7 +296,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return
         if parsed.path == '/_git-settings':
             qs = urllib.parse.parse_qs(parsed.query)
-            settings_file = os.path.join(DIR, 'git_settings')
+            settings_dir = os.path.expanduser('~/.config/fileview')
+            os.makedirs(settings_dir, exist_ok=True)
+            settings_file = os.path.join(settings_dir, 'git_settings')
+            # Also keep a session-local copy for the watcher
+            session_settings = os.path.join(DIR, 'git_settings')
             # Read current settings
             settings = {'diff_mode': 'branch'}
             if os.path.exists(settings_file):
@@ -308,8 +312,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             new_mode = qs.get('diff_mode', [''])[0]
             if new_mode in ('branch', 'local'):
                 settings['diff_mode'] = new_mode
-                with open(settings_file, 'w') as f:
-                    f.write(json.dumps(settings))
+                for sf in [settings_file, session_settings]:
+                    with open(sf, 'w') as f:
+                        f.write(json.dumps(settings))
+                # Signal loading and trigger full regen (watcher will re-sync git tabs)
+                open(os.path.join(DIR, 'loading'), 'w').close()
                 if SCRIPT:
                     subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             new_watch = qs.get('watch', [''])[0]

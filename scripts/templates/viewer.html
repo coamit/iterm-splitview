@@ -595,17 +595,32 @@ $body$
     if (e.target === gitOverlay) closeGitSettings();
   });
 
+  function showGitLoading() {
+    // Replace all git tab content with loading spinners
+    document.querySelectorAll('.fv-tab[data-group^="git."]').forEach(function(tab) {
+      tab.classList.add('loading');
+    });
+    var activePanel = document.querySelector('.fv-tab-content.active');
+    if (activePanel) {
+      activePanel.innerHTML = '<div class="fv-tab-loading-content">Reloading git changes</div>';
+    }
+  }
+
   if (gitModeBranch) gitModeBranch.addEventListener('click', function() {
     updateGitModeUI('branch');
-    fetch('/_git-settings?diff_mode=branch');
-    showToast('Switched to branch view \u2713');
     closeGitSettings();
+    showGitLoading();
+    lastOpenTriggered = Date.now();
+    fetch('/_git-settings?diff_mode=branch');
+    showToast('Switching to branch view\u2026');
   });
   if (gitModeLocal) gitModeLocal.addEventListener('click', function() {
     updateGitModeUI('local');
-    fetch('/_git-settings?diff_mode=local');
-    showToast('Switched to local changes \u2713');
     closeGitSettings();
+    showGitLoading();
+    lastOpenTriggered = Date.now();
+    fetch('/_git-settings?diff_mode=local');
+    showToast('Switching to local changes\u2026');
   });
 
   if (gitWatchBtn && gitWatchInput) {

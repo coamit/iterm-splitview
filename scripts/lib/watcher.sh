@@ -38,9 +38,11 @@ _sync_repo_tabs() {
 
   # Read diff mode setting (branch = PR-style, local = uncommitted only)
   local diff_mode="branch"
-  if [ -f "$_FV_SESSION_DIR/git_settings" ]; then
+  local settings_file="$_FV_SESSION_DIR/git_settings"
+  [ ! -f "$settings_file" ] && settings_file="$HOME/.config/fileview/git_settings"
+  if [ -f "$settings_file" ]; then
     local mode_val
-    mode_val=$(python3 -c "import json,sys; print(json.loads(open(sys.argv[1]).read()).get('diff_mode','branch'))" "$_FV_SESSION_DIR/git_settings" 2>/dev/null)
+    mode_val=$(python3 -c "import json,sys; print(json.loads(open(sys.argv[1]).read()).get('diff_mode','branch'))" "$settings_file" 2>/dev/null)
     [ -n "$mode_val" ] && diff_mode="$mode_val"
   fi
 
