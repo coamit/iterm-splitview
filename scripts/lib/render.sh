@@ -345,7 +345,7 @@ _generate_tab_bar() {
   printf '<span class="fv-group-add" id="fv-add-file" title="Open file (Ctrl+O)">+</span>\n'
   printf '<div class="fv-tab-spacer"></div>'
   printf '</div>\n'
-  printf '<div class="fv-tab-ts" id="fv-ts" data-generated="%s"></div>\n' "$gen_epoch"
+  printf '<div class="fv-tab-ts" id="fv-ts"></div>\n'
 }
 
 _generate_panels_for_group() {
@@ -402,16 +402,6 @@ _generate_tab_panels() {
 
 generate_tabbed_html() {
   local force="${1:-}"
-  # Debounce: skip if a regen completed within the last 3 seconds (unless forced)
-  local last_regen_file="$_FV_SESSION_DIR/regen.ts"
-  if [ "$force" != "force" ] && [ -f "$last_regen_file" ]; then
-    local last_ts now_ts
-    last_ts=$(cat "$last_regen_file" 2>/dev/null)
-    now_ts=$(date +%s)
-    if [ -n "$last_ts" ] && [ $((now_ts - last_ts)) -lt 8 ]; then
-      return 0
-    fi
-  fi
 
   # Lock to prevent concurrent regen (watcher + _regen subprocess)
   local lockfile="$_FV_SESSION_DIR/regen.lock"
@@ -466,7 +456,6 @@ generate_tabbed_html() {
     # Empty state — generate minimal page with tab bar (no tabs)
     tab_count=0
     {
-      printf '<div data-fv-gen="%s" data-fv-tabs="0" data-fv-theme="%s" style="display:none"></div>\n' "$gen_epoch" "$saved_theme"
       printf '<div class="fv-tab-bar"><div class="fv-tab-spacer"></div>'
       printf '<div class="fv-tab-action" id="fv-refresh" title="Refresh"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 3a5 5 0 0 0-4.55 2.92.5.5 0 1 1-.9-.38A6 6 0 0 1 14 8a6 6 0 0 1-6 6 6 6 0 0 1-5.46-3.54.5.5 0 0 1 .92-.38A5 5 0 1 0 8 3z"/><path d="M6.5 1a.5.5 0 0 1 .5.5V5h3.5a.5.5 0 0 1 0 1H6.5a.5.5 0 0 1-.5-.5V1.5a.5.5 0 0 1 .5-.5z"/></svg></div>'
       printf '</div>\n'
@@ -475,10 +464,20 @@ generate_tabbed_html() {
   else
     active_file=$(_resolve_active_file)
     tab_count=$(_count_valid_tabs)
-    printf '<div data-fv-gen="%s" data-fv-tabs="%s" data-fv-theme="%s" style="display:none"></div>\n' "$gen_epoch" "$tab_count" "$saved_theme" > "$body_tmp"
+    : > "$body_tmp"
     _generate_tab_bar "$active_file" "$gen_epoch" >> "$body_tmp"
     _generate_tab_panels "$active_file" "$body_tmp"
   fi
+
+  # Use content hash as gen value — only triggers reload when content actually changes
+  local gen_hash
+  gen_hash=$(md5 -q "$body_tmp" 2>/dev/null || md5sum "$body_tmp" 2>/dev/null | cut -d' ' -f1)
+  # Prepend the marker with the content hash
+  local body_with_marker
+  body_with_marker=$(mktemp)
+  printf '<div data-fv-gen="%s" data-fv-tabs="%s" data-fv-theme="%s" data-fv-time="%s" style="display:none"></div>\n' "$gen_hash" "$tab_count" "$saved_theme" "$gen_epoch" > "$body_with_marker"
+  cat "$body_tmp" >> "$body_with_marker"
+  mv "$body_with_marker" "$body_tmp"
 
   # Generate inline theme CSS for instant paint
   local theme_css=""
@@ -504,6 +503,5 @@ generate_tabbed_html() {
     { print }
   ' "$VIEW_TEMPLATE" > "$html_tmp"
   mv "$html_tmp" "$VIEW_HTML"
-  date +%s > "$last_regen_file"
   rm -f "$body_tmp" "$_FV_SESSION_DIR/loading" "$lockfile"
 }

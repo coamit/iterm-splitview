@@ -393,10 +393,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 except Exception:
                     pass
             self._resync_all_repos(diff_mode)
-            # Clear debounce so regen runs immediately
-            regen_ts = os.path.join(DIR, 'regen.ts')
-            if os.path.exists(regen_ts):
-                os.remove(regen_ts)
             if SCRIPT:
                 subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self.send_response(204)

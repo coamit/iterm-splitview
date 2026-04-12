@@ -361,6 +361,6 @@ case "$1" in
   unwatch)      shift; cmd_unwatch "$@" ;;
   list)         cmd_list ;;
   search-root)  shift; cmd_search_root "$@" ;;
-  _regen)       generate_tabbed_html force ;;
+  _regen)       generate_tabbed_html ;;
   *)            echo "Usage: fileview {open|close|diff|unwatch|list|search-root} [file ...]" >&2; exit 1 ;;
 esac

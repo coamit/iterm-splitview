@@ -1161,7 +1161,8 @@ $body$
 
   // --- Timestamp poller ---
   var tsEl = document.getElementById('fv-ts');
-  var tsGenEpoch = tsEl ? parseInt(tsEl.getAttribute('data-generated'), 10) : 0;
+  var timeMarker = document.querySelector('[data-fv-time]');
+  var tsGenEpoch = timeMarker ? parseInt(timeMarker.getAttribute('data-fv-time'), 10) : 0;
 
   function updateTimestamp() {
     if (!tsEl) return;
