@@ -16,30 +16,35 @@ These instructions apply when `fileview` is available on PATH.
 ## Commands
 
 ```bash
-# Single file (backward-compatible)
+# Open files (supports 1 or multiple)
 fileview open <file>              # Open file in browser split pane
-fileview close && fileview open <file>  # Refresh / replace current view
-
-# Multiple files (tabs)
 fileview open <f1> <f2> <f3>      # Open multiple files as tabs (last = active)
 fileview open <new-file>          # Add a tab to existing pane (no close needed)
-fileview close <file>             # Remove a specific tab
-fileview list                     # Show current tabs (* = active)
 
-# Git watch — persistent diff tracking
+# Close files (supports 1, multiple, or all)
+fileview close <file>             # Remove a specific tab
+fileview close <f1> <f2> <f3>     # Remove multiple tabs at once
+fileview close                    # Close pane + clear all tabs
+
+# Git watch — persistent diff tracking (supports 1 or multiple)
 fileview diff                     # Watch current repo (polls every ~6s, auto-manages tabs)
 fileview diff ~/dev/repo          # Watch a specific repo by path
+fileview diff ~/dev/r1 ~/dev/r2   # Watch multiple repos at once
+
+# Unwatch repos (supports 1 or multiple)
 fileview unwatch                  # Stop watching current repo
 fileview unwatch ~/dev/repo       # Stop watching a specific repo
+fileview unwatch ~/dev/r1 ~/dev/r2  # Stop watching multiple repos at once
 
-# Close
-fileview close                    # Close pane + clear all tabs
+# Other
+fileview list                     # Show current tabs (* = active)
 ```
 
 **Tab behavior:**
 - Opening a file already in tabs just activates it (no duplicate)
 - Closing the active tab activates the last remaining tab
 - Closing the last tab closes the pane
+- Switching between groups preserves the last active tab per group
 
 ---
 
