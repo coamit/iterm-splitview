@@ -26,6 +26,12 @@ fileview open <new-file>          # Add a tab to existing pane (no close needed)
 fileview close <file>             # Remove a specific tab
 fileview list                     # Show current tabs (* = active)
 
+# Git watch — persistent diff tracking
+fileview diff                     # Watch current repo (polls every ~6s, auto-manages tabs)
+fileview diff ~/dev/repo          # Watch a specific repo by path
+fileview unwatch                  # Stop watching current repo
+fileview unwatch ~/dev/repo       # Stop watching a specific repo
+
 # Close
 fileview close                    # Close pane + clear all tabs
 ```
@@ -54,5 +60,6 @@ Use fileview **autonomously** for ANY response containing:
 ## Key Rules
 
 - **Be proactive** — don't wait for the user to ask for split pane display
+- **Git watch** — `fileview diff` starts a persistent watcher that polls git every ~6s, auto-adding/removing tabs as files change. Git-tracked tabs appear in a separate "Git Changes" group. **Always activate `fileview diff` when starting work that involves git changes** so the user sees diffs in real-time. Run `fileview unwatch` when done.
 - **Auto-reload** — a local HTTP server enables live updates; when a displayed file changes, the browser auto-reloads within ~1.5s
 - Requires **iTerm2** (not Terminal.app) and uses per-session isolation
