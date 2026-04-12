@@ -1123,8 +1123,9 @@ $body$
     lastOpenedFilePath = ''; // Consume — only used once
     var activeGroupSel = document.querySelector('.fv-group-sel.active');
     var activeGroup = activeGroupSel ? activeGroupSel.getAttribute('data-group') : 'files';
-    // Detect if user was on a loading group (no tabs yet, just spinner)
-    var wasOnLoadingGroup = !activeTab && activeGroupSel && loadingGroups[activeGroup];
+    // Detect if user was on a loading group (spinner visible)
+    // Note: activeTab may still be set (hidden tab from another group), so don't check !activeTab
+    var wasOnLoadingGroup = activeGroupSel && loadingGroups[activeGroup];
 
     // 2. Prepare offscreen — init hljs, diff attrs, mermaid prep
     var offscreen = document.createElement('div');
