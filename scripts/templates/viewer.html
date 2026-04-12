@@ -114,7 +114,7 @@ div.sourceCode { margin: 8px 0; }
 /* Quick-open modal (Cmd+P) */
 .fv-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; }
 .fv-modal-overlay.visible { display: flex; justify-content: center; padding-top: 60px; }
-.fv-modal { width: 640px; max-height: 380px; background: #1f2430; border: 1px solid #353b4a; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); display: flex; flex-direction: column; overflow: hidden; }
+.fv-modal { width: min(640px, calc(100vw - 32px)); max-height: min(380px, calc(100vh - 120px)); background: #1f2430; border: 1px solid #353b4a; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); display: flex; flex-direction: column; overflow: hidden; }
 .fv-modal-input { background: #171b24; border: none; border-bottom: 1px solid #353b4a; padding: 12px 14px; font-size: 14px; color: #e8ecf0; outline: none; font-family: -apple-system, sans-serif; }
 .fv-modal-input::placeholder { color: #8a90a0; }
 .fv-modal-list { list-style: none; overflow-y: auto; flex: 1; padding: 0; margin: 0; scrollbar-width: thin; scrollbar-color: #4b5263 transparent; }
@@ -152,7 +152,7 @@ div.sourceCode { margin: 8px 0; }
 /* Settings modal */
 .fv-settings-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 500; }
 .fv-settings-overlay.visible { display: flex; justify-content: center; padding-top: 50px; }
-.fv-settings { width: 520px; max-height: 420px; background: #1f2430; border: 1px solid #353b4a; border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; overflow: hidden; }
+.fv-settings { width: min(520px, calc(100vw - 32px)); max-height: min(420px, calc(100vh - 100px)); background: #1f2430; border: 1px solid #353b4a; border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; overflow: hidden; }
 .fv-settings-header { padding: 14px 18px; font-size: 13px; font-weight: 600; color: #e8ecf0; border-bottom: 1px solid #353b4a; font-family: -apple-system, sans-serif; display: flex; align-items: center; }
 .fv-settings-header span { flex: 1; }
 .fv-settings-close { cursor: pointer; color: #6a7080; font-size: 16px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
