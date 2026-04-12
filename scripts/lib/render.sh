@@ -333,7 +333,7 @@ _generate_tab_bar() {
   printf '</div>\n'
 
   # Tab bar with tabs from all groups (hidden by group via CSS/JS)
-  printf '<div class="fv-tab-bar">\n'
+  printf '<div class="fv-tab-bar has-groups">\n'
   if [ "$has_files" = true ]; then
     _render_tab_group_tabs "files" "$TABS_FILE" "$active_file" ""
   fi

@@ -1448,14 +1448,13 @@ $body$
     });
   });
   // Init: show active group's tabs (skip if hash already handled it)
+  // Note: has-groups class is set in the HTML template so tab layout is correct
+  // when hash-restore runs scrollIntoView (before this init code executes).
   var groupBar = document.querySelector('.fv-group-bar');
   var hashHandledGroup = hash && hash.indexOf('fv-group:') === 0;
-  if (groupBar) {
-    document.querySelector('.fv-tab-bar').classList.add('has-groups');
-    if (!hashHandledGroup) {
-      var activeGroupSel = document.querySelector('.fv-group-sel.active');
-      if (activeGroupSel) switchGroup(activeGroupSel.getAttribute('data-group'));
-    }
+  if (groupBar && !hashHandledGroup) {
+    var activeGroupSel = document.querySelector('.fv-group-sel.active');
+    if (activeGroupSel) switchGroup(activeGroupSel.getAttribute('data-group'));
   }
 
   // Markdown raw/preview toggle
