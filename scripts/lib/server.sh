@@ -215,7 +215,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             try:
                 with open(os.path.join(DIR, 'index.html')) as f:
                     head = f.read()
-                m = re.search(r'data-fv-gen=\"(\d+)\"', head)
+                m = re.search(r'data-fv-gen=\"([^\"]+)\"', head)
                 if m: gen_val = m.group(1)
                 m2 = re.search(r'data-fv-tabs=\"(\d+)\"', head)
                 if m2: tabs_val = m2.group(1)
