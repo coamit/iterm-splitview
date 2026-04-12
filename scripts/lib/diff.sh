@@ -3,8 +3,13 @@
 
 # Get comma-separated list of added/modified line numbers from git diff
 _get_diff_added() {
-  local file="$1"
-  git diff --unified=0 -- "$file" 2>/dev/null | \
+  local file="$1" base="${2:-}" git_root="${3:-}"
+  local diff_cmd=(git)
+  [ -n "$git_root" ] && diff_cmd+=(-C "$git_root")
+  diff_cmd+=(diff --unified=0)
+  [ -n "$base" ] && diff_cmd+=("$base")
+  diff_cmd+=(-- "$file")
+  "${diff_cmd[@]}" 2>/dev/null | \
     grep -oE '^\@\@ [^ ]+ \+[0-9]+(,[0-9]+)?' | \
     sed -E 's/.*\+([0-9]+)(,([0-9]+))?/\1 \3/' | \
     while read -r s c; do
@@ -15,9 +20,14 @@ _get_diff_added() {
 
 # Get JSON map of removed lines: {"afterLineIdx": ["escaped content", ...]}
 _get_diff_removed() {
-  local file="$1"
+  local file="$1" base="${2:-}" git_root="${3:-}"
   local diff_output
-  diff_output=$(git diff -- "$file" 2>/dev/null)
+  local diff_cmd=(git)
+  [ -n "$git_root" ] && diff_cmd+=(-C "$git_root")
+  diff_cmd+=(diff)
+  [ -n "$base" ] && diff_cmd+=("$base")
+  diff_cmd+=(-- "$file")
+  diff_output=$("${diff_cmd[@]}" 2>/dev/null)
   [ -z "$diff_output" ] && return
 
   # Parse unified diff to extract removed lines with their position

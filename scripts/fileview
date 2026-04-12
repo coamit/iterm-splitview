@@ -32,10 +32,8 @@ source "$SCRIPT_DIR/lib/watcher.sh"
 # shellcheck source=lib/iterm.sh
 source "$SCRIPT_DIR/lib/iterm.sh"
 
-# Copy template to cache if not present
-if [ ! -f "$VIEW_TEMPLATE" ]; then
-  cp "$SCRIPT_DIR/templates/viewer.html" "$VIEW_TEMPLATE"
-fi
+# Copy template to cache (always sync — source may have changed)
+cp "$SCRIPT_DIR/templates/viewer.html" "$VIEW_TEMPLATE"
 
 # --- GC: clean up stale sessions from dead iTerm tabs ---
 
@@ -112,8 +110,11 @@ fi
 _close_all() {
   stop_watcher
   stop_server
-  rm -f "$TABS_FILE" "$ACTIVE_FILE" "$CWD_FILE" "$SEARCH_ROOT_FILE"
+  rm -f "$TABS_FILE" "$ACTIVE_FILE" "$CWD_FILE" "$SEARCH_ROOT_FILE" "$COLLAPSED_FILE"
   rm -f "$_FV_SESSION_DIR/plan" "$_FV_SESSION_DIR/mode"
+  # Remove watched file and all per-repo git tab files
+  rm -f "$WATCHED_FILE"
+  rm -f "$_FV_SESSION_DIR"/tabs.git.*
   _close_fileview_pane
 }
 
@@ -154,7 +155,18 @@ cmd_open() {
       echo "fileview: file not found: $src_file" >&2
       continue
     fi
-    _add_file_to_tabs "$abs_path"
+    # If the file is already in any git tab file, just activate it without duplicating
+    local in_git_tabs=false
+    for gtf in "$_FV_SESSION_DIR"/tabs.git.*; do
+      [ -f "$gtf" ] || continue
+      if grep -qxF "$abs_path" "$gtf" 2>/dev/null; then
+        in_git_tabs=true
+        break
+      fi
+    done
+    if [ "$in_git_tabs" = false ]; then
+      _add_file_to_tabs "$abs_path"
+    fi
     last_file="$abs_path"
     case "$abs_path" in
       */.claude/plans/*.md) echo "$abs_path" > "$_FV_SESSION_DIR/plan" ;;
@@ -178,16 +190,26 @@ cmd_close() {
   local target
   target=$(_resolve_path "$1")
 
-  if [ ! -f "$TABS_FILE" ]; then
-    return 0
+  # Remove from files tab and all git tab files
+  for tabfile in "$TABS_FILE" "$_FV_SESSION_DIR"/tabs.git.*; do
+    [ -f "$tabfile" ] || continue
+    local tmp
+    tmp=$(mktemp)
+    grep -vxF "$target" "$tabfile" > "$tmp" || true
+    mv "$tmp" "$tabfile"
+  done
+
+  # If all tab files are empty, close all
+  local any_has_tabs=false
+  if [ -f "$TABS_FILE" ] && [ -s "$TABS_FILE" ]; then
+    any_has_tabs=true
   fi
-
-  local tmp
-  tmp=$(mktemp)
-  grep -vxF "$target" "$TABS_FILE" > "$tmp" || true
-  mv "$tmp" "$TABS_FILE"
-
-  if [ ! -s "$TABS_FILE" ]; then
+  if [ "$any_has_tabs" = false ]; then
+    for gtf in "$_FV_SESSION_DIR"/tabs.git.*; do
+      [ -f "$gtf" ] && [ -s "$gtf" ] && { any_has_tabs=true; break; }
+    done
+  fi
+  if [ "$any_has_tabs" = false ]; then
     _close_all
     return 0
   fi
@@ -195,7 +217,14 @@ cmd_close() {
   local current_active
   current_active=$(cat "$ACTIVE_FILE" 2>/dev/null)
   if [ "$current_active" = "$target" ]; then
-    tail -1 "$TABS_FILE" > "$ACTIVE_FILE"
+    # Pick new active from whichever tab file has content
+    if [ -f "$TABS_FILE" ] && [ -s "$TABS_FILE" ]; then
+      tail -1 "$TABS_FILE" > "$ACTIVE_FILE"
+    else
+      for gtf in "$_FV_SESSION_DIR"/tabs.git.*; do
+        [ -f "$gtf" ] && [ -s "$gtf" ] && { tail -1 "$gtf" > "$ACTIVE_FILE"; break; }
+      done
+    fi
   fi
 
   generate_tabbed_html
@@ -203,56 +232,109 @@ cmd_close() {
 }
 
 cmd_diff() {
-  local files
-  files=$({ git diff --name-only; git diff --name-only --cached; git ls-files --others --exclude-standard; } 2>/dev/null | sort -u)
-  if [ -z "$files" ]; then
-    echo "fileview: no git changes found" >&2
+  local target_dir="${1:-.}"
+  local git_root
+  git_root=$(git -C "$(_resolve_path "$target_dir")" rev-parse --show-toplevel 2>/dev/null)
+  if [ -z "$git_root" ]; then
+    echo "fileview: not a git repository: $target_dir" >&2
     return 1
   fi
+  local repo_name
+  repo_name=$(basename "$git_root")
+
+  # Check if already watched
+  if grep -qxF "$git_root" "$WATCHED_FILE" 2>/dev/null; then
+    echo "fileview: already watching $repo_name"
+    return 0
+  fi
+
+  # Add to watched list
+  echo "$git_root" >> "$WATCHED_FILE"
+
+  # Do initial sync of git changes for this repo
+  local tabs_file
+  tabs_file=$(_git_tabs_file "$repo_name")
+  _sync_repo_tabs "$git_root" "$tabs_file"
 
   _show_loading
   echo "diff" > "$_FV_SESSION_DIR/mode"
   echo "$PWD" > "$CWD_FILE"
-  touch "$TABS_FILE"
 
-  while IFS= read -r f; do
-    [ -z "$f" ] && continue
-    local abs_path
-    abs_path=$(_resolve_path "$f")
-    [ ! -f "$abs_path" ] && continue
-    _add_file_to_tabs "$abs_path"
-  done <<< "$files"
-
-  if [ ! -s "$TABS_FILE" ]; then
-    rm -f "$_FV_SESSION_DIR/mode"
-    return 1
-  fi
-
+  # Set active to first file if none set
   if [ ! -f "$ACTIVE_FILE" ] || [ ! -s "$ACTIVE_FILE" ]; then
-    head -1 "$TABS_FILE" > "$ACTIVE_FILE"
+    [ -s "$tabs_file" ] && head -1 "$tabs_file" > "$ACTIVE_FILE"
   fi
 
-  if ! _generate_and_launch; then
-    rm -f "$_FV_SESSION_DIR/mode"
-    return 1
+  _generate_and_launch
+}
+
+cmd_unwatch() {
+  local target_dir="${1:-.}"
+  local git_root
+  git_root=$(git -C "$(_resolve_path "$target_dir")" rev-parse --show-toplevel 2>/dev/null || _resolve_path "$target_dir")
+  local repo_name
+  repo_name=$(basename "$git_root")
+
+  # Remove from watched
+  if [ -f "$WATCHED_FILE" ]; then
+    local tmp
+    tmp=$(mktemp)
+    grep -vxF "$git_root" "$WATCHED_FILE" > "$tmp" || true
+    mv "$tmp" "$WATCHED_FILE"
   fi
+
+  # Remove tabs file
+  rm -f "$(_git_tabs_file "$repo_name")"
+
+  generate_tabbed_html
+  start_watcher
+  echo "Stopped watching $repo_name"
 }
 
 cmd_list() {
-  if [ ! -f "$TABS_FILE" ] || [ ! -s "$TABS_FILE" ]; then
-    echo "No tabs open."
-    return 0
-  fi
+  local has_any=false
   local active_file=""
   [ -f "$ACTIVE_FILE" ] && active_file=$(cat "$ACTIVE_FILE")
-  while IFS= read -r fp; do
-    [ -z "$fp" ] && continue
-    if [ "$fp" = "$active_file" ]; then
-      echo "* $(basename "$fp")  ($fp)"
-    else
-      echo "  $(basename "$fp")  ($fp)"
-    fi
-  done < "$TABS_FILE"
+
+  if [ -f "$TABS_FILE" ] && [ -s "$TABS_FILE" ]; then
+    has_any=true
+    echo "Files:"
+    while IFS= read -r fp; do
+      [ -z "$fp" ] && continue
+      if [ "$fp" = "$active_file" ]; then
+        echo "* $(basename "$fp")  ($fp)"
+      else
+        echo "  $(basename "$fp")  ($fp)"
+      fi
+    done < "$TABS_FILE"
+  fi
+
+  # List each watched repo's git tabs
+  if [ -f "$WATCHED_FILE" ] && [ -s "$WATCHED_FILE" ]; then
+    while IFS= read -r repo_root; do
+      [ -z "$repo_root" ] && continue
+      local name
+      name=$(basename "$repo_root")
+      local tf
+      tf=$(_git_tabs_file "$name")
+      if [ -f "$tf" ] && [ -s "$tf" ]; then
+        has_any=true
+        echo "Git Changes ($name):"
+        while IFS= read -r fp; do
+          [ -z "$fp" ] && continue
+          if [ "$fp" = "$active_file" ]; then
+            echo "* $(basename "$fp")  ($fp)"
+          else
+            echo "  $(basename "$fp")  ($fp)"
+          fi
+        done < "$tf"
+      fi
+    done < "$WATCHED_FILE"
+  fi
+
+  if [ "$has_any" = false ]; then
+    echo "No tabs open."
+  fi
 }
 
 cmd_search_root() {
@@ -275,9 +357,10 @@ cmd_search_root() {
 case "$1" in
   open)         shift; cmd_open "$@" ;;
   close)        shift; cmd_close "$@" ;;
-  diff)         cmd_diff ;;
+  diff)         shift; cmd_diff "$@" ;;
+  unwatch)      shift; cmd_unwatch "$@" ;;
   list)         cmd_list ;;
   search-root)  shift; cmd_search_root "$@" ;;
   _regen)       generate_tabbed_html ;;
-  *)            echo "Usage: fileview {open|close|diff|list|search-root} [file ...]" >&2; exit 1 ;;
+  *)            echo "Usage: fileview {open|close|diff|unwatch|list|search-root} [file ...]" >&2; exit 1 ;;
 esac
