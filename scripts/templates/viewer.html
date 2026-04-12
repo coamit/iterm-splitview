@@ -1086,7 +1086,11 @@ $body$
         try {
           var d = JSON.parse(xhr.responseText);
           if (d.gen && d.gen !== genTime) {
-            if (pendingCloses > 0 || (Date.now() - lastCloseCompleted) < 5000 || (Date.now() - pageLoadTime) < 2000) return;
+            var closeGuard = pendingCloses > 0 || (Date.now() - lastCloseCompleted) < 5000;
+            if (closeGuard || (Date.now() - pageLoadTime) < 2000) {
+              if (closeGuard) genTime = d.gen;
+              return;
+            }
             if (lastOpenTriggered > 0) {
               // File is being opened — wait for loading to complete AND a minimum cooldown
               if ((Date.now() - lastOpenTriggered) < 5000) return;
