@@ -129,7 +129,7 @@ div.sourceCode { margin: 8px 0; }
 /* Diff counter badge */
 .diff-counter-badge { position: fixed; bottom: 16px; left: 16px; background: #2a3040; border: 1px solid #353b4a; border-radius: 6px; padding: 4px 12px; font-size: 12px; font-family: "JetBrains Mono", monospace; color: #ccd0d4; z-index: 200; display: none; user-select: none; }
 .diff-counter-badge.visible { display: block; }
-.diff-view-mode { display: none; font-size: 10px; color: #a78bfa; font-family: -apple-system, sans-serif; padding: 2px 8px; background: rgba(167, 139, 250, 0.1); border: 1px solid rgba(167, 139, 250, 0.3); border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; margin-left: auto; }
+.diff-view-mode { display: none; font-size: 10px; color: #a78bfa; font-family: -apple-system, sans-serif; padding: 2px 8px; background: rgba(167, 139, 250, 0.1); border: 1px solid rgba(167, 139, 250, 0.3); border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; margin-left: 8px; }
 .diff-collapsed .diff-view-mode { display: inline-block; }
 .diff-stats { display: inline-flex; gap: 6px; margin-left: 8px; font-size: 11px; font-family: "JetBrains Mono", monospace; }
 .diff-stat-add { color: #28c840; }
@@ -253,7 +253,7 @@ div.sourceCode { margin: 8px 0; }
 .dot-red { background: #ff5f57; } .dot-yellow { background: #febc2e; } .dot-green { background: #28c840; }
 .code-file-header .filename { color: #ccd0d4; font-weight: 500; margin-left: 4px; }
 .code-file-header .lang-badge { background: #353b4a; padding: 2px 8px; border-radius: 4px; font-size: 10px; color: #8a90a0; text-transform: uppercase; letter-spacing: 0.5px; margin-left: auto; }
-.diff-collapsed .code-file-header .lang-badge { margin-left: 8px; }
+.diff-collapsed .code-file-header .lang-badge { margin-left: auto; }
 .code-file-wrapper pre { border: none; border-radius: 0; margin: 0; }
 blockquote { border-left: 3px solid #87d96c; padding-left: 10px; color: #8a90a0; margin: 6px 0; }
 ul, ol { padding-left: 20px; margin: 6px 0; } li { margin-bottom: 2px; }
@@ -595,33 +595,79 @@ $body$
     if (e.target === gitOverlay) closeGitSettings();
   });
 
-  function showGitLoading() {
-    // Replace all git tab content with loading spinners
-    document.querySelectorAll('.fv-tab[data-group^="git."]').forEach(function(tab) {
-      tab.classList.add('loading');
+  // Track which groups are in loading state
+  var loadingGroups = {};
+
+  function showGroupLoading(groupName, label) {
+    // Remove existing tabs for this group
+    document.querySelectorAll('.fv-tab[data-group="' + groupName + '"]').forEach(function(t) { t.remove(); });
+    document.querySelectorAll('.fv-tab-content').forEach(function(p) {
+      if (p.id && p.id.indexOf('fv-tab-' + groupName + '-') === 0) p.remove();
     });
-    var activePanel = document.querySelector('.fv-tab-content.active');
-    if (activePanel) {
-      activePanel.innerHTML = '<div class="fv-tab-loading-content">Reloading git changes</div>';
+    // Create a loading content panel tied to this group
+    var panelId = 'fv-loading-' + groupName.replace(/\./g, '-');
+    var existing = document.getElementById(panelId);
+    if (!existing) {
+      var panel = document.createElement('div');
+      panel.className = 'fv-tab-content';
+      panel.id = panelId;
+      panel.setAttribute('data-loading-group', groupName);
+      panel.innerHTML = '<div class="fv-tab-loading-content">Loading ' + escHtml(label) + '</div>';
+      document.body.appendChild(panel);
     }
+    loadingGroups[groupName] = panelId;
+    updateGroupCounts();
+    // If this group is active, show the loading panel
+    var activeSel = document.querySelector('.fv-group-sel.active');
+    if (activeSel && activeSel.getAttribute('data-group') === groupName) {
+      document.querySelectorAll('.fv-tab-content.active').forEach(function(c) { c.classList.remove('active'); });
+      var lp = document.getElementById(panelId);
+      if (lp) lp.classList.add('active');
+    }
+  }
+
+  function showGitLoading(modeLabel) {
+    // Show loading for all git groups
+    document.querySelectorAll('.fv-group-sel[data-group^="git."]').forEach(function(sel) {
+      var group = sel.getAttribute('data-group');
+      showGroupLoading(group, modeLabel);
+    });
   }
 
   if (gitModeBranch) gitModeBranch.addEventListener('click', function() {
     updateGitModeUI('branch');
     closeGitSettings();
-    showGitLoading();
+    showGitLoading('branch changes');
     lastOpenTriggered = Date.now();
     fetch('/_git-settings?diff_mode=branch');
-    showToast('Switching to branch view\u2026');
   });
   if (gitModeLocal) gitModeLocal.addEventListener('click', function() {
     updateGitModeUI('local');
     closeGitSettings();
-    showGitLoading();
+    showGitLoading('local changes');
     lastOpenTriggered = Date.now();
     fetch('/_git-settings?diff_mode=local');
-    showToast('Switching to local changes\u2026');
   });
+
+  function addGroupHeader(groupName, label) {
+    var groupBar = document.querySelector('.fv-group-bar');
+    if (!groupBar) return;
+    // Don't add if already exists
+    if (groupBar.querySelector('[data-group="' + groupName + '"]')) return;
+    var spacer = groupBar.querySelector('.fv-tab-spacer');
+    var sel = document.createElement('span');
+    sel.className = 'fv-group-sel';
+    sel.setAttribute('data-group', groupName);
+    sel.innerHTML = '&#9095; ' + escHtml(label) + ' <span class="fv-group-count">0</span><span class="fv-group-close" data-unwatch="' + escHtml(label) + '" title="Stop watching">&times;</span>';
+    groupBar.insertBefore(sel, spacer);
+    // Add click handler
+    sel.addEventListener('click', function(e) {
+      if (e.target.classList.contains('fv-group-close')) return;
+      switchGroup(groupName);
+      var first = document.querySelector('.fv-tab.fv-group-visible[data-tab]');
+      if (first) { activateTab(first.getAttribute('data-tab')); }
+    });
+  }
 
   if (gitWatchBtn && gitWatchInput) {
     gitWatchBtn.addEventListener('click', function() {
@@ -638,8 +684,13 @@ $body$
           } else if (data.added) {
             if (gitWatchStatus) gitWatchStatus.textContent = '';
             gitWatchInput.value = '';
-            showToast('Watching ' + data.added + ' \u2713');
             closeGitSettings();
+            // Add group header immediately and show loading
+            var groupName = 'git.' + data.added;
+            addGroupHeader(groupName, data.added);
+            showGroupLoading(groupName, data.added + ' changes');
+            switchGroup(groupName);
+            lastOpenTriggered = Date.now();
           }
         });
     });
@@ -1086,10 +1137,10 @@ $body$
     if (!panel) return;
     var hasDiffs = panel.querySelector('.code-line.diff-added, .code-line.diff-removed');
     if (!hasDiffs) return;
-    // Skip for new files (all lines are added — nothing to collapse)
-    var totalLines = panel.querySelectorAll('.code-line').length;
+    // Skip for new files (all non-removed lines are added — nothing to collapse)
+    var totalLines = panel.querySelectorAll('.code-line:not(.diff-removed)').length;
     var addedLines = panel.querySelectorAll('.code-line.diff-added').length;
-    if (addedLines === totalLines) return;
+    if (totalLines > 0 && addedLines === totalLines) return;
     var codeBlocks = panel.querySelectorAll('pre, .code-lines');
     codeBlocks.forEach(function(b) { b.style.transition = 'opacity 0.06s ease-out'; b.style.opacity = '0'; });
     setTimeout(function() {
@@ -1136,13 +1187,22 @@ $body$
     document.querySelectorAll('.fv-tab-bar .fv-tab[data-group]').forEach(function(t) {
       t.classList.toggle('fv-group-visible', t.getAttribute('data-group') === groupName);
     });
-    // Show/hide empty state for groups with no tabs
-    var existing = document.getElementById('fv-group-empty');
-    if (existing) existing.remove();
+    // Hide all loading panels, show the one for this group if loading
+    document.querySelectorAll('[data-loading-group]').forEach(function(p) { p.classList.remove('active'); });
+    var existingEmpty = document.getElementById('fv-group-empty');
+    if (existingEmpty) existingEmpty.remove();
+
+    // Check if this group is in loading state
+    if (loadingGroups[groupName]) {
+      document.querySelectorAll('.fv-tab-content.active').forEach(function(c) { c.classList.remove('active'); });
+      var lp = document.getElementById(loadingGroups[groupName]);
+      if (lp) lp.classList.add('active');
+      return;
+    }
+
     var hasVisibleTabs = document.querySelector('.fv-tab.fv-group-visible[data-tab]');
     if (!hasVisibleTabs) {
-      // Hide all content panels
-      document.querySelectorAll('.fv-tab-content').forEach(function(c) { c.classList.remove('active'); });
+      document.querySelectorAll('.fv-tab-content.active').forEach(function(c) { c.classList.remove('active'); });
       var emptyDiv = document.createElement('div');
       emptyDiv.className = 'fv-tab-content active';
       emptyDiv.id = 'fv-group-empty';
@@ -1151,8 +1211,6 @@ $body$
       emptyDiv.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 80px);color:#6a7080;font-size:13px;font-family:-apple-system,sans-serif';
       emptyDiv.textContent = msg;
       document.body.appendChild(emptyDiv);
-    } else if (existing) {
-      // Restore previously active content if needed
     }
   }
   document.querySelectorAll('.fv-group-sel').forEach(function(sel) {
@@ -1721,8 +1779,31 @@ $body$
     var tabs = hasGroups
       ? Array.from(document.querySelectorAll('.fv-tab.fv-group-visible[data-tab]'))
       : Array.from(document.querySelectorAll('.fv-tab[data-tab]'));
-    if (tabs.length < 2) return;
+    if (tabs.length === 0) return;
     var activeIdx = tabs.findIndex(function(t) { return t.classList.contains('active'); });
+
+    if (hasGroups) {
+      var atEnd = (direction > 0 && activeIdx === tabs.length - 1) || (direction < 0 && activeIdx <= 0);
+      if (atEnd || tabs.length < 2) {
+        // Cycle to next/previous group
+        var groupSels = Array.from(document.querySelectorAll('.fv-group-sel'));
+        var activeGroupIdx = groupSels.findIndex(function(s) { return s.classList.contains('active'); });
+        var newGroupIdx = direction > 0 ? (activeGroupIdx + 1) % groupSels.length : (activeGroupIdx - 1 + groupSels.length) % groupSels.length;
+        var newGroup = groupSels[newGroupIdx].getAttribute('data-group');
+        switchGroup(newGroup);
+        // Activate first or last tab in the new group
+        var newTabs = Array.from(document.querySelectorAll('.fv-tab.fv-group-visible[data-tab]'));
+        if (newTabs.length > 0) {
+          var target = direction > 0 ? newTabs[0] : newTabs[newTabs.length - 1];
+          activateTab(target.getAttribute('data-tab'));
+          history.replaceState(null, '', '#' + target.getAttribute('data-tab'));
+        }
+        currentDiffIdx = -1;
+        return;
+      }
+    }
+
+    if (tabs.length < 2) return;
     var newIdx = direction > 0 ? (activeIdx + 1) % tabs.length : (activeIdx - 1 + tabs.length) % tabs.length;
     var newTabId = tabs[newIdx].getAttribute('data-tab');
     activateTab(newTabId);

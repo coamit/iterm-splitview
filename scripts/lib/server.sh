@@ -318,6 +318,15 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 # Re-sync all watched repos with new mode, then regen
                 open(os.path.join(DIR, 'loading'), 'w').close()
                 self._resync_all_repos(new_mode)
+                # Set active to first file in first git tab file
+                for gtf in sorted(_all_git_tab_files()):
+                    if os.path.exists(gtf) and os.path.getsize(gtf) > 0:
+                        with open(gtf) as f:
+                            first = f.readline().strip()
+                        if first:
+                            with open(os.path.join(DIR, 'active'), 'w') as f:
+                                f.write(first)
+                        break
                 if SCRIPT:
                     subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             new_watch = qs.get('watch', [''])[0]
@@ -338,6 +347,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                                 with open(WATCHED, 'w') as f:
                                     f.write('\n'.join(watched_lines) + '\n')
                                 settings['added'] = os.path.basename(git_root)
+                                # Do initial sync for the new repo immediately
+                                open(os.path.join(DIR, 'loading'), 'w').close()
+                                rname = os.path.basename(git_root)
+                                self._resync_repos([git_root], settings.get('diff_mode', 'branch'))
+                                # Set active to first file in the new repo
+                                new_tabs = os.path.join(DIR, 'tabs.git.' + rname)
+                                if os.path.exists(new_tabs) and os.path.getsize(new_tabs) > 0:
+                                    with open(new_tabs) as f:
+                                        first = f.readline().strip()
+                                    if first:
+                                        with open(os.path.join(DIR, 'active'), 'w') as f:
+                                            f.write(first)
                                 if SCRIPT:
                                     subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                             else:
@@ -429,10 +450,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return
         super().do_GET()
 
-    def _resync_all_repos(self, diff_mode):
-        if not os.path.exists(WATCHED): return
-        with open(WATCHED) as f:
-            repos = [l.strip() for l in f.readlines() if l.strip()]
+    def _resync_repos(self, repos, diff_mode):
         for repo_root in repos:
             rname = os.path.basename(repo_root)
             tabs_file = os.path.join(DIR, 'tabs.git.' + rname)
@@ -463,6 +481,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     f.write('\n'.join(sorted(changed)) + '\n' if changed else '')
             except Exception:
                 pass
+
+    def _resync_all_repos(self, diff_mode):
+        if not os.path.exists(WATCHED): return
+        with open(WATCHED) as f:
+            repos = [l.strip() for l in f.readlines() if l.strip()]
+        self._resync_repos(repos, diff_mode)
 
     def _json_response(self, data, code=200):
         self.send_response(code)
