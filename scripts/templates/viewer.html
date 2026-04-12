@@ -1121,6 +1121,8 @@ $body$
     var activeTabPath = activeTab ? activeTab.getAttribute('title') : '';
     var activeGroupSel = document.querySelector('.fv-group-sel.active');
     var activeGroup = activeGroupSel ? activeGroupSel.getAttribute('data-group') : 'files';
+    // Detect if user was on a loading group (no tabs yet, just spinner)
+    var wasOnLoadingGroup = !activeTab && activeGroupSel && loadingGroups[activeGroup];
 
     // 2. Prepare offscreen — init hljs, diff attrs, mermaid prep
     var offscreen = document.createElement('div');
@@ -1135,8 +1137,13 @@ $body$
     // 4. Attach event listeners to new content
     attachBodyListeners(container);
 
-    // 5. Restore active tab by file path
-    if (activeTabPath) {
+    // 5. Restore active tab
+    if (wasOnLoadingGroup) {
+      // Was on a loading group (spinner) — switch to that group's first real tab
+      switchGroup(activeGroup);
+      var first = document.querySelector('.fv-tab.fv-group-visible[data-tab]');
+      if (first) activateTab(first.getAttribute('data-tab'));
+    } else if (activeTabPath) {
       var restoredTab = container.querySelector('.fv-tab[title="' + activeTabPath.replace(/"/g, '\\"') + '"]');
       if (restoredTab) {
         var restoredGroup = restoredTab.getAttribute('data-group');
