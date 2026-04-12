@@ -25,6 +25,7 @@ body {
   z-index: 100;
   min-height: 35px;
 }
+.fv-tab-bar::after { content: ''; min-height: 35px; }
 .fv-group-bar + .fv-tab-bar { top: 29px; }
 .fv-tab-bar::-webkit-scrollbar { height: 3px; }
 .fv-tab-bar::-webkit-scrollbar-track { background: transparent; }
@@ -859,7 +860,7 @@ $body$
     if (tab) {
       tab.classList.add('active');
       var content = document.getElementById(tabId);
-      if (content) content.classList.add('active');
+      if (content) { content.classList.add('active'); content.classList.add('fv-reveal'); }
       // Switch group bar to match the activated tab's group
       var tabGroup = tab.getAttribute('data-group');
       if (tabGroup && document.querySelector('.fv-group-bar')) {
