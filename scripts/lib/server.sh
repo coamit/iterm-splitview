@@ -294,6 +294,60 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps(results).encode())
             return
+        if parsed.path == '/_git-settings':
+            qs = urllib.parse.parse_qs(parsed.query)
+            settings_file = os.path.join(DIR, 'git_settings')
+            # Read current settings
+            settings = {'diff_mode': 'branch'}
+            if os.path.exists(settings_file):
+                try:
+                    settings = json.loads(open(settings_file).read())
+                except Exception:
+                    pass
+            # Update if params provided
+            new_mode = qs.get('diff_mode', [''])[0]
+            if new_mode in ('branch', 'local'):
+                settings['diff_mode'] = new_mode
+                with open(settings_file, 'w') as f:
+                    f.write(json.dumps(settings))
+                if SCRIPT:
+                    subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            new_watch = qs.get('watch', [''])[0]
+            if new_watch:
+                new_watch = os.path.expanduser(new_watch)
+                if os.path.isdir(new_watch):
+                    try:
+                        r = subprocess.run(['git', 'rev-parse', '--show-toplevel'],
+                            cwd=new_watch, capture_output=True, text=True, timeout=2)
+                        if r.returncode == 0:
+                            git_root = r.stdout.strip()
+                            watched_lines = []
+                            if os.path.exists(WATCHED):
+                                with open(WATCHED) as f:
+                                    watched_lines = [l.strip() for l in f.readlines() if l.strip()]
+                            if git_root not in watched_lines:
+                                watched_lines.append(git_root)
+                                with open(WATCHED, 'w') as f:
+                                    f.write('\n'.join(watched_lines) + '\n')
+                                settings['added'] = os.path.basename(git_root)
+                                if SCRIPT:
+                                    subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                            else:
+                                settings['already_watching'] = os.path.basename(git_root)
+                        else:
+                            settings['error'] = 'Not a git repository'
+                    except Exception:
+                        settings['error'] = 'Failed to resolve git root'
+                else:
+                    settings['error'] = 'Directory not found'
+            # Return current watched repos
+            watched_repos = []
+            if os.path.exists(WATCHED):
+                with open(WATCHED) as f:
+                    watched_repos = [l.strip() for l in f.readlines() if l.strip()]
+            settings['watched'] = [os.path.basename(r) for r in watched_repos]
+            self._json_response(settings)
+            return
         if parsed.path == '/_refresh':
             if SCRIPT:
                 subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

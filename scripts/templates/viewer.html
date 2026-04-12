@@ -66,6 +66,7 @@ body {
 .fv-tab-spacer { flex: 1; }
 .fv-tab-action { padding: 6px 4px; color: #4b5263; cursor: pointer; display: flex; align-items: center; position: sticky; right: 0; background: inherit; }
 .fv-tab-action:hover { color: #ccd0d4; }
+#fv-git-settings { font-size: 15px; }
 /* Group selector bar */
 .fv-group-bar { display: flex; align-items: center; background: #171b24; border-bottom: 1px solid #252a35; position: sticky; top: 0; z-index: 101; padding: 0 4px; }
 .fv-group-sel { padding: 5px 10px; font-size: 11px; font-family: -apple-system, sans-serif; color: #4b5263; cursor: pointer; user-select: none; white-space: nowrap; border-bottom: 2px solid transparent; transition: color 0.1s; }
@@ -82,10 +83,11 @@ body {
 /* Tab visibility — only active group's tabs show */
 .fv-tab-bar.has-groups .fv-tab[data-group] { display: none; }
 .fv-tab-bar.has-groups .fv-tab.fv-group-visible { display: block; }
-/* Preview toggle for markdown files */
-.fv-preview-toggle { font-size: 10px; color: #6a7080; padding: 2px 8px; border: 1px solid #353b4a; border-radius: 4px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; margin-left: 8px; }
-.fv-preview-toggle:hover { color: #ccd0d4; border-color: #4b5263; }
-.fv-preview-toggle.active { color: #73b8f0; border-color: #73b8f0; }
+/* Markdown view toggle (raw/preview) */
+.fv-md-toggle { display: inline-flex; margin-left: 8px; border: 1px solid #353b4a; border-radius: 4px; overflow: hidden; }
+.fv-md-toggle-btn { font-size: 10px; color: #6a7080; padding: 2px 8px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; border: none; background: none; }
+.fv-md-toggle-btn:hover { color: #ccd0d4; }
+.fv-md-toggle-btn.active { color: #e8ecf0; background: #353b4a; }
 .fv-tab-ts { display: none; }
 .fv-tab-content { display: none; padding: 14px 18px; }
 .fv-tab-content.active { display: block; }
@@ -302,6 +304,34 @@ $body$
     <div class="fv-settings-body">
       <div class="fv-settings-section">Theme</div>
       <div class="fv-theme-grid" id="fv-theme-grid"></div>
+    </div>
+  </div>
+</div>
+<div class="fv-settings-overlay" id="fv-git-overlay">
+  <div class="fv-settings" style="width:440px">
+    <div class="fv-settings-header"><span>Git Settings</span><div class="fv-settings-close" id="fv-git-close">&times;</div></div>
+    <div class="fv-settings-body">
+      <div class="fv-settings-section">Diff View</div>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <div class="fv-theme-card" id="fv-git-mode-branch" style="flex:1;cursor:pointer">
+          <div style="padding:10px 12px;font-size:12px;font-family:-apple-system,sans-serif">
+            <div style="font-weight:600;margin-bottom:4px">Branch changes</div>
+            <div style="color:#6a7080;font-size:11px">All changes since branching from main (PR view)</div>
+          </div>
+        </div>
+        <div class="fv-theme-card" id="fv-git-mode-local" style="flex:1;cursor:pointer">
+          <div style="padding:10px 12px;font-size:12px;font-family:-apple-system,sans-serif">
+            <div style="font-weight:600;margin-bottom:4px">Local changes</div>
+            <div style="color:#6a7080;font-size:11px">Only uncommitted and staged changes</div>
+          </div>
+        </div>
+      </div>
+      <div class="fv-settings-section">Watch Repository</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input type="text" id="fv-git-watch-input" placeholder="~/development/my-repo" style="flex:1;background:#171b24;border:1px solid #353b4a;border-radius:4px;padding:6px 10px;font-size:12px;color:#e8ecf0;outline:none;font-family:-apple-system,sans-serif" />
+        <button id="fv-git-watch-btn" style="background:#353b4a;border:none;border-radius:4px;padding:6px 12px;font-size:11px;color:#ccd0d4;cursor:pointer;font-family:-apple-system,sans-serif">Watch</button>
+      </div>
+      <div id="fv-git-watch-status" style="font-size:11px;color:#6a7080;font-family:-apple-system,sans-serif;min-height:16px"></div>
     </div>
   </div>
 </div>
@@ -526,6 +556,80 @@ $body$
   if (refreshBtn) {
     refreshBtn.addEventListener('click', function() {
       fetch('/_refresh');
+    });
+  }
+
+  // Git settings modal
+  var gitOverlay = document.getElementById('fv-git-overlay');
+  var gitCloseBtn = document.getElementById('fv-git-close');
+  var gitSettingsBtn = document.getElementById('fv-git-settings');
+  var gitModeBranch = document.getElementById('fv-git-mode-branch');
+  var gitModeLocal = document.getElementById('fv-git-mode-local');
+  var gitWatchInput = document.getElementById('fv-git-watch-input');
+  var gitWatchBtn = document.getElementById('fv-git-watch-btn');
+  var gitWatchStatus = document.getElementById('fv-git-watch-status');
+
+  function updateGitModeUI(mode) {
+    if (gitModeBranch) gitModeBranch.classList.toggle('active', mode === 'branch');
+    if (gitModeLocal) gitModeLocal.classList.toggle('active', mode === 'local');
+  }
+
+  function openGitSettings() {
+    if (!gitOverlay) return;
+    fetch('/_git-settings')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        updateGitModeUI(data.diff_mode || 'branch');
+        if (gitWatchStatus) gitWatchStatus.textContent = '';
+      });
+    gitOverlay.classList.add('visible');
+  }
+
+  function closeGitSettings() {
+    if (gitOverlay) gitOverlay.classList.remove('visible');
+  }
+
+  if (gitSettingsBtn) gitSettingsBtn.addEventListener('click', openGitSettings);
+  if (gitCloseBtn) gitCloseBtn.addEventListener('click', closeGitSettings);
+  if (gitOverlay) gitOverlay.addEventListener('click', function(e) {
+    if (e.target === gitOverlay) closeGitSettings();
+  });
+
+  if (gitModeBranch) gitModeBranch.addEventListener('click', function() {
+    updateGitModeUI('branch');
+    fetch('/_git-settings?diff_mode=branch');
+    showToast('Switched to branch view \u2713');
+    closeGitSettings();
+  });
+  if (gitModeLocal) gitModeLocal.addEventListener('click', function() {
+    updateGitModeUI('local');
+    fetch('/_git-settings?diff_mode=local');
+    showToast('Switched to local changes \u2713');
+    closeGitSettings();
+  });
+
+  if (gitWatchBtn && gitWatchInput) {
+    gitWatchBtn.addEventListener('click', function() {
+      var path = gitWatchInput.value.trim();
+      if (!path) return;
+      if (gitWatchStatus) gitWatchStatus.textContent = 'Adding...';
+      fetch('/_git-settings?watch=' + encodeURIComponent(path))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.error) {
+            if (gitWatchStatus) gitWatchStatus.textContent = data.error;
+          } else if (data.already_watching) {
+            if (gitWatchStatus) gitWatchStatus.textContent = 'Already watching ' + data.already_watching;
+          } else if (data.added) {
+            if (gitWatchStatus) gitWatchStatus.textContent = '';
+            gitWatchInput.value = '';
+            showToast('Watching ' + data.added + ' \u2713');
+            closeGitSettings();
+          }
+        });
+    });
+    gitWatchInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); gitWatchBtn.click(); }
     });
   }
 
@@ -1072,19 +1176,20 @@ $body$
     if (activeGroupSel) switchGroup(activeGroupSel.getAttribute('data-group'));
   }
 
-  // Preview toggle for markdown files
-  document.querySelectorAll('.fv-preview-toggle').forEach(function(btn) {
+  // Markdown raw/preview toggle
+  document.querySelectorAll('.fv-md-toggle-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
       var wrapper = btn.closest('.code-file-wrapper');
       if (!wrapper) return;
       var rawView = wrapper.querySelector('.fv-raw-view');
       var previewView = wrapper.querySelector('.fv-preview-view');
       if (!rawView || !previewView) return;
-      var showPreview = rawView.style.display !== 'none';
-      rawView.style.display = showPreview ? 'none' : '';
-      previewView.style.display = showPreview ? '' : 'none';
-      btn.classList.toggle('active', showPreview);
-      btn.textContent = showPreview ? 'raw' : 'preview';
+      var view = btn.getAttribute('data-view');
+      rawView.style.display = view === 'raw' ? '' : 'none';
+      previewView.style.display = view === 'preview' ? '' : 'none';
+      wrapper.querySelectorAll('.fv-md-toggle-btn').forEach(function(b) {
+        b.classList.toggle('active', b === btn);
+      });
     });
   });
 

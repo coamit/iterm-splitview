@@ -36,37 +36,50 @@ _sync_repo_tabs() {
   [ -z "$git_root" ] && return 1
   [ -z "$tabs_file" ] && return 1
 
-  # Get changes on current branch vs its merge base with the default remote branch
-  # This mirrors what GitHub shows in a PR diff
-  local changed=""
-  local branch
-  branch=$(timeout 2 git -C "$git_root" rev-parse --abbrev-ref HEAD 2>/dev/null)
-  if [ -n "$branch" ]; then
-    # Find merge base with origin/main or origin/master
-    local base_branch=""
-    for candidate in main master; do
-      if timeout 2 git -C "$git_root" rev-parse --verify "origin/$candidate" &>/dev/null; then
-        base_branch="origin/$candidate"
-        break
-      fi
-    done
-    if [ -n "$base_branch" ]; then
-      local merge_base
-      merge_base=$(timeout 3 git -C "$git_root" merge-base "$base_branch" HEAD 2>/dev/null)
-      if [ -n "$merge_base" ]; then
-        # All changes since branching: committed + staged + unstaged + untracked
-        changed=$({ timeout 5 git -C "$git_root" diff --name-only "$merge_base" 2>/dev/null
-                    timeout 5 git -C "$git_root" ls-files --others --exclude-standard 2>/dev/null | head -50
-                  } | sort -u | head -100)
-      fi
-    fi
+  # Read diff mode setting (branch = PR-style, local = uncommitted only)
+  local diff_mode="branch"
+  if [ -f "$_FV_SESSION_DIR/git_settings" ]; then
+    local mode_val
+    mode_val=$(python3 -c "import json,sys; print(json.loads(open(sys.argv[1]).read()).get('diff_mode','branch'))" "$_FV_SESSION_DIR/git_settings" 2>/dev/null)
+    [ -n "$mode_val" ] && diff_mode="$mode_val"
   fi
-  # Fallback: if no merge base found, show local uncommitted changes only
-  if [ -z "$changed" ]; then
+
+  local changed=""
+  if [ "$diff_mode" = "local" ]; then
+    # Local changes only: unstaged + staged + untracked
     changed=$({ timeout 5 git -C "$git_root" diff --name-only 2>/dev/null
                 timeout 5 git -C "$git_root" diff --name-only --cached 2>/dev/null
                 timeout 5 git -C "$git_root" ls-files --others --exclude-standard 2>/dev/null | head -50
               } | sort -u | head -100)
+  else
+    # Branch mode: all changes since diverging from origin/main
+    local branch
+    branch=$(timeout 2 git -C "$git_root" rev-parse --abbrev-ref HEAD 2>/dev/null)
+    if [ -n "$branch" ]; then
+      local base_branch=""
+      for candidate in main master; do
+        if timeout 2 git -C "$git_root" rev-parse --verify "origin/$candidate" &>/dev/null; then
+          base_branch="origin/$candidate"
+          break
+        fi
+      done
+      if [ -n "$base_branch" ]; then
+        local merge_base
+        merge_base=$(timeout 3 git -C "$git_root" merge-base "$base_branch" HEAD 2>/dev/null)
+        if [ -n "$merge_base" ]; then
+          changed=$({ timeout 5 git -C "$git_root" diff --name-only "$merge_base" 2>/dev/null
+                      timeout 5 git -C "$git_root" ls-files --others --exclude-standard 2>/dev/null | head -50
+                    } | sort -u | head -100)
+        fi
+      fi
+    fi
+    # Fallback to local if no merge base
+    if [ -z "$changed" ]; then
+      changed=$({ timeout 5 git -C "$git_root" diff --name-only 2>/dev/null
+                  timeout 5 git -C "$git_root" diff --name-only --cached 2>/dev/null
+                  timeout 5 git -C "$git_root" ls-files --others --exclude-standard 2>/dev/null | head -50
+                } | sort -u | head -100)
+    fi
   fi
 
   # Build set of absolute paths of changed files

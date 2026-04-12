@@ -125,7 +125,7 @@ generate_file_body() {
       printf '    <span class="filename">%s</span>\n' "$filename"
       [ -n "$diff_stats" ] && printf '    %s\n' "$diff_stats"
       printf '    <span class="diff-view-mode">collapsed</span>\n'
-      printf '    <span class="fv-preview-toggle" title="Toggle preview">preview</span>\n'
+      printf '    <span class="fv-md-toggle"><span class="fv-md-toggle-btn active" data-view="raw">Raw</span><span class="fv-md-toggle-btn" data-view="preview">Preview</span></span>\n'
       printf '    <span class="lang-badge">%s</span>\n' "$lang_display"
       printf '  </div>\n'
       printf '  <div class="fv-raw-view">\n'
@@ -149,7 +149,7 @@ generate_file_body() {
       printf '<div class="code-file-wrapper">\n'
       printf '  <div class="code-file-header">\n'
       printf '    <span class="filename">%s</span>\n' "$filename"
-      printf '    <span class="fv-preview-toggle active" title="Toggle raw">raw</span>\n'
+      printf '    <span class="fv-md-toggle"><span class="fv-md-toggle-btn" data-view="raw">Raw</span><span class="fv-md-toggle-btn active" data-view="preview">Preview</span></span>\n'
       printf '    <span class="lang-badge">md</span>\n'
       printf '  </div>\n'
       printf '  <div class="fv-raw-view" style="display:none">\n'
@@ -325,6 +325,7 @@ _generate_tab_bar() {
   done
 
   printf '<div class="fv-tab-spacer"></div>'
+  printf '<div class="fv-tab-action" id="fv-git-settings" title="Git settings">&#9095;</div>'
   printf '<div class="fv-tab-action" id="fv-refresh" title="Refresh"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></div>'
   printf '</div>\n'
 
