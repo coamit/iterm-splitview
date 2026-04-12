@@ -3,13 +3,13 @@
 # shellcheck disable=SC2153  # Variables (ACTIVE_FILE etc.) are defined in config.sh
 
 _build_diff_attrs() {
-  local src_file="$1"
+  local src_file="$1" diff_base="${2:-}"
   local added removed removed_escaped
-  added=$(_get_diff_added "$src_file")
+  added=$(_get_diff_added "$src_file" "$diff_base")
   if [ -n "$added" ]; then
     printf ' data-diff-added="%s"' "$added"
   fi
-  removed=$(_get_diff_removed "$src_file")
+  removed=$(_get_diff_removed "$src_file" "$diff_base")
   if [ -n "$removed" ] && [ "$removed" != "{}" ]; then
     removed_escaped="${removed//\'/\&#39;}"
     printf " data-diff-removed='%s'" "$removed_escaped"
@@ -74,6 +74,7 @@ _render_code_file() {
 generate_file_body() {
   local src_file="$1"
   local mode="${2:-}"
+  local diff_base="${3:-}"
 
   if _is_code_file "$src_file"; then
     local lang diff_attrs="" diff_stats=""
@@ -81,9 +82,9 @@ generate_file_body() {
 
     if [ "$mode" = "diff" ]; then
       local added removed file_status
-      added=$(_get_diff_added "$src_file")
-      removed=$(_get_diff_removed "$src_file")
-      diff_attrs=$(_build_diff_attrs "$src_file")
+      added=$(_get_diff_added "$src_file" "$diff_base")
+      removed=$(_get_diff_removed "$src_file" "$diff_base")
+      diff_attrs=$(_build_diff_attrs "$src_file" "$diff_base")
       local git_root rel_path
       git_root=$(git -C "$(dirname "$src_file")" rev-parse --show-toplevel 2>/dev/null)
       rel_path=$(git -C "$git_root" ls-files --full-name -- "$src_file" 2>/dev/null)
@@ -281,7 +282,7 @@ _generate_tab_bar() {
 }
 
 _generate_panels_for_group() {
-  local group_id="$1" tabs_src="$2" active_file="$3" body_tmp="$4" mode="$5"
+  local group_id="$1" tabs_src="$2" active_file="$3" body_tmp="$4" mode="$5" diff_base="${6:-}"
   local idx=0
   while IFS= read -r fp; do
     [ -z "$fp" ] || [ ! -f "$fp" ] && continue
@@ -289,7 +290,7 @@ _generate_panels_for_group() {
     [ "$fp" = "$active_file" ] && active_class=" active"
     {
       printf '<div class="fv-tab-content%s" id="fv-tab-%s-%d">\n' "$active_class" "$group_id" "$idx"
-      generate_file_body "$fp" "$mode"
+      generate_file_body "$fp" "$mode" "$diff_base"
       printf '</div>\n'
     } >> "$body_tmp"
     idx=$((idx + 1))
@@ -304,16 +305,22 @@ _generate_tab_panels() {
     _generate_panels_for_group "files" "$TABS_FILE" "$active_file" "$body_tmp" ""
   fi
 
-  # Generate panels for each watched repo (with diff mode)
+  # Generate panels for each watched repo (with diff mode, using merge-base)
   if [ -f "$WATCHED_FILE" ] && [ -s "$WATCHED_FILE" ]; then
     while IFS= read -r repo_root; do
       [ -z "$repo_root" ] && continue
-      local rname
+      local rname rtf diff_base=""
       rname=$(basename "$repo_root")
-      local rtf
       rtf=$(_git_tabs_file "$rname")
       if [ -f "$rtf" ] && [ -s "$rtf" ]; then
-        _generate_panels_for_group "git.${rname}" "$rtf" "$active_file" "$body_tmp" "diff"
+        # Compute merge base for this repo
+        for candidate in main master; do
+          if git -C "$repo_root" rev-parse --verify "origin/$candidate" &>/dev/null; then
+            diff_base=$(git -C "$repo_root" merge-base "origin/$candidate" HEAD 2>/dev/null)
+            break
+          fi
+        done
+        _generate_panels_for_group "git.${rname}" "$rtf" "$active_file" "$body_tmp" "diff" "$diff_base"
       fi
     done < "$WATCHED_FILE"
   fi
