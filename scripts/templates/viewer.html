@@ -935,6 +935,17 @@ $body$
         activateTab(firstTab.getAttribute('data-tab'));
       }
     }
+  } else if (hash && hash.indexOf('fv-path:') === 0) {
+    // Path-based hash: find tab by file path (survives index shifts)
+    var targetPath = decodeURIComponent(hash.substring('fv-path:'.length));
+    var matchTab = document.querySelector('.fv-tab[title="' + targetPath.replace(/"/g, '\\"') + '"]');
+    if (matchTab) {
+      var matchGroup = matchTab.getAttribute('data-group');
+      if (matchGroup && document.querySelector('.fv-group-bar')) {
+        switchGroup(matchGroup);
+      }
+      activateTab(matchTab.getAttribute('data-tab'));
+    }
   } else if (hash && document.getElementById(hash) && document.querySelector('[data-tab="' + hash + '"]')) {
     activateTab(hash);
   }
@@ -1116,12 +1127,12 @@ $body$
               } catch(e) {}
               lastOpenTriggered = 0;
             }
-            // Preserve user's current tab across reload via hash
-            // Don't overwrite group-level hashes (e.g. #fv-group:git.dapulse)
+            // Preserve user's current position across reload
+            // Save file path (not tab ID, which shifts when tabs are added)
             if (window.location.hash.indexOf('#fv-group:') !== 0) {
               var curActive = document.querySelector('.fv-tab.active');
-              if (curActive && curActive.getAttribute('data-tab')) {
-                history.replaceState(null, '', '#' + curActive.getAttribute('data-tab'));
+              if (curActive && curActive.getAttribute('title')) {
+                history.replaceState(null, '', '#fv-path:' + encodeURIComponent(curActive.getAttribute('title')));
               }
             }
             var ac = document.querySelector('.fv-tab-content.active');
