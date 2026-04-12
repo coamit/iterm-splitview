@@ -1110,6 +1110,7 @@ $body$
   var genTime = marker ? marker.getAttribute('data-fv-gen') : null;
   var tabCount = marker ? parseInt(marker.getAttribute('data-fv-tabs') || '0', 10) : 0;
   var swapInProgress = false;
+  var lastOpenedFilePath = ''; // Tracks the most recent file opened via Ctrl+O
 
   function performSwap(newBodyHtml) {
     if (swapInProgress) return;
@@ -1118,7 +1119,8 @@ $body$
     // 1. Save state
     var scrollTop = window.scrollY;
     var activeTab = document.querySelector('.fv-tab.active');
-    var activeTabPath = activeTab ? activeTab.getAttribute('title') : '';
+    var activeTabPath = lastOpenedFilePath || (activeTab ? activeTab.getAttribute('title') : '');
+    lastOpenedFilePath = ''; // Consume — only used once
     var activeGroupSel = document.querySelector('.fv-group-sel.active');
     var activeGroup = activeGroupSel ? activeGroupSel.getAttribute('data-group') : 'files';
     // Detect if user was on a loading group (no tabs yet, just spinner)
@@ -2010,6 +2012,9 @@ $body$
     document.body.appendChild(panel);
 
     updateGroupCounts();
+
+    // Track last opened file for reliable swap restoration
+    lastOpenedFilePath = filePath;
 
     // Switch to files group and activate the loading tab immediately
     var activeGroup = document.querySelector('.fv-group-sel.active');
