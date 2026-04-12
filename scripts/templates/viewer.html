@@ -1133,8 +1133,13 @@ $body$
     // 1. Save state
     var scrollTop = window.scrollY;
     var activeTab = document.querySelector('.fv-tab.active');
-    var activeTabPath = lastOpenedFilePath || (activeTab ? activeTab.getAttribute('title') : '');
-    lastOpenedFilePath = ''; // Consume — only used once
+    // Only use lastOpenedFilePath if user is still on a loading tab;
+    // if they navigated away to a real tab, respect their choice
+    var isOnLoadingTab = activeTab && activeTab.classList.contains('loading');
+    var activeTabPath = (isOnLoadingTab && lastOpenedFilePath)
+      ? lastOpenedFilePath
+      : (activeTab ? activeTab.getAttribute('title') : '');
+    lastOpenedFilePath = '';
     var activeGroupSel = document.querySelector('.fv-group-sel.active');
     var activeGroup = activeGroupSel ? activeGroupSel.getAttribute('data-group') : 'files';
     // Detect if user was on a loading group (spinner visible)
