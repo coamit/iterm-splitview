@@ -351,14 +351,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                                 open(os.path.join(DIR, 'loading'), 'w').close()
                                 rname = os.path.basename(git_root)
                                 self._resync_repos([git_root], settings.get('diff_mode', 'branch'))
-                                # Set active to first file in the new repo
-                                new_tabs = os.path.join(DIR, 'tabs.git.' + rname)
-                                if os.path.exists(new_tabs) and os.path.getsize(new_tabs) > 0:
-                                    with open(new_tabs) as f:
-                                        first = f.readline().strip()
-                                    if first:
-                                        with open(os.path.join(DIR, 'active'), 'w') as f:
-                                            f.write(first)
+                                # Don't change active file — client handles navigation via URL hash
                                 if SCRIPT:
                                     subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                             else:
