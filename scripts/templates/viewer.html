@@ -935,6 +935,11 @@ $body$
         activateTab(firstTab.getAttribute('data-tab'));
       }
     }
+    // Content is fresh from watch reload — suppress further reloads for 15s
+    // to absorb watcher regen cycles that would cause flickering
+    suppressReloadFor(15000);
+    // Clear the group hash so future reloads use path-based tracking
+    history.replaceState(null, '', window.location.pathname);
   } else if (hash && hash.indexOf('fv-path:') === 0) {
     // Path-based hash: find tab by file path (survives index shifts)
     var targetPath = decodeURIComponent(hash.substring('fv-path:'.length));
@@ -946,6 +951,9 @@ $body$
       }
       activateTab(matchTab.getAttribute('data-tab'));
     }
+    // Suppress further reloads — content just loaded
+    suppressReloadFor(15000);
+    history.replaceState(null, '', window.location.pathname);
   } else if (hash && document.getElementById(hash) && document.querySelector('[data-tab="' + hash + '"]')) {
     activateTab(hash);
   }
