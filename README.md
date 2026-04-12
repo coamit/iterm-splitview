@@ -135,6 +135,18 @@ cp claude-code/SKILL.md ~/.claude/skills/iterm-splitview/SKILL.md
 
 ## Changelog
 
+### 2026-04-12 — In-Place Content Swap, Multi-Repo Watch & UX Improvements
+
+- **Zero-blank-page updates** — replaced `location.reload()` with in-place DOM swapping via `DOMParser`; old content stays visible until new content is fully initialized offscreen, then swapped in a single operation
+- **Loading tab UX** — opening a file via Ctrl+O immediately navigates to a loading tab with centered spinner; navigating away is respected (no forced jump-back)
+- **Multi-arg commands** — `fileview close f1 f2 f3`, `fileview diff repo1 repo2`, `fileview unwatch repo1 repo2` all support multiple arguments
+- **Per-group tab memory** — switching between groups preserves the last active tab; returning to a group restores your position
+- **Loading group navigation** — adding a watcher stays on the new group after loading completes instead of jumping back to the previous group
+- **Thread-safe tab operations** — added `TABS_LOCK` to prevent race conditions when opening multiple files concurrently
+- **Toolbar button persistence** — settings, refresh, add-file, add-git buttons survive content swaps
+- **Consistent tab bar height** — tab bar maintains 35px height even when a group has no visible tabs
+- **Modal width cap** — search and settings modals capped at 70% viewport width
+
 ### 2026-04-11 — Filesystem Search, Themes & Enhanced Shortcuts
 
 - **Filesystem search** — Ctrl+O opens files by name (fuzzy, via `rg --files | fzf --filter`), Ctrl+H searches text across files (via `rg`) and opens matches
