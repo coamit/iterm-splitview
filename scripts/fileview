@@ -187,16 +187,18 @@ cmd_close() {
     return 0
   fi
 
-  local target
-  target=$(_resolve_path "$1")
-
-  # Remove from files tab and all git tab files
-  for tabfile in "$TABS_FILE" "$_FV_SESSION_DIR"/tabs.git.*; do
-    [ -f "$tabfile" ] || continue
-    local tmp
-    tmp=$(mktemp)
-    grep -vxF "$target" "$tabfile" > "$tmp" || true
-    mv "$tmp" "$tabfile"
+  # Remove each specified file from tabs
+  local arg
+  for arg in "$@"; do
+    local target
+    target=$(_resolve_path "$arg")
+    for tabfile in "$TABS_FILE" "$_FV_SESSION_DIR"/tabs.git.*; do
+      [ -f "$tabfile" ] || continue
+      local tmp
+      tmp=$(mktemp)
+      grep -vxF "$target" "$tabfile" > "$tmp" || true
+      mv "$tmp" "$tabfile"
+    done
   done
 
   # If all tab files are empty, close all
@@ -216,8 +218,14 @@ cmd_close() {
 
   local current_active
   current_active=$(cat "$ACTIVE_FILE" 2>/dev/null)
-  if [ "$current_active" = "$target" ]; then
-    # Pick new active from whichever tab file has content
+  # Check if active file was among those removed
+  local active_removed=false
+  for arg in "$@"; do
+    local target
+    target=$(_resolve_path "$arg")
+    [ "$current_active" = "$target" ] && { active_removed=true; break; }
+  done
+  if [ "$active_removed" = true ]; then
     if [ -f "$TABS_FILE" ] && [ -s "$TABS_FILE" ]; then
       tail -1 "$TABS_FILE" > "$ACTIVE_FILE"
     else
@@ -232,63 +240,77 @@ cmd_close() {
 }
 
 cmd_diff() {
-  local target_dir="${1:-.}"
-  local git_root
-  git_root=$(git -C "$(_resolve_path "$target_dir")" rev-parse --show-toplevel 2>/dev/null)
-  if [ -z "$git_root" ]; then
-    echo "fileview: not a git repository: $target_dir" >&2
-    return 1
+  # Default to current directory if no args
+  local dirs=("${@:-.}")
+  local added_any=false
+
+  local dir
+  for dir in "${dirs[@]}"; do
+    local git_root
+    git_root=$(git -C "$(_resolve_path "$dir")" rev-parse --show-toplevel 2>/dev/null)
+    if [ -z "$git_root" ]; then
+      echo "fileview: not a git repository: $dir" >&2
+      continue
+    fi
+    local repo_name
+    repo_name=$(basename "$git_root")
+
+    # Check if already watched
+    if grep -qxF "$git_root" "$WATCHED_FILE" 2>/dev/null; then
+      echo "fileview: already watching $repo_name"
+      continue
+    fi
+
+    # Add to watched list
+    echo "$git_root" >> "$WATCHED_FILE"
+
+    # Do initial sync of git changes for this repo
+    local tabs_file
+    tabs_file=$(_git_tabs_file "$repo_name")
+    _sync_repo_tabs "$git_root" "$tabs_file"
+
+    # Set active to first file if none set
+    if [ ! -f "$ACTIVE_FILE" ] || [ ! -s "$ACTIVE_FILE" ]; then
+      [ -s "$tabs_file" ] && head -1 "$tabs_file" > "$ACTIVE_FILE"
+    fi
+
+    added_any=true
+  done
+
+  if [ "$added_any" = true ]; then
+    _show_loading
+    echo "diff" > "$_FV_SESSION_DIR/mode"
+    echo "$PWD" > "$CWD_FILE"
+    _generate_and_launch
   fi
-  local repo_name
-  repo_name=$(basename "$git_root")
-
-  # Check if already watched
-  if grep -qxF "$git_root" "$WATCHED_FILE" 2>/dev/null; then
-    echo "fileview: already watching $repo_name"
-    return 0
-  fi
-
-  # Add to watched list
-  echo "$git_root" >> "$WATCHED_FILE"
-
-  # Do initial sync of git changes for this repo
-  local tabs_file
-  tabs_file=$(_git_tabs_file "$repo_name")
-  _sync_repo_tabs "$git_root" "$tabs_file"
-
-  _show_loading
-  echo "diff" > "$_FV_SESSION_DIR/mode"
-  echo "$PWD" > "$CWD_FILE"
-
-  # Set active to first file if none set
-  if [ ! -f "$ACTIVE_FILE" ] || [ ! -s "$ACTIVE_FILE" ]; then
-    [ -s "$tabs_file" ] && head -1 "$tabs_file" > "$ACTIVE_FILE"
-  fi
-
-  _generate_and_launch
 }
 
 cmd_unwatch() {
-  local target_dir="${1:-.}"
-  local git_root
-  git_root=$(git -C "$(_resolve_path "$target_dir")" rev-parse --show-toplevel 2>/dev/null || _resolve_path "$target_dir")
-  local repo_name
-  repo_name=$(basename "$git_root")
+  # Default to current directory if no args
+  local dirs=("${@:-.}")
 
-  # Remove from watched
-  if [ -f "$WATCHED_FILE" ]; then
-    local tmp
-    tmp=$(mktemp)
-    grep -vxF "$git_root" "$WATCHED_FILE" > "$tmp" || true
-    mv "$tmp" "$WATCHED_FILE"
-  fi
+  local dir
+  for dir in "${dirs[@]}"; do
+    local git_root
+    git_root=$(git -C "$(_resolve_path "$dir")" rev-parse --show-toplevel 2>/dev/null || _resolve_path "$dir")
+    local repo_name
+    repo_name=$(basename "$git_root")
 
-  # Remove tabs file
-  rm -f "$(_git_tabs_file "$repo_name")"
+    # Remove from watched
+    if [ -f "$WATCHED_FILE" ]; then
+      local tmp
+      tmp=$(mktemp)
+      grep -vxF "$git_root" "$WATCHED_FILE" > "$tmp" || true
+      mv "$tmp" "$WATCHED_FILE"
+    fi
+
+    # Remove tabs file
+    rm -f "$(_git_tabs_file "$repo_name")"
+    echo "Stopped watching $repo_name"
+  done
 
   generate_tabbed_html
   start_watcher
-  echo "Stopped watching $repo_name"
 }
 
 cmd_list() {
