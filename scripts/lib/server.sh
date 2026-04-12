@@ -315,8 +315,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 for sf in [settings_file, session_settings]:
                     with open(sf, 'w') as f:
                         f.write(json.dumps(settings))
-                # Signal loading and trigger full regen (watcher will re-sync git tabs)
+                # Re-sync all watched repos with new mode, then regen
                 open(os.path.join(DIR, 'loading'), 'w').close()
+                self._resync_all_repos(new_mode)
                 if SCRIPT:
                     subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             new_watch = qs.get('watch', [''])[0]
@@ -427,6 +428,41 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             return
         super().do_GET()
+
+    def _resync_all_repos(self, diff_mode):
+        if not os.path.exists(WATCHED): return
+        with open(WATCHED) as f:
+            repos = [l.strip() for l in f.readlines() if l.strip()]
+        for repo_root in repos:
+            rname = os.path.basename(repo_root)
+            tabs_file = os.path.join(DIR, 'tabs.git.' + rname)
+            try:
+                if diff_mode == 'local':
+                    cmds = [['git','diff','--name-only'], ['git','diff','--name-only','--cached'], ['git','ls-files','--others','--exclude-standard']]
+                else:
+                    # Find merge base
+                    base = None
+                    for c in ['main', 'master']:
+                        r = subprocess.run(['git','rev-parse','--verify','origin/'+c], cwd=repo_root, capture_output=True, timeout=2)
+                        if r.returncode == 0:
+                            mb = subprocess.run(['git','merge-base','origin/'+c,'HEAD'], cwd=repo_root, capture_output=True, text=True, timeout=3)
+                            if mb.returncode == 0: base = mb.stdout.strip()
+                            break
+                    if base:
+                        cmds = [['git','diff','--name-only',base], ['git','ls-files','--others','--exclude-standard']]
+                    else:
+                        cmds = [['git','diff','--name-only'], ['git','diff','--name-only','--cached'], ['git','ls-files','--others','--exclude-standard']]
+                changed = set()
+                for cmd in cmds:
+                    r = subprocess.run(cmd, cwd=repo_root, capture_output=True, text=True, timeout=5)
+                    for l in r.stdout.splitlines():
+                        if l.strip():
+                            p = os.path.normpath(os.path.join(repo_root, l.strip()))
+                            if os.path.isfile(p): changed.add(p)
+                with open(tabs_file, 'w') as f:
+                    f.write('\n'.join(sorted(changed)) + '\n' if changed else '')
+            except Exception:
+                pass
 
     def _json_response(self, data, code=200):
         self.send_response(code)
