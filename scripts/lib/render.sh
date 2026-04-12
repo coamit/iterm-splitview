@@ -17,10 +17,18 @@ _build_diff_attrs() {
 }
 
 _git_file_status() {
-  local file="$1" git_root="$2"
+  local file="$1" git_root="$2" diff_base="${3:-}"
+  # Check if file is untracked
   if git -C "$git_root" ls-files --others --exclude-standard 2>/dev/null | grep -qxF "$file"; then
-    echo "new"
-  elif git -C "$git_root" ls-files --deleted 2>/dev/null | grep -qxF "$file"; then
+    echo "new"; return
+  fi
+  # Check if file exists at the diff base — if not, it's new in this branch
+  if [ -n "$diff_base" ]; then
+    if ! git -C "$git_root" cat-file -e "${diff_base}:${file}" 2>/dev/null; then
+      echo "new"; return
+    fi
+  fi
+  if git -C "$git_root" ls-files --deleted 2>/dev/null | grep -qxF "$file"; then
     echo "deleted"
   else
     echo "modified"
@@ -76,7 +84,8 @@ generate_file_body() {
   local mode="${2:-}"
   local diff_base="${3:-}"
 
-  if _is_code_file "$src_file"; then
+  # In diff mode, render all files as code (with line numbers + diff highlighting)
+  if _is_code_file "$src_file" || [ "$mode" = "diff" ]; then
     local lang diff_attrs="" diff_stats=""
     lang=$(_lang_from_ext "$src_file")
 
@@ -95,7 +104,7 @@ generate_file_body() {
         lower_file=$(echo "$src_file" | tr '[:upper:]' '[:lower:]')
         rel_path="${lower_file#"$lower_root"/}"
       fi
-      file_status=$(_git_file_status "$rel_path" "$git_root")
+      file_status=$(_git_file_status "$rel_path" "$git_root" "$diff_base")
       diff_stats=$(_build_diff_stats_html "$added" "$removed" "$file_status")
     fi
 
