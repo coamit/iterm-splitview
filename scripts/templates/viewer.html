@@ -82,6 +82,10 @@ body {
 /* Tab visibility — only active group's tabs show */
 .fv-tab-bar.has-groups .fv-tab[data-group] { display: none; }
 .fv-tab-bar.has-groups .fv-tab.fv-group-visible { display: block; }
+/* Preview toggle for markdown files */
+.fv-preview-toggle { font-size: 10px; color: #6a7080; padding: 2px 8px; border: 1px solid #353b4a; border-radius: 4px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; margin-left: 8px; }
+.fv-preview-toggle:hover { color: #ccd0d4; border-color: #4b5263; }
+.fv-preview-toggle.active { color: #73b8f0; border-color: #73b8f0; }
 .fv-tab-ts { display: none; }
 .fv-tab-content { display: none; padding: 14px 18px; }
 .fv-tab-content.active { display: block; }
@@ -963,6 +967,10 @@ $body$
     if (!panel) return;
     var hasDiffs = panel.querySelector('.code-line.diff-added, .code-line.diff-removed');
     if (!hasDiffs) return;
+    // Skip for new files (all lines are added — nothing to collapse)
+    var totalLines = panel.querySelectorAll('.code-line').length;
+    var addedLines = panel.querySelectorAll('.code-line.diff-added').length;
+    if (addedLines === totalLines) return;
     var codeBlocks = panel.querySelectorAll('pre, .code-lines');
     codeBlocks.forEach(function(b) { b.style.transition = 'opacity 0.06s ease-out'; b.style.opacity = '0'; });
     setTimeout(function() {
@@ -1009,6 +1017,24 @@ $body$
     document.querySelectorAll('.fv-tab-bar .fv-tab[data-group]').forEach(function(t) {
       t.classList.toggle('fv-group-visible', t.getAttribute('data-group') === groupName);
     });
+    // Show/hide empty state for groups with no tabs
+    var existing = document.getElementById('fv-group-empty');
+    if (existing) existing.remove();
+    var hasVisibleTabs = document.querySelector('.fv-tab.fv-group-visible[data-tab]');
+    if (!hasVisibleTabs) {
+      // Hide all content panels
+      document.querySelectorAll('.fv-tab-content').forEach(function(c) { c.classList.remove('active'); });
+      var emptyDiv = document.createElement('div');
+      emptyDiv.className = 'fv-tab-content active';
+      emptyDiv.id = 'fv-group-empty';
+      var isGit = groupName.indexOf('git.') === 0;
+      var msg = isGit ? 'No changes on this branch' : 'Press Ctrl+O to open a file';
+      emptyDiv.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 80px);color:#6a7080;font-size:13px;font-family:-apple-system,sans-serif';
+      emptyDiv.textContent = msg;
+      document.body.appendChild(emptyDiv);
+    } else if (existing) {
+      // Restore previously active content if needed
+    }
   }
   document.querySelectorAll('.fv-group-sel').forEach(function(sel) {
     sel.addEventListener('click', function(e) {
@@ -1045,6 +1071,22 @@ $body$
     var activeGroupSel = document.querySelector('.fv-group-sel.active');
     if (activeGroupSel) switchGroup(activeGroupSel.getAttribute('data-group'));
   }
+
+  // Preview toggle for markdown files
+  document.querySelectorAll('.fv-preview-toggle').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var wrapper = btn.closest('.code-file-wrapper');
+      if (!wrapper) return;
+      var rawView = wrapper.querySelector('.fv-raw-view');
+      var previewView = wrapper.querySelector('.fv-preview-view');
+      if (!rawView || !previewView) return;
+      var showPreview = rawView.style.display !== 'none';
+      rawView.style.display = showPreview ? 'none' : '';
+      previewView.style.display = showPreview ? '' : 'none';
+      btn.classList.toggle('active', showPreview);
+      btn.textContent = showPreview ? 'raw' : 'preview';
+    });
+  });
 
   // Reset diff index on tab switch
   document.querySelectorAll('.fv-tab').forEach(function(tab) {

@@ -108,9 +108,62 @@ generate_file_body() {
       diff_stats=$(_build_diff_stats_html "$added" "$removed" "$file_status")
     fi
 
-    _render_code_file "$src_file" "$lang" "$diff_attrs" "$diff_stats"
+    local is_markdown=false
+    case "$src_file" in *.md|*.markdown|*.mdown) is_markdown=true ;; esac
+
+    if [ "$is_markdown" = true ]; then
+      # Render both code (raw/diff) and preview views for markdown
+      local preview_html
+      preview_html=$(timeout 10 pandoc "$src_file" 2>/dev/null | sed '/<colgroup>/,/<\/colgroup>/d')
+
+      local filename lang_display
+      filename=$(basename "$src_file")
+      lang_display="${lang:-${src_file##*.}}"
+
+      printf '<div class="code-file-wrapper">\n'
+      printf '  <div class="code-file-header">\n'
+      printf '    <span class="filename">%s</span>\n' "$filename"
+      [ -n "$diff_stats" ] && printf '    %s\n' "$diff_stats"
+      printf '    <span class="diff-view-mode">collapsed</span>\n'
+      printf '    <span class="fv-preview-toggle" title="Toggle preview">preview</span>\n'
+      printf '    <span class="lang-badge">%s</span>\n' "$lang_display"
+      printf '  </div>\n'
+      printf '  <div class="fv-raw-view">\n'
+      printf '  <pre><code class="language-%s"%s>' "$lang" "$diff_attrs"
+      sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g' "$src_file"
+      printf '</code></pre>\n'
+      printf '  </div>\n'
+      printf '  <div class="fv-preview-view" style="display:none;padding:14px 18px">\n'
+      echo "$preview_html"
+      printf '  </div>\n'
+      printf '</div>\n'
+    else
+      _render_code_file "$src_file" "$lang" "$diff_attrs" "$diff_stats"
+    fi
   elif _is_text_file "$src_file"; then
-    timeout 10 pandoc "$src_file" 2>/dev/null | sed '/<colgroup>/,/<\/colgroup>/d'
+    local is_md=false
+    case "$src_file" in *.md|*.markdown|*.mdown) is_md=true ;; esac
+    if [ "$is_md" = true ]; then
+      local filename
+      filename=$(basename "$src_file")
+      printf '<div class="code-file-wrapper">\n'
+      printf '  <div class="code-file-header">\n'
+      printf '    <span class="filename">%s</span>\n' "$filename"
+      printf '    <span class="fv-preview-toggle active" title="Toggle raw">raw</span>\n'
+      printf '    <span class="lang-badge">md</span>\n'
+      printf '  </div>\n'
+      printf '  <div class="fv-raw-view" style="display:none">\n'
+      printf '  <pre><code class="language-markdown">'
+      sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g' "$src_file"
+      printf '</code></pre>\n'
+      printf '  </div>\n'
+      printf '  <div class="fv-preview-view" style="padding:14px 18px">\n'
+      timeout 10 pandoc "$src_file" 2>/dev/null | sed '/<colgroup>/,/<\/colgroup>/d'
+      printf '  </div>\n'
+      printf '</div>\n'
+    else
+      timeout 10 pandoc "$src_file" 2>/dev/null | sed '/<colgroup>/,/<\/colgroup>/d'
+    fi
   else
     printf '<p style="color:#6a7080;font-style:italic">Binary file — cannot render</p>\n'
   fi
