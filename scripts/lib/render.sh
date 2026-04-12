@@ -419,6 +419,9 @@ generate_tabbed_html() {
   done
   echo $$ > "$lockfile"
 
+  # Symlink js directory so browser can load JS modules
+  ln -sfn "$SCRIPT_DIR/js" "$_FV_SESSION_DIR/js"
+
   local active_file gen_epoch tab_count body_tmp saved_theme
   gen_epoch=$(date +%s)
   body_tmp=$(mktemp)
