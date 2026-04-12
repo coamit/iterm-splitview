@@ -172,8 +172,6 @@ div.sourceCode { margin: 8px 0; }
 @keyframes fv-spin { to { transform: rotate(360deg); } }
 .fv-tab-loading-content { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: calc(100vh - 50px); color: #6a7080; font-size: 14px; font-family: -apple-system, sans-serif; gap: 16px; margin: -14px -18px; }
 .fv-tab-loading-content::before { content: ''; display: block; width: 32px; height: 32px; border: 3px solid #353b4a; border-top-color: #ccd0d4; border-radius: 50%; animation: fv-spin 0.7s linear infinite; }
-.fv-tab.loading .fv-tab-close { display: none; }
-.fv-tab.loading::before { content: ''; display: inline-block; width: 10px; height: 10px; border: 1.5px solid #353b4a; border-top-color: #ccd0d4; border-radius: 50%; animation: fv-spin 0.7s linear infinite; margin-right: 6px; vertical-align: middle; flex-shrink: 0; }
 .fv-toast { position: fixed; top: 50px; left: 50%; transform: translateX(-50%) translateY(-10px); background: #2a3040; border: 1px solid #353b4a; border-radius: 6px; padding: 8px 18px; font-size: 12px; color: #e8ecf0; font-family: -apple-system, sans-serif; z-index: 400; opacity: 0; transition: opacity 0.15s, transform 0.15s; pointer-events: none; white-space: nowrap; }
 .fv-toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
 /* Unified settings modal */
@@ -244,7 +242,6 @@ div.sourceCode { margin: 8px 0; }
   .fv-modal-loading::after { border-color: #d0d7de; border-top-color: #0366d6; }
   .fv-tab-loading-content { color: #6a737d; }
   .fv-tab-loading-content::before { border-color: #d0d7de; border-top-color: #24292e; }
-  .fv-tab.loading::before { border-color: #d0d7de; border-top-color: #24292e; }
   .fv-toast { background: #ffffff; border-color: #d0d7de; color: #24292e; }
   .fv-shortcut-key { background: #e1e4e8; border-color: #d0d7de; color: #24292e; }
   .fv-settings { background: #ffffff; border-color: #d0d7de; }
@@ -318,6 +315,9 @@ tr:hover { background: #2a3040; }
 $theme_style$
 </head>
 <body>
+<div id="fv-page-loader" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:9999">
+  <div style="width:32px;height:32px;border:3px solid #353b4a;border-top-color:#ccd0d4;border-radius:50%;animation:fv-spin 0.7s linear infinite"></div>
+</div>
 $body$
 <div class="diff-counter-badge" id="diff-counter-badge"></div>
 <div class="fv-toast" id="fv-toast"></div>
@@ -507,7 +507,6 @@ $body$
       '.fv-modal-loading::after { border-color: ' + t.border + '; border-top-color: ' + t.accent + '; }' +
       '.fv-tab-loading-content { color: ' + t.textMuted + '; }' +
       '.fv-tab-loading-content::before { border-color: ' + t.border + '; border-top-color: ' + t.text + '; }' +
-      '.fv-tab.loading::before { border-color: ' + t.border + '; border-top-color: ' + t.text + '; }' +
       '.fv-toast { background: ' + t.bgHover + '; border-color: ' + t.border + '; color: ' + t.textBright + '; }' +
       '.fv-shortcut-key { background: ' + t.bgHover + '; border-color: ' + t.border + '; color: ' + t.text + '; }' +
       '.fv-shortcut-desc { color: ' + t.textMuted + '; }' +
@@ -1109,8 +1108,13 @@ $body$
               }
             }
             var ac = document.querySelector('.fv-tab-content.active');
-            if (ac) { ac.style.opacity = '0'; }
-            loadingToast.style.display = 'flex';
+            var isLoadingTab = ac && ac.querySelector('.fv-tab-loading-content');
+            if (isLoadingTab) {
+              // Keep centered spinner visible — page-level spinner bridges the reload
+            } else {
+              if (ac) { ac.style.opacity = '0'; }
+              loadingToast.style.display = 'flex';
+            }
             window.location.reload();
           }
         } catch(e) {}
@@ -1344,6 +1348,8 @@ $body$
   initDiffCollapse();
   var initHide = document.getElementById('fv-init-hide');
   if (initHide) initHide.remove();
+  var pageLoader = document.getElementById('fv-page-loader');
+  if (pageLoader) pageLoader.remove();
   var activeContent = document.querySelector('.fv-tab-content.active');
   if (activeContent) activeContent.classList.add('fv-reveal');
 
@@ -1893,27 +1899,54 @@ $body$
     var fname = filePath.split('/').pop();
     var tabBar = document.querySelector('.fv-tab-bar');
     var safeFname = escHtml(fname);
+    var tabId = 'fv-tab-loading-' + Date.now();
 
-    // Add tab to bar silently (don't switch to it — user stays on current tab)
+    // Determine file icon from extension
+    var codeExts = /\.(ts|tsx|js|jsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|cc|cpp|h|hpp|cs|fs|fsx|sh|bash|zsh|yaml|yml|toml|json|jsonc|sql|graphql|gql|html|css|scss|sass|less|lua|php|r|m|ex|exs|tf|hcl|vue|svelte)$/i;
+    var codeNames = /^(Dockerfile|Makefile|Vagrantfile|Procfile|Brewfile)$/;
+    var isCode = codeExts.test(fname) || codeNames.test(fname);
+    var tabIcon = isCode ? '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:-2px;margin-right:4px;opacity:0.6"><path d="m11.28 3.22 4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L13.94 8l-3.72-3.72a.749.749 0 0 1 .326-1.275.749.749 0 0 1 .734.215Zm-6.56 0a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042L2.06 8l3.72 3.72a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215L.47 8.53a.75.75 0 0 1 0-1.06Z"/></svg>' : '';
+
+    // Create tab header
     var tab = document.createElement('div');
     tab.className = 'fv-tab loading';
-    tab.setAttribute('data-tab', 'fv-tab-loading-' + Date.now());
+    tab.setAttribute('data-tab', tabId);
     tab.setAttribute('title', filePath);
-    tab.innerHTML = safeFname + '<span class="fv-tab-close" data-close-path="' + escHtml(filePath) + '">\u00d7</span>';
+    tab.innerHTML = tabIcon + safeFname + '<span class="fv-tab-close" data-close-path="' + escHtml(filePath) + '">\u00d7</span>';
     tab.setAttribute('data-group', 'files');
-    // Only make visible if files group is currently active
-    var activeGroup = document.querySelector('.fv-group-sel.active');
-    if (activeGroup && activeGroup.getAttribute('data-group') === 'files') {
-      tab.classList.add('fv-group-visible');
-    }
+    tab.classList.add('fv-group-visible');
     var addFileBtn = document.getElementById('fv-add-file');
     if (addFileBtn) {
       tabBar.insertBefore(tab, addFileBtn);
     } else {
       tabBar.insertBefore(tab, tabBar.querySelector('.fv-tab-spacer'));
     }
+
+    // Create content panel with centered loading spinner
+    var panel = document.createElement('div');
+    panel.className = 'fv-tab-content';
+    panel.id = tabId;
+    panel.innerHTML = '<div class="fv-tab-loading-content">Loading ' + safeFname + '\u2026</div>';
+    document.body.appendChild(panel);
+
     updateGroupCounts();
-    showToast('Opening ' + fname + '\u2026');
+
+    // Switch to files group and activate the loading tab immediately
+    var activeGroup = document.querySelector('.fv-group-sel.active');
+    if (activeGroup && activeGroup.getAttribute('data-group') !== 'files') {
+      switchGroup('files');
+    }
+    activateTab(tabId);
+    // Set hash to file path — pollReload will preserve this if user stays,
+    // or overwrite with the user's actual active tab if they navigate away
+    history.replaceState(null, '', '#fv-path:' + encodeURIComponent(filePath));
+
+    // Allow clicking back to loading tab if user navigates away
+    tab.addEventListener('click', function(e) {
+      if (e.target.classList.contains('fv-tab-close')) return;
+      activateTab(tabId);
+      history.replaceState(null, '', '#fv-path:' + encodeURIComponent(filePath));
+    });
   }
 
   function selectModalItem() {
@@ -1934,7 +1967,6 @@ $body$
       var filePath = item.file;
       closeModal();
       createLoadingTab(filePath);
-      // Keep current hash — user stays on their current tab after reload
       lastOpenTriggered = Date.now();
       fetch('/_open?path=' + encodeURIComponent(filePath));
       return;
