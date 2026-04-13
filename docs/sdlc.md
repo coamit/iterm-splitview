@@ -60,9 +60,3 @@ Create in `docs/feature-contexts/<YYYY-MM-DD>-<type>-<slug>.md`:
 
 Omit sections that have no content. The goal is to capture decisions and gotchas that aren't obvious from reading the code — not to restate what the diff shows.
 
-## Getting Started
-
-1. Read [`docs/feature-contexts/README.md`](feature-contexts/README.md) for architecture, terminology, and accumulated knowledge
-2. Read [`AGENTS.md`](../AGENTS.md) for coding standards and the refactoring checklist
-3. Read [`CONTRIBUTING.md`](../CONTRIBUTING.md) for development commands (`make lint`, `make test`, `make check`)
-4. Browse existing feature context files in `docs/feature-contexts/` for examples of past work

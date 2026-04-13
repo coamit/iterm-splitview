@@ -4,25 +4,7 @@ Rules for AI agents working on this codebase. Follow these autonomously — don'
 
 ## Onboarding
 
-Before making changes, understand what this project is and how it works.
-
-**What is iterm-splitview?** A lightweight read-only IDE that renders files as styled HTML in an iTerm2 browser split pane. Supports multi-tab viewing, real-time git diff tracking, filesystem search, and 6 themes. Zero context switching — everything stays in the terminal.
-
-**How it works:**
-1. CLI (`scripts/fileview`) parses commands and dispatches to bash modules in `scripts/lib/`
-2. Bash modules generate HTML from source files using pandoc (markdown) and highlight.js (code)
-3. A Python HTTP server (`scripts/lib/http-server.sh`) serves the rendered page and API endpoints
-4. iTerm2 opens a browser split pane pointing at the local server
-5. 11 JS modules (`scripts/js/`) handle all interactivity: tabs, groups, content swap, diff, search, themes, keyboard shortcuts
-6. A file watcher polls for changes and triggers in-place DOM swaps (no page reloads)
-
-**Key constraints:**
-- No bundler, no build step, no TypeScript — JS modules loaded via `<script>` tags
-- No npm runtime dependencies — pandoc and Python are the only external requirements
-- Per-session isolation — each iTerm tab gets its own fileview instance in `/tmp/fileview/<session-id>/`
-- Shared state via `window.fv` namespace — each module owns its private state
-
-**Before you start:** Read [`docs/feature-contexts/README.md`](docs/feature-contexts/README.md) for architecture decisions, terminology, and accumulated knowledge from past features.
+Before making changes, read [`docs/feature-contexts/README.md`](docs/feature-contexts/README.md) — it has the project overview, architecture, terminology, key decisions, and accumulated knowledge from all past features. That file is the single source of truth for understanding this codebase.
 
 ## Golden Rule
 
