@@ -19,6 +19,7 @@ window.fv = {
   currentSearchRoot: '',
   fileSearchAbort: null,
   fileSearchQuery: '',
+  searchGeneration: 0,
   pollers: {
     loading: { id: null, xhr: null },
     reload: { id: null, xhr: null },
