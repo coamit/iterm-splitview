@@ -1,4 +1,4 @@
-// diff.js — Diff context marking, hunk navigation, counter badge, collapse toggle
+// diff-viewer.js — Diff context marking, hunk navigation, counter badge, collapse toggle
 var fv = window.fv;
 
 function createDiffSeparator() {
@@ -86,7 +86,7 @@ function getDiffHunks() {
   return hunks;
 }
 
-function _clearDiffCounterListeners() {
+function removeDiffCounterListeners() {
   if (fv._diffCounterDismiss) {
     document.removeEventListener('click', fv._diffCounterDismiss);
     document.removeEventListener('keydown', fv._diffCounterDismiss);
@@ -99,12 +99,12 @@ function showDiffCounter() {
   if (hunks.length === 0 || fv.currentDiffIdx < 0) return;
   fv.diffCounterBadge.textContent = (fv.currentDiffIdx + 1) + '/' + hunks.length;
   fv.diffCounterBadge.classList.add('visible');
-  _clearDiffCounterListeners();
+  removeDiffCounterListeners();
   fv._diffCounterDismiss = function(e) {
     if (e.type === 'keydown' && e.ctrlKey && e.key === 'd') return;
     fv.diffCounterBadge.classList.remove('visible');
     document.querySelectorAll('.code-line.diff-focus').forEach(function(el) { el.classList.remove('diff-focus'); });
-    _clearDiffCounterListeners();
+    removeDiffCounterListeners();
   };
   setTimeout(function() {
     document.addEventListener('click', fv._diffCounterDismiss);
@@ -150,7 +150,7 @@ function toggleDiffCollapse() {
   }, SWAP_FADE_OUT_MS);
 }
 
-function initDiffCollapseOn(root) {
+function initializeDiffCollapse(root) {
   var panels = root.querySelectorAll('.fv-tab-content');
   panels.forEach(function(panel) {
     if (panel.querySelector('.code-line.diff-added, .code-line.diff-removed')) {

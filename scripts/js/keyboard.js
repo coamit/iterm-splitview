@@ -1,14 +1,14 @@
-// shortcuts.js — Keyboard shortcut dispatch map + handler
+// keyboard.js — Keyboard shortcut dispatch map + handler
 var fv = window.fv;
 
 var shortcutMap = {
   't': function() { window.scrollTo({ top: 0, behavior: 'smooth' }); },
   'b': function() { window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); },
-  'f': function() { toggleModal('text-active'); },
-  'g': function() { toggleModal('text'); },
-  'h': function() { toggleModal('fs-text'); },
-  'o': function() { toggleModal('fs-files'); },
-  'p': function() { toggleModal('files'); },
+  'f': function() { toggleSearchModal('text-active'); },
+  'g': function() { toggleSearchModal('text'); },
+  'h': function() { toggleSearchModal('fs-text'); },
+  'o': function() { toggleSearchModal('fs-files'); },
+  'p': function() { toggleSearchModal('files'); },
   's': function() { /* no-op: prevent default */ },
   'i': function() {
     if (fv.gitWatchOverlay && fv.gitWatchOverlay.classList.contains('visible')) closeGitWatch();
@@ -34,8 +34,8 @@ var shortcutMap = {
     var fp = getActiveFilePath();
     if (fp) { fetch('/_open-workspace?path=' + encodeURIComponent(fp)); showToast('Opened workspace in Cursor \u2713'); }
   },
-  ']': function() { cycleTab(1); },
-  '[': function() { cycleTab(-1); },
+  ']': function() { navigateToAdjacentTab(1); },
+  '[': function() { navigateToAdjacentTab(-1); },
   'w': function() { closeActiveTab(); }
 };
 
@@ -57,7 +57,7 @@ document.addEventListener('keydown', function(e) {
     return;
   }
   if (!fv.modalOverlay.classList.contains('visible')) return;
-  if (e.key === 'Escape') { closeModal(); e.preventDefault(); }
+  if (e.key === 'Escape') { closeSearchModal(); e.preventDefault(); }
   if (e.key === 'ArrowDown') { fv.modalSelectedIdx = Math.min(fv.modalSelectedIdx + 1, fv.modalItems.length - 1); updateModalSelection(); e.preventDefault(); }
   if (e.key === 'ArrowUp') { fv.modalSelectedIdx = Math.max(fv.modalSelectedIdx - 1, 0); updateModalSelection(); e.preventDefault(); }
   if (e.key === 'Enter') { selectModalItem(); e.preventDefault(); }

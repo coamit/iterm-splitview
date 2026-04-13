@@ -1,4 +1,4 @@
-// tabs.js — Tab switching, loading tabs, file icons, cycling, closing, body listeners
+// tab-bar.js — Tab switching, loading tabs, file icons, cycling, closing, body listeners
 var fv = window.fv;
 
 function activateTab(tabId) {
@@ -11,23 +11,23 @@ function activateTab(tabId) {
     if (content) { content.classList.add('active'); content.classList.add('fv-reveal'); }
     var tabGroup = tab.getAttribute('data-group');
     if (tabGroup && document.querySelector('.fv-group-bar')) {
-      switchGroup(tabGroup);
+      switchTabGroup(tabGroup);
     }
     tab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
   }
 }
 
 function getFileIcon(filename) {
-  var codeExts = /\.(ts|tsx|js|jsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|cc|cpp|h|hpp|cs|fs|fsx|sh|bash|zsh|yaml|yml|toml|json|jsonc|sql|graphql|gql|html|css|scss|sass|less|lua|php|r|m|ex|exs|tf|hcl|vue|svelte)$/i;
+  var codeExtensions = /\.(ts|tsx|js|jsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|cc|cpp|h|hpp|cs|fs|fsx|sh|bash|zsh|yaml|yml|toml|json|jsonc|sql|graphql|gql|html|css|scss|sass|less|lua|php|r|m|ex|exs|tf|hcl|vue|svelte)$/i;
   var codeNames = /^(Dockerfile|Makefile|Vagrantfile|Procfile|Brewfile)$/;
-  var isCode = codeExts.test(filename) || codeNames.test(filename);
+  var isCode = codeExtensions.test(filename) || codeNames.test(filename);
   return isCode ? '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:-2px;margin-right:4px;opacity:0.6"><path d="m11.28 3.22 4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L13.94 8l-3.72-3.72a.749.749 0 0 1 .326-1.275.749.749 0 0 1 .734.215Zm-6.56 0a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042L2.06 8l3.72 3.72a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215L.47 8.53a.75.75 0 0 1 0-1.06Z"/></svg>' : '';
 }
 
 function createLoadingTab(filePath) {
   var fname = filePath.split('/').pop();
   var tabBar = document.querySelector('.fv-tab-bar');
-  var safeFname = escHtml(fname);
+  var safeFilename = escapeHtml(fname);
   var tabId = 'fv-tab-loading-' + Date.now();
   var tabIcon = getFileIcon(fname);
 
@@ -36,12 +36,12 @@ function createLoadingTab(filePath) {
   tab.className = 'fv-tab loading';
   tab.setAttribute('data-tab', tabId);
   tab.setAttribute('title', filePath);
-  tab.innerHTML = tabIcon + safeFname + '<span class="fv-tab-close" data-close-path="' + escHtml(filePath) + '">\u00d7</span>';
+  tab.innerHTML = tabIcon + safeFilename + '<span class="fv-tab-close" data-close-path="' + escapeHtml(filePath) + '">\u00d7</span>';
   tab.setAttribute('data-group', 'files');
   tab.classList.add('fv-group-visible');
-  var addFileBtn = document.getElementById('fv-add-file');
-  if (addFileBtn) {
-    tabBar.insertBefore(tab, addFileBtn);
+  var addFileButton = document.getElementById('fv-add-file');
+  if (addFileButton) {
+    tabBar.insertBefore(tab, addFileButton);
   } else {
     tabBar.insertBefore(tab, tabBar.querySelector('.fv-tab-spacer'));
   }
@@ -50,7 +50,7 @@ function createLoadingTab(filePath) {
   var panel = document.createElement('div');
   panel.className = 'fv-tab-content';
   panel.id = tabId;
-  panel.innerHTML = '<div class="fv-tab-loading-content">Loading ' + safeFname + '\u2026</div>';
+  panel.innerHTML = '<div class="fv-tab-loading-content">Loading ' + safeFilename + '\u2026</div>';
   document.body.appendChild(panel);
 
   updateGroupCounts();
@@ -61,7 +61,7 @@ function createLoadingTab(filePath) {
   // Switch to files group and activate the loading tab immediately
   var activeGroup = document.querySelector('.fv-group-sel.active');
   if (activeGroup && activeGroup.getAttribute('data-group') !== 'files') {
-    switchGroup('files');
+    switchTabGroup('files');
   }
   activateTab(tabId);
   history.replaceState(null, '', '#fv-path:' + encodeURIComponent(filePath));
@@ -74,24 +74,24 @@ function createLoadingTab(filePath) {
   });
 }
 
-function cycleTab(direction) {
+function navigateToAdjacentTab(direction) {
   var hasGroups = !!document.querySelector('.fv-group-bar');
   var tabs = hasGroups
     ? Array.from(document.querySelectorAll('.fv-tab.fv-group-visible[data-tab]'))
     : Array.from(document.querySelectorAll('.fv-tab[data-tab]'));
   if (tabs.length === 0 && !hasGroups) return;
-  var activeIdx = tabs.findIndex(function(tab) { return tab.classList.contains('active'); });
+  var activeIndex = tabs.findIndex(function(tab) { return tab.classList.contains('active'); });
 
   if (hasGroups) {
-    var atEnd = tabs.length === 0 || (direction > 0 && activeIdx >= tabs.length - 1) || (direction < 0 && activeIdx <= 0);
-    if (atEnd) {
-      var groupSels = Array.from(document.querySelectorAll('.fv-group-sel'));
-      var activeGroupIdx = groupSels.findIndex(function(s) { return s.classList.contains('active'); });
-      if (direction > 0 && activeGroupIdx >= groupSels.length - 1) return;
-      if (direction < 0 && activeGroupIdx <= 0) return;
-      for (var i = activeGroupIdx + direction; i >= 0 && i < groupSels.length; i += direction) {
-        var newGroup = groupSels[i].getAttribute('data-group');
-        switchGroup(newGroup);
+    var isAtGroupBoundary = tabs.length === 0 || (direction > 0 && activeIndex >= tabs.length - 1) || (direction < 0 && activeIndex <= 0);
+    if (isAtGroupBoundary) {
+      var groupSelectors = Array.from(document.querySelectorAll('.fv-group-sel'));
+      var activeGroupIndex = groupSelectors.findIndex(function(s) { return s.classList.contains('active'); });
+      if (direction > 0 && activeGroupIndex >= groupSelectors.length - 1) return;
+      if (direction < 0 && activeGroupIndex <= 0) return;
+      for (var i = activeGroupIndex + direction; i >= 0 && i < groupSelectors.length; i += direction) {
+        var newGroup = groupSelectors[i].getAttribute('data-group');
+        switchTabGroup(newGroup);
         var newTabs = Array.from(document.querySelectorAll('.fv-tab.fv-group-visible[data-tab]'));
         if (newTabs.length > 0) {
           var target = direction > 0 ? newTabs[0] : newTabs[newTabs.length - 1];
@@ -106,9 +106,9 @@ function cycleTab(direction) {
   }
 
   if (tabs.length < 2) return;
-  var newIdx = activeIdx + direction;
-  if (newIdx < 0 || newIdx >= tabs.length) return;
-  var newTabId = tabs[newIdx].getAttribute('data-tab');
+  var newIndex = activeIndex + direction;
+  if (newIndex < 0 || newIndex >= tabs.length) return;
+  var newTabId = tabs[newIndex].getAttribute('data-tab');
   activateTab(newTabId);
   history.replaceState(null, '', '#' + newTabId);
   fv.currentDiffIdx = -1;
@@ -161,7 +161,7 @@ function attachBodyListeners(root) {
       var remainingInGroup = document.querySelectorAll('.fv-tab[data-group="' + closedGroup + '"][data-tab]');
       if (wasActive && remainingInGroup.length === 0) {
         document.querySelectorAll('.fv-tab-content.active').forEach(function(panel) { panel.classList.remove('active'); });
-        switchGroup(closedGroup);
+        switchTabGroup(closedGroup);
       }
       fv.pendingCloses++;
       fetch('/_close?path=' + encodeURIComponent(filePath) + '&active=' + encodeURIComponent(newActivePath))
@@ -172,16 +172,16 @@ function attachBodyListeners(root) {
     sel.addEventListener('click', function(e) {
       if (e.target.classList.contains('fv-group-close')) return;
       var group = sel.getAttribute('data-group');
-      switchGroup(group);
-      var restored = false;
+      switchTabGroup(group);
+      var wasRestored = false;
       if (fv.groupLastTab[group]) {
-        var savedTab = document.querySelector('.fv-tab.fv-group-visible[title="' + escSelector(fv.groupLastTab[group]) + '"]');
+        var savedTab = document.querySelector('.fv-tab.fv-group-visible[title="' + escapeCssSelector(fv.groupLastTab[group]) + '"]');
         if (savedTab) {
           activateTab(savedTab.getAttribute('data-tab'));
-          restored = true;
+          wasRestored = true;
         }
       }
-      if (!restored) {
+      if (!wasRestored) {
         var visibleActive = document.querySelector('.fv-tab.fv-group-visible.active');
         if (!visibleActive) {
           var first = document.querySelector('.fv-tab.fv-group-visible[data-tab]');
@@ -195,7 +195,7 @@ function attachBodyListeners(root) {
   root.querySelectorAll('.fv-group-close').forEach(function(btn) {
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
-      handleUnwatch(btn);
+      removeWatchedRepository(btn);
     });
   });
   root.querySelectorAll('.fv-md-toggle-btn').forEach(function(btn) {
@@ -220,15 +220,15 @@ function attachBodyListeners(root) {
     });
   });
   // Toolbar buttons (inside body container, lost on swap)
-  var addFileBtn = root.querySelector('#fv-add-file');
-  if (addFileBtn) addFileBtn.addEventListener('click', function() { toggleModal('fs-files'); });
-  var addGitBtn = root.querySelector('#fv-add-git');
-  if (addGitBtn) addGitBtn.addEventListener('click', function() { openGitWatch(); });
-  var settingsBtn = root.querySelector('#fv-settings-btn');
-  if (settingsBtn) settingsBtn.addEventListener('click', function() { openSettings(); });
-  var refreshBtn = root.querySelector('#fv-refresh');
-  if (refreshBtn) refreshBtn.addEventListener('click', function() {
-    refreshBtn.style.opacity = '0.3'; refreshBtn.style.pointerEvents = 'none';
+  var addFileButton = root.querySelector('#fv-add-file');
+  if (addFileButton) addFileButton.addEventListener('click', function() { toggleSearchModal('fs-files'); });
+  var addGitButton = root.querySelector('#fv-add-git');
+  if (addGitButton) addGitButton.addEventListener('click', function() { openGitWatch(); });
+  var settingsButton = root.querySelector('#fv-settings-btn');
+  if (settingsButton) settingsButton.addEventListener('click', function() { openSettings(); });
+  var refreshButton = root.querySelector('#fv-refresh');
+  if (refreshButton) refreshButton.addEventListener('click', function() {
+    refreshButton.style.opacity = '0.3'; refreshButton.style.pointerEvents = 'none';
     showToast('Refreshing\u2026', true, true);
     fv.lastOpenTriggered = 0;
     fetch('/_refresh');

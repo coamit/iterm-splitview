@@ -15,22 +15,22 @@ _FV_ENTRYPOINT="$0"
 SCRIPT_DIR="$(cd "$(dirname "$(realpath "$0")")" && pwd)"
 
 # Source libraries
-# shellcheck source=lib/config.sh
-source "$SCRIPT_DIR/lib/config.sh"
-# shellcheck source=lib/paths.sh
-source "$SCRIPT_DIR/lib/paths.sh"
-# shellcheck source=lib/filetypes.sh
-source "$SCRIPT_DIR/lib/filetypes.sh"
-# shellcheck source=lib/diff.sh
-source "$SCRIPT_DIR/lib/diff.sh"
-# shellcheck source=lib/render.sh
-source "$SCRIPT_DIR/lib/render.sh"
-# shellcheck source=lib/server.sh
-source "$SCRIPT_DIR/lib/server.sh"
-# shellcheck source=lib/watcher.sh
-source "$SCRIPT_DIR/lib/watcher.sh"
-# shellcheck source=lib/iterm.sh
-source "$SCRIPT_DIR/lib/iterm.sh"
+# shellcheck source=lib/session.sh
+source "$SCRIPT_DIR/lib/session.sh"
+# shellcheck source=lib/path-resolver.sh
+source "$SCRIPT_DIR/lib/path-resolver.sh"
+# shellcheck source=lib/file-detection.sh
+source "$SCRIPT_DIR/lib/file-detection.sh"
+# shellcheck source=lib/git-diff.sh
+source "$SCRIPT_DIR/lib/git-diff.sh"
+# shellcheck source=lib/html-generator.sh
+source "$SCRIPT_DIR/lib/html-generator.sh"
+# shellcheck source=lib/http-server.sh
+source "$SCRIPT_DIR/lib/http-server.sh"
+# shellcheck source=lib/file-watcher.sh
+source "$SCRIPT_DIR/lib/file-watcher.sh"
+# shellcheck source=lib/iterm-pane.sh
+source "$SCRIPT_DIR/lib/iterm-pane.sh"
 
 # Copy template to cache (always sync — source may have changed)
 cp "$SCRIPT_DIR/templates/viewer.html" "$VIEW_TEMPLATE"

@@ -1,13 +1,13 @@
-// groups.js — Group switching, counts, loading states, unwatch, group headers, polling
+// group-bar.js — Group switching, counts, loading states, unwatch, group headers, polling
 var fv = window.fv;
 
-function switchGroup(groupName) {
+function switchTabGroup(groupName) {
   // Save current group's active tab before switching
-  var curGroupSel = document.querySelector('.fv-group-sel.active');
-  if (curGroupSel) {
-    var curGroup = curGroupSel.getAttribute('data-group');
-    var curActive = document.querySelector('.fv-tab.active[data-group="' + curGroup + '"]');
-    if (curActive) fv.groupLastTab[curGroup] = curActive.getAttribute('title');
+  var currentGroupSelector = document.querySelector('.fv-group-sel.active');
+  if (currentGroupSelector) {
+    var currentGroup = currentGroupSelector.getAttribute('data-group');
+    var currentActiveTab = document.querySelector('.fv-tab.active[data-group="' + currentGroup + '"]');
+    if (currentActiveTab) fv.groupLastTab[currentGroup] = currentActiveTab.getAttribute('title');
   }
   document.querySelectorAll('.fv-group-sel').forEach(function(sel) {
     sel.classList.toggle('active', sel.getAttribute('data-group') === groupName);
@@ -27,8 +27,8 @@ function switchGroup(groupName) {
   // Check if this group is in loading state
   if (fv.loadingGroups[groupName]) {
     document.querySelectorAll('.fv-tab-content.active').forEach(function(content) { content.classList.remove('active'); });
-    var lp = document.getElementById(fv.loadingGroups[groupName]);
-    if (lp) lp.classList.add('active');
+    var loadingPanel = document.getElementById(fv.loadingGroups[groupName]);
+    if (loadingPanel) loadingPanel.classList.add('active');
     return;
   }
 
@@ -69,7 +69,7 @@ function showGroupLoading(groupName, label) {
     panel.className = 'fv-tab-content';
     panel.id = panelId;
     panel.setAttribute('data-loading-group', groupName);
-    panel.innerHTML = '<div class="fv-tab-loading-content">Loading ' + escHtml(label) + '</div>';
+    panel.innerHTML = '<div class="fv-tab-loading-content">Loading ' + escapeHtml(label) + '</div>';
     document.body.appendChild(panel);
   }
   fv.loadingGroups[groupName] = panelId;
@@ -90,7 +90,7 @@ function showGitLoading(modeLabel) {
   });
 }
 
-function handleUnwatch(btn) {
+function removeWatchedRepository(btn) {
   var repoName = btn.getAttribute('data-unwatch');
   if (!repoName) return;
   var groupName = 'git.' + repoName;
@@ -105,17 +105,17 @@ function handleUnwatch(btn) {
   document.querySelectorAll('.fv-tab-content').forEach(function(panel) {
     if (panel.id && panel.id.indexOf('fv-tab-' + groupName + '-') === 0) panel.remove();
   });
-  var lp = document.getElementById('fv-loading-' + groupName.replace(/\./g, '-'));
-  if (lp) lp.remove();
+  var loadingPanel = document.getElementById('fv-loading-' + groupName.replace(/\./g, '-'));
+  if (loadingPanel) loadingPanel.remove();
   delete fv.loadingGroups[groupName];
-  switchGroup(targetGroup);
+  switchTabGroup(targetGroup);
   var first = document.querySelector('.fv-tab.fv-group-visible[data-tab]');
   if (first) activateTab(first.getAttribute('data-tab'));
   fetch('/_unwatch?name=' + encodeURIComponent(repoName));
   showToast('Stopped watching ' + repoName + ' \u2713');
 }
 
-function addGroupHeader(groupName, label) {
+function createGroupHeader(groupName, label) {
   var groupBar = document.querySelector('.fv-group-bar');
   if (!groupBar) return;
   if (groupBar.querySelector('[data-group="' + groupName + '"]')) return;
@@ -124,19 +124,19 @@ function addGroupHeader(groupName, label) {
   var sel = document.createElement('span');
   sel.className = 'fv-group-sel';
   sel.setAttribute('data-group', groupName);
-  sel.innerHTML = '&#9095; ' + escHtml(label) + ' <span class="fv-group-count">0</span><span class="fv-group-close" data-unwatch="' + escHtml(label) + '" title="Stop watching">&times;</span>';
+  sel.innerHTML = '&#9095; ' + escapeHtml(label) + ' <span class="fv-group-count">0</span><span class="fv-group-close" data-unwatch="' + escapeHtml(label) + '" title="Stop watching">&times;</span>';
   groupBar.insertBefore(sel, insertBefore);
   sel.addEventListener('click', function(e) {
     if (e.target.classList.contains('fv-group-close')) return;
     var tabs = document.querySelectorAll('.fv-tab[data-group="' + groupName + '"]');
     if (tabs.length === 0) {
-      switchGroup(groupName);
+      switchTabGroup(groupName);
       showGroupLoading(groupName, label + ' changes');
       fv.lastOpenTriggered = 0;
       fetch('/_refresh');
       return;
     }
-    switchGroup(groupName);
+    switchTabGroup(groupName);
     var first = document.querySelector('.fv-tab.fv-group-visible[data-tab]');
     if (first) { activateTab(first.getAttribute('data-tab')); }
   });

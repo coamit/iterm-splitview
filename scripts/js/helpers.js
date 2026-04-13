@@ -1,11 +1,11 @@
 // helpers.js — Utility functions
 var fv = window.fv;
 
-function escHtml(s) {
+function escapeHtml(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function escSelector(s) {
+function escapeCssSelector(s) {
   return s.replace(/"/g, '\\"');
 }
 
