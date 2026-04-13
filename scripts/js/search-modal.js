@@ -213,10 +213,12 @@ function fetchTextSearch(query) {
   if (!query || query.length < SEARCH_MIN_QUERY_LEN) { fv.modalItems = []; fv.modalList.innerHTML = renderEmptyState('Type to search\u2026'); return; }
   showModalLoading();
   fv.fileSearchAbort = new AbortController();
+  var gen = ++fv.searchGeneration;
   var queryLower = query.toLowerCase();
   fetch('/_search-text?q=' + encodeURIComponent(query) + '&limit=' + SEARCH_RESULTS_LIMIT, { signal: fv.fileSearchAbort.signal })
     .then(function(res) { return res.json(); })
     .then(function(results) {
+      if (gen !== fv.searchGeneration) return;
       var openPaths = getOpenFilePaths();
       fv.modalItems = results.filter(function(item) {
         return !openPaths[item.file.toLowerCase()];
@@ -234,9 +236,11 @@ function fetchFileSearch(query) {
   showModalLoading();
   fv.fileSearchQuery = query || '';
   fv.fileSearchAbort = new AbortController();
+  var gen = ++fv.searchGeneration;
   fetch('/_search-files?q=' + encodeURIComponent(query) + '&limit=' + SEARCH_RESULTS_LIMIT, { signal: fv.fileSearchAbort.signal })
     .then(function(res) { return res.json(); })
     .then(function(results) {
+      if (gen !== fv.searchGeneration) return;
       var openPaths = getOpenFilePaths();
       fv.modalItems = results.map(function(item) {
         return { file: item.file, filename: item.fname, filepath: item.fpath };
@@ -358,6 +362,9 @@ function openSearchModal(mode) {
   fv.modalMode = mode || 'files';
   fv.modalInput.value = '';
   fv.modalSelectedIdx = 0;
+  fv.modalItems = [];
+  if (fv.fileSearchAbort) { fv.fileSearchAbort.abort(); fv.fileSearchAbort = null; }
+  clearTimeout(fv.searchTimer);
   var cfg = modalModeConfig[fv.modalMode] || modalModeConfig['files'];
   fv.modalInput.style.display = '';
   fv.modalInput.placeholder = cfg.placeholder;
@@ -375,7 +382,10 @@ function openSearchModal(mode) {
 
 function closeSearchModal() {
   clearTimeout(fv.searchTimer);
+  fv.searchGeneration++;
   if (fv.fileSearchAbort) { fv.fileSearchAbort.abort(); fv.fileSearchAbort = null; }
+  fv.modalItems = [];
+  fv.modalList.innerHTML = '';
   fv.modalOverlay.classList.remove('visible');
 }
 
