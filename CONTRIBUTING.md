@@ -20,6 +20,10 @@ make test-browser  # Browser smoke tests only (needs iTerm2)
 
 CI runs `make lint` + `make test-js` + `make test-cli` on every PR via GitHub Actions. All checks must pass before merge.
 
+### Workflow
+
+Every PR that changes behavior must include a feature context update in [`docs/feature-contexts/`](docs/feature-contexts/). See the [development workflow](docs/sdlc.md) for the full process.
+
 ---
 
 ## Architecture

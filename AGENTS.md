@@ -2,6 +2,10 @@
 
 Rules for AI agents working on this codebase. Follow these autonomously — don't ask for permission to apply them.
 
+## Onboarding
+
+Before making changes, read [`docs/feature-contexts/README.md`](docs/feature-contexts/README.md) — it has the project overview, architecture, terminology, key decisions, and accumulated knowledge from all past features. That file is the single source of truth for understanding this codebase.
+
 ## Golden Rule
 
 **Preserve existing behavior.** When refactoring, restructuring, or cleaning up code: same features, same UX, same endpoints. No new features, no removed features, no "improvements" unless explicitly requested. If unsure whether a change affects behavior, don't make it.
@@ -85,6 +89,19 @@ Before committing any refactor:
 7. `fileview diff .` — git watcher starts, diff view renders
 8. All keyboard shortcuts still function
 9. Open page in Chrome — no JS errors in console
+
+## Development Workflow
+
+See [`docs/sdlc.md`](docs/sdlc.md) for the full guide.
+
+**Every PR that changes behavior must include a feature context file** in `docs/feature-contexts/`. This is part of the definition of done — not a follow-up task.
+
+- **Plan** → for medium+ features, create `docs/feature-contexts/<date>-<type>-<slug>.md` before coding
+- **Build** → feature branch, incremental commits, `make check`
+- **Review** → refactoring checklist, PR (must include feature context + README.md entry)
+- **Preserve** → after merge, verify feature context reflects what was actually built
+
+Knowledge lives in `docs/feature-contexts/`. The [domain README](docs/feature-contexts/README.md) accumulates architecture decisions, terminology, and gotchas across all features.
 
 ## What NOT To Do
 
