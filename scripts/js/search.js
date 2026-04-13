@@ -44,19 +44,20 @@ function getTabData() {
 function getOpenFilePaths() {
   var paths = {};
   document.querySelectorAll('.fv-tab[data-tab]').forEach(function(tab) {
-    var p = (tab.getAttribute('title') || '').toLowerCase();
-    if (p) paths[p] = true;
+    var fp = (tab.getAttribute('title') || '').toLowerCase();
+    if (fp) paths[fp] = true;
   });
   return paths;
 }
 
+// eslint-disable-next-line max-lines-per-function
 function searchText(query, activeOnly) {
   if (!query || query.length < SEARCH_MIN_QUERY_LEN) return [];
   var results = [];
   var queryLower = query.toLowerCase();
   var tabs = getTabData();
   var tabMap = {};
-  tabs.forEach(function(t) { tabMap[t.tabId] = t; });
+  tabs.forEach(function(tabData) { tabMap[tabData.tabId] = tabData; });
   var panels = activeOnly
     ? [document.querySelector('.fv-tab-content.active')].filter(Boolean)
     : document.querySelectorAll('.fv-tab-content');
@@ -89,8 +90,8 @@ function searchText(query, activeOnly) {
       }
     });
   });
-  results.sort(function(a, b) {
-    var al = a.content.toLowerCase(), bl = b.content.toLowerCase();
+  results.sort(function(first, second) {
+    var al = first.content.toLowerCase(), bl = second.content.toLowerCase();
     var aExact = al.indexOf(queryLower) !== -1 ? 1 : 0;
     var bExact = bl.indexOf(queryLower) !== -1 ? 1 : 0;
     return bExact - aExact;
@@ -153,10 +154,10 @@ function renderTextSearchModal(query) {
 function getGroupData() {
   var groups = [];
   document.querySelectorAll('.fv-group-sel').forEach(function(sel) {
-    var g = sel.getAttribute('data-group');
+    var group = sel.getAttribute('data-group');
     var label = sel.textContent.replace(/\d+$/, '').replace(/\u00d7$/, '').trim();
     var count = sel.querySelector('.fv-group-count');
-    groups.push({ group: g, label: label, count: count ? count.textContent : '0', isGroup: true });
+    groups.push({ group: group, label: label, count: count ? count.textContent : '0', isGroup: true });
   });
   return groups;
 }
@@ -165,16 +166,16 @@ function renderFileSearchModal(query) {
   var tabs = getTabData();
   var groups = document.querySelector('.fv-group-bar') ? getGroupData() : [];
 
-  var filteredGroups = query ? groups.filter(function(g) {
-    return fuzzyMatch(g.label, query) || fuzzyMatch(g.group, query);
+  var filteredGroups = query ? groups.filter(function(grp) {
+    return fuzzyMatch(grp.label, query) || fuzzyMatch(grp.group, query);
   }) : groups;
-  var filteredTabs = query ? tabs.filter(function(t) {
-    return fuzzyMatch(t.fname, query) || fuzzyMatch(t.fpath, query);
+  var filteredTabs = query ? tabs.filter(function(tabData) {
+    return fuzzyMatch(tabData.fname, query) || fuzzyMatch(tabData.fpath, query);
   }) : tabs;
 
   fv.modalItems = [];
-  filteredGroups.forEach(function(g) { fv.modalItems.push(g); });
-  filteredTabs.forEach(function(t) { fv.modalItems.push(t); });
+  filteredGroups.forEach(function(grp) { fv.modalItems.push(grp); });
+  filteredTabs.forEach(function(tabData) { fv.modalItems.push(tabData); });
 
   fv.modalSelectedIdx = Math.min(fv.modalSelectedIdx, Math.max(0, fv.modalItems.length - 1));
   fv.modalList.innerHTML = fv.modalItems.length ? fv.modalItems.map(function(item, i) {
@@ -194,7 +195,7 @@ function fetchFsTextSearch(query) {
   showLoading();
   fv.fsSearchAbort = new AbortController();
   fetch('/_search-text?q=' + encodeURIComponent(query) + '&limit=' + SEARCH_RESULTS_LIMIT, { signal: fv.fsSearchAbort.signal })
-    .then(function(r) { return r.json(); })
+    .then(function(res) { return res.json(); })
     .then(function(results) {
       var openPaths = getOpenFilePaths();
       fv.modalItems = results.filter(function(item) {
@@ -223,7 +224,7 @@ function fetchFsFileSearch(query) {
   fv.fsFileQuery = query || '';
   fv.fsSearchAbort = new AbortController();
   fetch('/_search-files?q=' + encodeURIComponent(query) + '&limit=' + SEARCH_RESULTS_LIMIT, { signal: fv.fsSearchAbort.signal })
-    .then(function(r) { return r.json(); })
+    .then(function(res) { return res.json(); })
     .then(function(results) {
       var openPaths = getOpenFilePaths();
       fv.modalItems = results.filter(function(item) {
@@ -273,7 +274,7 @@ var modalModeConfig = {
   'shortcuts':   { placeholder: 'Filter shortcuts...',       label: 'Keyboard Shortcuts' }
 };
 
-function isFsMode(m) { return m === 'fs-text' || m === 'fs-files'; }
+function isFsMode(mode) { return mode === 'fs-text' || mode === 'fs-files'; }
 
 function updateSearchRootDisplay() {
   if (!isFsMode(fv.modalMode)) {
@@ -287,7 +288,7 @@ function updateSearchRootDisplay() {
 
 function fetchSearchRoot() {
   fetch('/_search-root')
-    .then(function(r) { return r.json(); })
+    .then(function(res) { return res.json(); })
     .then(function(data) {
       fv.currentSearchRoot = data.root;
       updateSearchRootDisplay();
@@ -308,7 +309,7 @@ function startEditSearchRoot() {
     var val = input.value.trim();
     if (val && val !== fv.currentSearchRoot) {
       fetch('/_search-root?path=' + encodeURIComponent(val))
-        .then(function(r) { return r.json(); })
+        .then(function(res) { return res.json(); })
         .then(function(data) {
           fv.currentSearchRoot = data.root;
           updateSearchRootDisplay();

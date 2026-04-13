@@ -9,24 +9,24 @@ function switchGroup(groupName) {
     var curActive = document.querySelector('.fv-tab.active[data-group="' + curGroup + '"]');
     if (curActive) fv.groupLastTab[curGroup] = curActive.getAttribute('title');
   }
-  document.querySelectorAll('.fv-group-sel').forEach(function(s) {
-    s.classList.toggle('active', s.getAttribute('data-group') === groupName);
+  document.querySelectorAll('.fv-group-sel').forEach(function(sel) {
+    sel.classList.toggle('active', sel.getAttribute('data-group') === groupName);
   });
   // Show only tabs from active group
-  document.querySelectorAll('.fv-tab-bar .fv-tab[data-group]').forEach(function(t) {
-    t.classList.toggle('fv-group-visible', t.getAttribute('data-group') === groupName);
+  document.querySelectorAll('.fv-tab-bar .fv-tab[data-group]').forEach(function(tab) {
+    tab.classList.toggle('fv-group-visible', tab.getAttribute('data-group') === groupName);
   });
   // Show + button only for files group
   var addBtn = document.getElementById('fv-add-file');
   if (addBtn) addBtn.style.display = (groupName === 'files') ? '' : 'none';
   // Hide all loading panels, show the one for this group if loading
-  document.querySelectorAll('[data-loading-group]').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('[data-loading-group]').forEach(function(panel) { panel.classList.remove('active'); });
   var existingEmpty = document.getElementById('fv-group-empty');
   if (existingEmpty) existingEmpty.remove();
 
   // Check if this group is in loading state
   if (fv.loadingGroups[groupName]) {
-    document.querySelectorAll('.fv-tab-content.active').forEach(function(c) { c.classList.remove('active'); });
+    document.querySelectorAll('.fv-tab-content.active').forEach(function(content) { content.classList.remove('active'); });
     var lp = document.getElementById(fv.loadingGroups[groupName]);
     if (lp) lp.classList.add('active');
     return;
@@ -34,7 +34,7 @@ function switchGroup(groupName) {
 
   var hasVisibleTabs = document.querySelector('.fv-tab.fv-group-visible[data-tab]');
   if (!hasVisibleTabs) {
-    document.querySelectorAll('.fv-tab-content.active').forEach(function(c) { c.classList.remove('active'); });
+    document.querySelectorAll('.fv-tab-content.active').forEach(function(content) { content.classList.remove('active'); });
     var emptyDiv = document.createElement('div');
     emptyDiv.className = 'fv-tab-content active';
     emptyDiv.id = 'fv-group-empty';
@@ -57,9 +57,9 @@ function updateGroupCounts() {
 
 function showGroupLoading(groupName, label) {
   // Remove existing tabs for this group
-  document.querySelectorAll('.fv-tab[data-group="' + groupName + '"]').forEach(function(t) { t.remove(); });
-  document.querySelectorAll('.fv-tab-content').forEach(function(p) {
-    if (p.id && p.id.indexOf('fv-tab-' + groupName + '-') === 0) p.remove();
+  document.querySelectorAll('.fv-tab[data-group="' + groupName + '"]').forEach(function(tab) { tab.remove(); });
+  document.querySelectorAll('.fv-tab-content').forEach(function(panel) {
+    if (panel.id && panel.id.indexOf('fv-tab-' + groupName + '-') === 0) panel.remove();
   });
   // Create a loading content panel tied to this group
   var panelId = 'fv-loading-' + groupName.replace(/\./g, '-');
@@ -77,7 +77,7 @@ function showGroupLoading(groupName, label) {
   // If this group is active, show the loading panel
   var activeSel = document.querySelector('.fv-group-sel.active');
   if (activeSel && activeSel.getAttribute('data-group') === groupName) {
-    document.querySelectorAll('.fv-tab-content.active').forEach(function(c) { c.classList.remove('active'); });
+    document.querySelectorAll('.fv-tab-content.active').forEach(function(content) { content.classList.remove('active'); });
     var loadPanel = document.getElementById(panelId);
     if (loadPanel) loadPanel.classList.add('active');
   }
@@ -101,9 +101,9 @@ function handleUnwatch(btn) {
   }
   var targetGroup = prevGroup ? prevGroup.getAttribute('data-group') : 'files';
   if (sel) sel.remove();
-  document.querySelectorAll('.fv-tab[data-group="' + groupName + '"]').forEach(function(t) { t.remove(); });
-  document.querySelectorAll('.fv-tab-content').forEach(function(p) {
-    if (p.id && p.id.indexOf('fv-tab-' + groupName + '-') === 0) p.remove();
+  document.querySelectorAll('.fv-tab[data-group="' + groupName + '"]').forEach(function(tab) { tab.remove(); });
+  document.querySelectorAll('.fv-tab-content').forEach(function(panel) {
+    if (panel.id && panel.id.indexOf('fv-tab-' + groupName + '-') === 0) panel.remove();
   });
   var lp = document.getElementById('fv-loading-' + groupName.replace(/\./g, '-'));
   if (lp) lp.remove();
@@ -148,7 +148,7 @@ function pollGroupCount(groupName, repoName) {
     attempts++;
     if (attempts > POLL_GROUP_COUNT_MAX_ATTEMPTS) { clearInterval(pollInterval); return; }
     fetch('/_git-settings')
-      .then(function(r) { return r.json(); })
+      .then(function(res) { return res.json(); })
       .then(function(data) {
         if (data.repo_counts && data.repo_counts[repoName] > 0) {
           var badge = document.querySelector('.fv-group-sel[data-group="' + groupName + '"] .fv-group-count');

@@ -2,8 +2,9 @@
 var fv = window.fv;
 
 // --- Reusable initialization: hljs + line numbers + diff attrs + mermaid prep ---
+// eslint-disable-next-line max-lines-per-function
 function initializeContent(root) {
-  root.querySelectorAll('pre code').forEach(function(block) {
+  root.querySelectorAll('pre code').forEach(function(block) { // eslint-disable-line max-lines-per-function
     if (block.closest('pre.mermaid') || block.classList.contains('mermaid')) return;
     var plainText = block.textContent;
     var lang = (block.className.match(/language-(\S+)/) || block.className.match(/sourceCode\s+(\S+)/) || [])[1] || '';
@@ -46,7 +47,7 @@ function initializeContent(root) {
           if (ins.before) wrapper.insertBefore(ins.el, ins.before);
           else wrapper.appendChild(ins.el);
         });
-      } catch(e) { /* non-critical */ }
+      } catch(_e) { /* non-critical */ }
     }
     block.innerHTML = '';
     block.style.padding = '0';
@@ -146,7 +147,7 @@ function performSwap(newBodyHtml) {
   // 6. Mermaid rendering (needs live DOM)
   var mermaidEls = container.querySelectorAll('.mermaid:not([data-processed])');
   if (mermaidEls.length > 0) {
-    try { mermaid.run({ nodes: mermaidEls }); } catch(e) { /* non-critical */ }
+    try { mermaid.run({ nodes: mermaidEls }); } catch(_e) { /* non-critical */ }
   }
 
   // 7. Ensure content visible
@@ -169,13 +170,13 @@ function performSwap(newBodyHtml) {
 
 // --- Poller infrastructure ---
 function abortPoller(name) {
-  var p = fv.pollers[name];
-  if (p.xhr) { p.xhr.abort(); p.xhr = null; }
+  var poller = fv.pollers[name];
+  if (poller.xhr) { poller.xhr.abort(); poller.xhr = null; }
 }
 
 function stopPoller(name) {
-  var p = fv.pollers[name];
-  if (p.id) { clearInterval(p.id); p.id = null; }
+  var poller = fv.pollers[name];
+  if (poller.id) { clearInterval(poller.id); poller.id = null; }
   abortPoller(name);
 }
 
@@ -199,10 +200,10 @@ function pollLoading() {
         var showIt = response.loading && fv.lastOpenTriggered === 0 && (Date.now() - fv.pageLoadTime) > PAGE_LOAD_GRACE_MS;
         fv.loadingToast.style.display = showIt ? 'flex' : 'none';
         if (!response.loading) stopPoller('loading');
-      } catch(e) { /* non-critical */ }
+      } catch(_e) { /* non-critical */ }
     };
     xhr.send();
-  } catch(e) { /* non-critical */ }
+  } catch(_e) { /* non-critical */ }
 }
 
 function startLoadingPoll() {
@@ -211,6 +212,7 @@ function startLoadingPoll() {
 }
 
 // --- Auto-reload poller ---
+// eslint-disable-next-line max-lines-per-function
 function pollReload() {
   abortPoller('reload');
   if (fv.swapInProgress) return;
@@ -236,7 +238,7 @@ function pollReload() {
               loadingXhr.send();
               var loadingStatus = JSON.parse(loadingXhr.responseText);
               if (loadingStatus.loading) return;
-            } catch(e) { /* non-critical */ }
+            } catch(_e) { /* non-critical */ }
             fv.lastOpenTriggered = 0;
           }
           if (fv.swapInProgress) return;
@@ -253,10 +255,10 @@ function pollReload() {
           };
           fetchXhr.send();
         }
-      } catch(e) { /* non-critical */ }
+      } catch(_e) { /* non-critical */ }
     };
     xhr.send();
-  } catch(e) { /* non-critical */ }
+  } catch(_e) { /* non-critical */ }
 }
 
 function startReloadPoll() {

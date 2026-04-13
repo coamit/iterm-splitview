@@ -2,8 +2,8 @@
 var fv = window.fv;
 
 function activateTab(tabId) {
-  document.querySelectorAll('.fv-tab').forEach(function(t) { t.classList.remove('active'); });
-  document.querySelectorAll('.fv-tab-content').forEach(function(c) { c.classList.remove('active'); });
+  document.querySelectorAll('.fv-tab').forEach(function(tab) { tab.classList.remove('active'); });
+  document.querySelectorAll('.fv-tab-content').forEach(function(content) { content.classList.remove('active'); });
   var tab = document.querySelector('[data-tab="' + tabId + '"]');
   if (tab) {
     tab.classList.add('active');
@@ -80,7 +80,7 @@ function cycleTab(direction) {
     ? Array.from(document.querySelectorAll('.fv-tab.fv-group-visible[data-tab]'))
     : Array.from(document.querySelectorAll('.fv-tab[data-tab]'));
   if (tabs.length === 0 && !hasGroups) return;
-  var activeIdx = tabs.findIndex(function(t) { return t.classList.contains('active'); });
+  var activeIdx = tabs.findIndex(function(tab) { return tab.classList.contains('active'); });
 
   if (hasGroups) {
     var atEnd = tabs.length === 0 || (direction > 0 && activeIdx >= tabs.length - 1) || (direction < 0 && activeIdx <= 0);
@@ -127,6 +127,7 @@ function getActiveFilePath() {
   return tab ? tab.getAttribute('title') : '';
 }
 
+// eslint-disable-next-line max-lines-per-function
 function attachBodyListeners(root) {
   root.querySelectorAll('.fv-tab').forEach(function(tab) {
     tab.addEventListener('click', function(e) {
@@ -159,7 +160,7 @@ function attachBodyListeners(root) {
       }
       var remainingInGroup = document.querySelectorAll('.fv-tab[data-group="' + closedGroup + '"][data-tab]');
       if (wasActive && remainingInGroup.length === 0) {
-        document.querySelectorAll('.fv-tab-content.active').forEach(function(c) { c.classList.remove('active'); });
+        document.querySelectorAll('.fv-tab-content.active').forEach(function(panel) { panel.classList.remove('active'); });
         switchGroup(closedGroup);
       }
       fv.pendingCloses++;
@@ -207,8 +208,8 @@ function attachBodyListeners(root) {
       var view = btn.getAttribute('data-view');
       rawView.style.display = view === 'raw' ? '' : 'none';
       previewView.style.display = view === 'preview' ? '' : 'none';
-      wrapper.querySelectorAll('.fv-md-toggle-btn').forEach(function(b) {
-        b.classList.toggle('active', b === btn);
+      wrapper.querySelectorAll('.fv-md-toggle-btn').forEach(function(toggleBtn) {
+        toggleBtn.classList.toggle('active', toggleBtn === btn);
       });
     });
   });

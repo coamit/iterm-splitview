@@ -111,7 +111,7 @@ if (fv.gitWatchBtn && fv.gitWatchInput) {
     if (!path) return;
     if (fv.gitWatchStatus) fv.gitWatchStatus.textContent = 'Adding...';
     fetch('/_git-settings?watch=' + encodeURIComponent(path))
-      .then(function(r) { return r.json(); })
+      .then(function(res) { return res.json(); })
       .then(function(data) {
         if (data.error) {
           if (fv.gitWatchStatus) fv.gitWatchStatus.textContent = data.error;

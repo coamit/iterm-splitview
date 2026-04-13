@@ -39,7 +39,7 @@ function createElement(tag, className, attrs) {
   var el = document.createElement(tag);
   if (className) el.className = className;
   if (attrs) {
-    Object.keys(attrs).forEach(function(k) { el.setAttribute(k, attrs[k]); });
+    Object.keys(attrs).forEach(function(key) { el.setAttribute(key, attrs[key]); });
   }
   return el;
 }

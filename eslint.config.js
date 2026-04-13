@@ -96,7 +96,7 @@ module.exports = [
       "eqeqeq": "error",
       "no-empty": "error",
       "no-shadow": "warn",
-      "no-unused-vars": ["warn", { "args": "none" }],
+      "no-unused-vars": ["warn", { "args": "none", "vars": "local", "caughtErrors": "none" }],
       "id-length": ["warn", { "min": 2, "exceptions": ["i", "j", "e", "s", "x", "y"] }],
       "max-lines-per-function": ["warn", { "max": 40, "skipBlankLines": true, "skipComments": true }],
       "no-var": "off",
