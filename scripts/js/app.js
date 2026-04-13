@@ -73,6 +73,8 @@ if (fv.gitModeBranch) fv.gitModeBranch.addEventListener('click', function() {
   if (fv.gitModeBranch.classList.contains('active')) return;
   updateGitModeUI('branch');
   closeSettings();
+  fv.selectedCommits = {};
+  document.querySelectorAll('.fv-commit-indicator').forEach(function(el) { el.remove(); });
   showGitLoading('branch changes');
   fv.lastOpenTriggered = Date.now();
   fetch('/_git-settings?diff_mode=branch');
@@ -81,6 +83,8 @@ if (fv.gitModeLocal) fv.gitModeLocal.addEventListener('click', function() {
   if (fv.gitModeLocal.classList.contains('active')) return;
   updateGitModeUI('local');
   closeSettings();
+  fv.selectedCommits = {};
+  document.querySelectorAll('.fv-commit-indicator').forEach(function(el) { el.remove(); });
   showGitLoading('local changes');
   fv.lastOpenTriggered = Date.now();
   fetch('/_git-settings?diff_mode=local');
@@ -100,6 +104,9 @@ if (refreshButton) {
     refreshButton.style.pointerEvents = 'none';
     showToast('Refreshing\u2026', true, true);
     fv.lastOpenTriggered = 0;
+    // Clear commit selections on refresh
+    fv.selectedCommits = {};
+    document.querySelectorAll('.fv-commit-indicator').forEach(function(el) { el.remove(); });
     fetch('/_refresh');
   });
 }
@@ -235,6 +242,10 @@ if (groupBar && !hashHandledGroup) {
   var activeGroupSelector = document.querySelector('.fv-group-sel.active');
   if (activeGroupSelector) switchTabGroup(activeGroupSelector.getAttribute('data-group'));
 }
+
+// --- Init commit viewer buttons ---
+initCommitButtons();
+restoreCommitState();
 
 // --- Start all pollers ---
 startLoadingPoll();

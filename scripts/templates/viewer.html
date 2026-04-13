@@ -294,6 +294,37 @@ th { background: #2d3748; padding: 8px 12px; text-align: left !important; border
 td { padding: 8px 12px; border: 1px solid #4a5568; text-align: left !important; }
 tr:hover { background: #2a3040; }
 
+/* Commit viewer */
+.fv-commit-btn { display: inline-flex; align-items: center; justify-content: center; margin-left: 4px; padding: 1px 4px; cursor: pointer; color: #4b5263; border-radius: 3px; vertical-align: middle; }
+.fv-commit-btn:hover { color: #a78bfa; background: rgba(167, 139, 250, 0.1); }
+.fv-commit-indicator { display: inline-block; font-size: 9px; font-family: "JetBrains Mono", monospace; color: #a78bfa; background: rgba(167, 139, 250, 0.12); border: 1px solid rgba(167, 139, 250, 0.25); border-radius: 3px; padding: 0 4px; margin-left: 4px; line-height: 1.5; }
+.fv-commit-dropdown { position: fixed; z-index: 600; background: #1f2430; border: 1px solid #353b4a; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); width: 360px; max-height: 420px; display: flex; flex-direction: column; overflow: hidden; }
+.fv-commit-dropdown-header { padding: 8px 12px; font-size: 11px; font-weight: 600; color: #6a7080; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #353b4a; font-family: -apple-system, sans-serif; }
+.fv-commit-dropdown-list { overflow-y: auto; flex: 1; max-height: 360px; scrollbar-width: thin; scrollbar-color: #4b5263 transparent; }
+.fv-commit-dropdown-list::-webkit-scrollbar { width: 6px; }
+.fv-commit-dropdown-list::-webkit-scrollbar-track { background: transparent; }
+.fv-commit-dropdown-list::-webkit-scrollbar-thumb { background: #4b5263; border-radius: 3px; }
+.fv-commit-item { display: flex; align-items: center; gap: 8px; padding: 7px 12px; cursor: pointer; font-size: 12px; font-family: -apple-system, sans-serif; color: #ccd0d4; border-left: 2px solid transparent; }
+.fv-commit-item:hover { background: #2a3040; }
+.fv-commit-item.active { background: rgba(167, 139, 250, 0.08); border-left-color: #a78bfa; }
+.fv-commit-hash { font-family: "JetBrains Mono", monospace; font-size: 11px; color: #a78bfa; flex-shrink: 0; min-width: 54px; }
+.fv-commit-msg { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #ccd0d4; }
+.fv-commit-author { font-size: 10px; color: #4b5263; flex-shrink: 0; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fv-commit-empty { padding: 16px 12px; text-align: center; color: #6a7080; font-size: 12px; font-family: -apple-system, sans-serif; }
+@media (prefers-color-scheme: light) {
+  .fv-commit-btn { color: #9ca3af; }
+  .fv-commit-btn:hover { color: #7c3aed; background: rgba(124, 58, 237, 0.08); }
+  .fv-commit-indicator { color: #7c3aed; background: rgba(124, 58, 237, 0.08); border-color: rgba(124, 58, 237, 0.25); }
+  .fv-commit-dropdown { background: #ffffff; border-color: #d0d7de; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
+  .fv-commit-dropdown-header { color: #6a737d; border-bottom-color: #d0d7de; }
+  .fv-commit-item { color: #24292e; }
+  .fv-commit-item:hover { background: #f6f8fa; }
+  .fv-commit-item.active { background: rgba(124, 58, 237, 0.06); border-left-color: #7c3aed; }
+  .fv-commit-hash { color: #7c3aed; }
+  .fv-commit-msg { color: #24292e; }
+  .fv-commit-author { color: #6a737d; }
+  .fv-commit-empty { color: #6a737d; }
+}
 /* Git watch modal */
 .fv-git-watch-title { color: #e8ecf0; }
 .fv-git-watch-input { background: #171b24; border: 1px solid #353b4a; color: #e8ecf0; }
@@ -441,6 +472,7 @@ $body$
 <script src="js/content-swap.js"></script>
 <script src="js/diff-viewer.js"></script>
 <script src="js/search-modal.js"></script>
+<script src="js/commit-viewer.js"></script>
 <script src="js/keyboard.js"></script>
 <script src="js/app.js"></script>
 </body>

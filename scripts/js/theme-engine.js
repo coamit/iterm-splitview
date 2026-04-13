@@ -140,7 +140,19 @@ function buildThemeCSS(theme) {
     '.fv-loading-toast-text { color: ' + theme.textMuted + '; }' +
     '.fv-empty-state { color: ' + theme.textMuted + '; }' +
     '.fv-binary-note { color: ' + theme.textMuted + '; }' +
-    '.fv-theme-grid-label { color: ' + theme.textMuted + '; }';
+    '.fv-theme-grid-label { color: ' + theme.textMuted + '; }' +
+    '.fv-commit-btn { color: ' + theme.textDim + '; }' +
+    '.fv-commit-btn:hover { color: ' + theme.accent + '; background: ' + (theme.dark ? 'rgba(167,139,250,0.1)' : 'rgba(124,58,237,0.08)') + '; }' +
+    '.fv-commit-indicator { color: ' + theme.accent + '; background: ' + (theme.dark ? 'rgba(167,139,250,0.12)' : 'rgba(124,58,237,0.08)') + '; border-color: ' + (theme.dark ? 'rgba(167,139,250,0.25)' : 'rgba(124,58,237,0.25)') + '; }' +
+    '.fv-commit-dropdown { background: ' + theme.bg + '; border-color: ' + theme.border + '; }' +
+    '.fv-commit-dropdown-header { color: ' + theme.textMuted + '; border-bottom-color: ' + theme.border + '; }' +
+    '.fv-commit-item { color: ' + theme.text + '; }' +
+    '.fv-commit-item:hover { background: ' + theme.bgHover + '; }' +
+    '.fv-commit-item.active { background: ' + (theme.dark ? 'rgba(167,139,250,0.08)' : 'rgba(124,58,237,0.06)') + '; border-left-color: ' + theme.accent + '; }' +
+    '.fv-commit-hash { color: ' + theme.accent + '; }' +
+    '.fv-commit-msg { color: ' + theme.text + '; }' +
+    '.fv-commit-author { color: ' + theme.textDim + '; }' +
+    '.fv-commit-empty { color: ' + theme.textMuted + '; }';
 }
 
 function applyTheme(id) {

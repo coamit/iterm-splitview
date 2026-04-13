@@ -231,6 +231,8 @@ function attachBodyListeners(root) {
     refreshButton.style.opacity = '0.3'; refreshButton.style.pointerEvents = 'none';
     showToast('Refreshing\u2026', true, true);
     fv.lastOpenTriggered = 0;
+    fv.selectedCommits = {};
+    document.querySelectorAll('.fv-commit-indicator').forEach(function(el) { el.remove(); });
     fetch('/_refresh');
   });
 }

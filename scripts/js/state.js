@@ -52,6 +52,10 @@ window.fv = {
   modalModeText: null,
   modalRootEl: null,
   // Diff counter dismiss handler
-  _diffCounterDismiss: null
+  _diffCounterDismiss: null,
+  // Commit viewer state
+  selectedCommits: {},    // repo_name -> commit_hash (or null for working tree)
+  commitCache: {},        // repo_name -> [{hash, short, author, message}]
+  commitDropdownOpen: null // repo_name of currently open dropdown (or null)
 };
 var fv = window.fv;

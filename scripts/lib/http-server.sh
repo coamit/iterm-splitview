@@ -350,7 +350,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 for sf in [settings_file, session_settings]:
                     with open(sf, 'w') as f:
                         f.write(json.dumps(settings))
-                # Re-sync all watched repos with new mode, then regen
+                # Clear commit selections and re-sync all watched repos
+                for cf in glob.glob(os.path.join(DIR, 'commit.*')):
+                    try: os.remove(cf)
+                    except: pass
                 open(os.path.join(DIR, 'loading'), 'w').close()
                 self._resync_all_repos(new_mode)
                 # Set active to first file in first git tab file
@@ -408,11 +411,165 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 else:
                     repo_counts[wn] = 0
             settings['repo_counts'] = repo_counts
+            # Include per-repo selected commit
+            repo_commits = {}
+            for _, wn in watched:
+                cf = os.path.join(DIR, 'commit.' + _sanitize_name(wn))
+                if os.path.exists(cf):
+                    repo_commits[wn] = open(cf).read().strip()
+            if repo_commits:
+                settings['selected_commits'] = repo_commits
             self._json_response(settings)
             return
+        if parsed.path == '/_git-commits':
+            qs = urllib.parse.parse_qs(parsed.query)
+            repo_name = qs.get('repo', [''])[0]
+            limit = int(qs.get('limit', ['15'])[0])
+            limit = max(1, min(limit, 50))
+            watched = _parse_watched_file()
+            git_root = None
+            for wr, wn in watched:
+                if wn == repo_name:
+                    git_root = wr
+                    break
+            commits = []
+            if git_root:
+                try:
+                    fmt = '%H%n%h%n%an%n%s'
+                    r = subprocess.run(
+                        ['git', 'log', '--format=' + fmt, '-n', str(limit)],
+                        cwd=git_root, capture_output=True, text=True, timeout=5)
+                    if r.returncode == 0:
+                        lines = r.stdout.strip().split('\n')
+                        i = 0
+                        while i + 3 < len(lines):
+                            commits.append({
+                                'hash': lines[i],
+                                'short': lines[i+1],
+                                'author': lines[i+2],
+                                'message': lines[i+3]
+                            })
+                            i += 4
+                except Exception:
+                    pass
+            self._json_response({'commits': commits})
+            return
+        if parsed.path == '/_git-commit-diff':
+            qs = urllib.parse.parse_qs(parsed.query)
+            repo_name = qs.get('repo', [''])[0]
+            commit_hash = qs.get('commit', [''])[0]
+            watched = _parse_watched_file()
+            git_root = None
+            for wr, wn in watched:
+                if wn == repo_name:
+                    git_root = wr
+                    break
+            result = {'files': [], 'error': ''}
+            if not git_root:
+                result['error'] = 'Repository not found'
+            elif not commit_hash:
+                result['error'] = 'No commit specified'
+            else:
+                try:
+                    # Validate commit exists
+                    v = subprocess.run(['git', 'rev-parse', '--verify', commit_hash + '^{commit}'],
+                        cwd=git_root, capture_output=True, timeout=3)
+                    if v.returncode != 0:
+                        result['error'] = 'Commit not found (may have been rebased away)'
+                    else:
+                        r = subprocess.run(
+                            ['git', 'diff-tree', '--no-commit-id', '-r', '--name-only', commit_hash],
+                            cwd=git_root, capture_output=True, text=True, timeout=5)
+                        if r.returncode == 0:
+                            for f in r.stdout.strip().split('\n'):
+                                f = f.strip()
+                                if not f:
+                                    continue
+                                abs_path = os.path.normpath(os.path.join(git_root, f))
+                                result['files'].append(abs_path)
+                except Exception as e:
+                    result['error'] = str(e)
+            self._json_response(result)
+            return
+        if parsed.path == '/_git-select-commit':
+            qs = urllib.parse.parse_qs(parsed.query)
+            repo_name = qs.get('repo', [''])[0]
+            commit_hash = qs.get('commit', [''])[0]
+            watched = _parse_watched_file()
+            git_root = None
+            for wr, wn in watched:
+                if wn == repo_name:
+                    git_root = wr
+                    break
+            if not git_root or not repo_name:
+                self._json_response({'error': 'Repository not found'}, 400)
+                return
+            tabs_file = _git_tabs_path(repo_name)
+            commit_file = os.path.join(DIR, 'commit.' + _sanitize_name(repo_name))
+            if not commit_hash or commit_hash == 'working-tree':
+                # Clear commit selection — go back to working tree
+                if os.path.exists(commit_file):
+                    os.remove(commit_file)
+                # Re-sync to working tree
+                open(os.path.join(DIR, 'loading'), 'w').close()
+                settings_file = os.path.join(os.path.expanduser('~/.config/fileview'), 'git_settings')
+                diff_mode = 'branch'
+                if os.path.exists(settings_file):
+                    try:
+                        diff_mode = json.loads(open(settings_file).read()).get('diff_mode', 'branch')
+                    except Exception:
+                        pass
+                self._resync_repos([(git_root, repo_name)], diff_mode)
+                if SCRIPT:
+                    subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                self._json_response({'ok': True, 'mode': 'working-tree'})
+                return
+            else:
+                # Validate commit
+                try:
+                    v = subprocess.run(['git', 'rev-parse', '--verify', commit_hash + '^{commit}'],
+                        cwd=git_root, capture_output=True, timeout=3)
+                    if v.returncode != 0:
+                        self._json_response({'error': 'Commit not found'}, 400)
+                        return
+                except Exception:
+                    self._json_response({'error': 'Failed to verify commit'}, 400)
+                    return
+                # Save commit selection
+                with open(commit_file, 'w') as f:
+                    f.write(commit_hash)
+                # Get files changed in this commit
+                open(os.path.join(DIR, 'loading'), 'w').close()
+                try:
+                    r = subprocess.run(
+                        ['git', 'diff-tree', '--no-commit-id', '-r', '--name-only', commit_hash],
+                        cwd=git_root, capture_output=True, text=True, timeout=5)
+                    changed = set()
+                    if r.returncode == 0:
+                        for line in r.stdout.strip().split('\n'):
+                            line = line.strip()
+                            if not line:
+                                continue
+                            # For commit diffs, we need the file to exist in the working tree
+                            # to render it. Show it if it exists at HEAD.
+                            abs_path = os.path.normpath(os.path.join(git_root, line))
+                            if os.path.isfile(abs_path):
+                                changed.add(abs_path)
+                    with open(tabs_file, 'w') as f:
+                        f.write('\n'.join(sorted(changed)) + '\n' if changed else '')
+                except Exception:
+                    pass
+                if SCRIPT:
+                    subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                self._json_response({'ok': True, 'mode': 'commit', 'commit': commit_hash})
+                return
         if parsed.path == '/_refresh':
-            # Hard refresh: resync all watched repos, then regen
+            # Hard refresh: clear commit selections, resync all watched repos, then regen
             open(os.path.join(DIR, 'loading'), 'w').close()
+            # Clear any commit selections
+            for cf in glob.glob(os.path.join(DIR, 'commit.*')):
+                try: os.remove(cf)
+                except: pass
             # Read current diff mode
             settings_file = os.path.join(os.path.expanduser('~/.config/fileview'), 'git_settings')
             diff_mode = 'branch'
@@ -434,6 +591,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 tabs_file = _git_tabs_path(repo_name)
                 if os.path.exists(tabs_file):
                     os.remove(tabs_file)
+                commit_file = os.path.join(DIR, 'commit.' + _sanitize_name(repo_name))
+                if os.path.exists(commit_file):
+                    os.remove(commit_file)
                 if os.path.exists(WATCHED):
                     watched = _parse_watched_file()
                     remaining = [wr + '|' + wn for wr, wn in watched if wn != repo_name]

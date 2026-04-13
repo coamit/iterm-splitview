@@ -157,6 +157,13 @@ start_watcher() {
             _parse_watched_line "$line"
             local rname="$WATCHED_DISPLAY_NAME"
             local repo_root="$WATCHED_GIT_ROOT"
+            # Skip polling for repos with a selected commit (static diff)
+            local safe_rname="${rname// /_}"
+            safe_rname="${safe_rname////_}"
+            local commit_file="$_FV_SESSION_DIR/commit.${safe_rname}"
+            if [ -f "$commit_file" ] && [ -s "$commit_file" ]; then
+              continue
+            fi
             local rtf
             rtf=$(_git_tabs_file "$rname")
             if _sync_repo_tabs "$repo_root" "$rtf"; then

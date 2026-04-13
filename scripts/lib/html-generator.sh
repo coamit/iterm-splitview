@@ -3,13 +3,13 @@
 # shellcheck disable=SC2153  # Variables (ACTIVE_FILE etc.) are defined in config.sh
 
 _build_diff_attrs() {
-  local src_file="$1" diff_base="${2:-}" git_root="${3:-}"
+  local src_file="$1" diff_base="${2:-}" git_root="${3:-}" diff_target="${4:-}"
   local added removed removed_escaped
-  added=$(_get_diff_added "$src_file" "$diff_base" "$git_root")
+  added=$(_get_diff_added "$src_file" "$diff_base" "$git_root" "$diff_target")
   if [ -n "$added" ]; then
     printf ' data-diff-added="%s"' "$added"
   fi
-  removed=$(_get_diff_removed "$src_file" "$diff_base" "$git_root")
+  removed=$(_get_diff_removed "$src_file" "$diff_base" "$git_root" "$diff_target")
   if [ -n "$removed" ] && [ "$removed" != "{}" ]; then
     removed_escaped="${removed//\'/\&#39;}"
     printf " data-diff-removed='%s'" "$removed_escaped"
@@ -61,7 +61,7 @@ _build_diff_stats_html() {
 }
 
 _render_code_file() {
-  local src_file="$1" lang="$2" diff_attrs="$3" diff_stats="$4"
+  local src_file="$1" lang="$2" diff_attrs="$3" diff_stats="$4" content_file="${5:-$1}"
   local filename lang_display
   filename=$(basename "$src_file")
   lang_display="${lang:-${src_file##*.}}"
@@ -75,7 +75,7 @@ _render_code_file() {
   printf '  </div>\n'
 
   printf '  <pre><code class="language-%s"%s>' "$lang" "$diff_attrs"
-  sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g' "$src_file"
+  sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g' "$content_file"
   printf '</code></pre>\n'
   printf '</div>\n'
 }
@@ -85,6 +85,8 @@ generate_file_body() {
   local mode="${2:-}"
   local diff_base="${3:-}"
   local git_root="${4:-}"
+  local diff_target="${5:-}"
+  local content_file="${6:-$1}"  # separate content file for commit mode
 
   # In diff mode, render all files as code (with line numbers + diff highlighting)
   if _is_code_file "$src_file" || [ "$mode" = "diff" ]; then
@@ -94,9 +96,9 @@ generate_file_body() {
     if [ "$mode" = "diff" ]; then
       [ -z "$git_root" ] && git_root=$(git -C "$(dirname "$src_file")" rev-parse --show-toplevel 2>/dev/null)
       local added removed file_status
-      added=$(_get_diff_added "$src_file" "$diff_base" "$git_root")
-      removed=$(_get_diff_removed "$src_file" "$diff_base" "$git_root")
-      diff_attrs=$(_build_diff_attrs "$src_file" "$diff_base" "$git_root")
+      added=$(_get_diff_added "$src_file" "$diff_base" "$git_root" "$diff_target")
+      removed=$(_get_diff_removed "$src_file" "$diff_base" "$git_root" "$diff_target")
+      diff_attrs=$(_build_diff_attrs "$src_file" "$diff_base" "$git_root" "$diff_target")
       local rel_path
       rel_path=$(git -C "$git_root" ls-files --full-name -- "$src_file" 2>/dev/null)
       if [ -z "$rel_path" ]; then
@@ -116,7 +118,7 @@ generate_file_body() {
     if [ "$is_markdown" = true ]; then
       # Render both code (raw/diff) and preview views for markdown
       local preview_html
-      preview_html=$(timeout 10 pandoc "$src_file" 2>/dev/null | sed '/<colgroup>/,/<\/colgroup>/d')
+      preview_html=$(timeout 10 pandoc "$content_file" 2>/dev/null | sed '/<colgroup>/,/<\/colgroup>/d')
 
       local filename lang_display
       filename=$(basename "$src_file")
@@ -132,7 +134,7 @@ generate_file_body() {
       printf '  </div>\n'
       printf '  <div class="fv-raw-view">\n'
       printf '  <pre><code class="language-%s"%s>' "$lang" "$diff_attrs"
-      sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g' "$src_file"
+      sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g' "$content_file"
       printf '</code></pre>\n'
       printf '  </div>\n'
       printf '  <div class="fv-preview-view" style="display:none;padding:14px 18px">\n'
@@ -140,7 +142,7 @@ generate_file_body() {
       printf '  </div>\n'
       printf '</div>\n'
     else
-      _render_code_file "$src_file" "$lang" "$diff_attrs" "$diff_stats"
+      _render_code_file "$src_file" "$lang" "$diff_attrs" "$diff_stats" "$content_file"
     fi
   elif _is_text_file "$src_file"; then
     local is_md=false
@@ -156,15 +158,15 @@ generate_file_body() {
       printf '  </div>\n'
       printf '  <div class="fv-raw-view" style="display:none">\n'
       printf '  <pre><code class="language-markdown">'
-      sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g' "$src_file"
+      sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g' "$content_file"
       printf '</code></pre>\n'
       printf '  </div>\n'
       printf '  <div class="fv-preview-view" style="padding:14px 18px">\n'
-      timeout 10 pandoc "$src_file" 2>/dev/null | sed '/<colgroup>/,/<\/colgroup>/d'
+      timeout 10 pandoc "$content_file" 2>/dev/null | sed '/<colgroup>/,/<\/colgroup>/d'
       printf '  </div>\n'
       printf '</div>\n'
     else
-      timeout 10 pandoc "$src_file" 2>/dev/null | sed '/<colgroup>/,/<\/colgroup>/d'
+      timeout 10 pandoc "$content_file" 2>/dev/null | sed '/<colgroup>/,/<\/colgroup>/d'
     fi
   else
     printf '<p class="fv-binary-note" style="font-style:italic">Binary file — cannot render</p>\n'
@@ -349,17 +351,34 @@ _generate_tab_bar() {
 }
 
 _generate_panels_for_group() {
-  local group_id="$1" tabs_src="$2" active_file="$3" body_tmp="$4" mode="$5" diff_base="${6:-}" git_root="${7:-}"
+  local group_id="$1" tabs_src="$2" active_file="$3" body_tmp="$4" mode="$5" diff_base="${6:-}" git_root="${7:-}" diff_target="${8:-}"
   local idx=0
   while IFS= read -r fp; do
     [ -z "$fp" ] || [ ! -f "$fp" ] && continue
-    local active_class=""
+    local active_class="" content_file="$fp"
     [ "$fp" = "$active_file" ] && active_class=" active"
+    # In commit mode, extract the file at the commit version for accurate rendering
+    if [ -n "$diff_target" ] && [ -n "$git_root" ]; then
+      local rel_path
+      rel_path="${fp#"$git_root"/}"
+      local tmp_commit_dir
+      tmp_commit_dir=$(mktemp -d "/tmp/fv-commit-XXXXXX")
+      local tmp_commit_file="${tmp_commit_dir}/$(basename "$fp")"
+      if git -C "$git_root" show "${diff_target}:${rel_path}" > "$tmp_commit_file" 2>/dev/null; then
+        content_file="$tmp_commit_file"
+      else
+        rm -rf "$tmp_commit_dir"
+      fi
+    fi
     {
       printf '<div class="fv-tab-content%s" id="fv-tab-%s-%d">\n' "$active_class" "$group_id" "$idx"
-      generate_file_body "$fp" "$mode" "$diff_base" "$git_root"
+      generate_file_body "$fp" "$mode" "$diff_base" "$git_root" "$diff_target" "$content_file"
       printf '</div>\n'
     } >> "$body_tmp"
+    # Clean up temp dir if used
+    if [ "$content_file" != "$fp" ]; then
+      rm -rf "$(dirname "$content_file")"
+    fi
     idx=$((idx + 1))
   done < "$tabs_src"
 }
@@ -372,7 +391,7 @@ _generate_tab_panels() {
     _generate_panels_for_group "files" "$TABS_FILE" "$active_file" "$body_tmp" ""
   fi
 
-  # Generate panels for each watched repo (with diff mode, using merge-base)
+  # Generate panels for each watched repo (with diff mode, using merge-base or commit parent)
   if [ -f "$WATCHED_FILE" ] && [ -s "$WATCHED_FILE" ]; then
     while IFS= read -r line; do
       [ -z "$line" ] && continue
@@ -382,21 +401,34 @@ _generate_tab_panels() {
       local rtf diff_base=""
       rtf=$(_git_tabs_file "$rname")
       if [ -f "$rtf" ] && [ -s "$rtf" ]; then
-        # Compute merge base for this repo (reset per repo)
-        diff_base=""
-        for candidate in main master; do
-          if git -C "$repo_root" rev-parse --verify "origin/$candidate" &>/dev/null; then
-            local mb head_sha
-            mb=$(git -C "$repo_root" merge-base "origin/$candidate" HEAD 2>/dev/null)
-            head_sha=$(git -C "$repo_root" rev-parse HEAD 2>/dev/null)
-            # If merge-base equals HEAD (on the base branch), use local mode (no base)
-            if [ -n "$mb" ] && [ "$mb" != "$head_sha" ]; then
-              diff_base="$mb"
+        # Check if a specific commit is selected for this repo
+        local safe_rname="${rname// /_}"
+        safe_rname="${safe_rname////_}"
+        local commit_file="$_FV_SESSION_DIR/commit.${safe_rname}"
+        local diff_target=""
+        if [ -f "$commit_file" ] && [ -s "$commit_file" ]; then
+          # Commit mode: diff between commit's parent and the commit itself
+          local selected_commit
+          selected_commit=$(cat "$commit_file")
+          diff_base=$(git -C "$repo_root" rev-parse "${selected_commit}^" 2>/dev/null || echo "")
+          diff_target="$selected_commit"
+        else
+          # Working tree mode: compute merge base for this repo
+          diff_base=""
+          for candidate in main master; do
+            if git -C "$repo_root" rev-parse --verify "origin/$candidate" &>/dev/null; then
+              local mb head_sha
+              mb=$(git -C "$repo_root" merge-base "origin/$candidate" HEAD 2>/dev/null)
+              head_sha=$(git -C "$repo_root" rev-parse HEAD 2>/dev/null)
+              # If merge-base equals HEAD (on the base branch), use local mode (no base)
+              if [ -n "$mb" ] && [ "$mb" != "$head_sha" ]; then
+                diff_base="$mb"
+              fi
+              break
             fi
-            break
-          fi
-        done
-        _generate_panels_for_group "git.${rname}" "$rtf" "$active_file" "$body_tmp" "diff" "$diff_base" "$repo_root"
+          done
+        fi
+        _generate_panels_for_group "git.${rname}" "$rtf" "$active_file" "$body_tmp" "diff" "$diff_base" "$repo_root" "$diff_target"
       fi
     done < "$WATCHED_FILE"
   fi

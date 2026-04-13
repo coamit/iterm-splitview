@@ -141,6 +141,12 @@ function performSwap(newBodyHtml) {
     }
   });
 
+  // 4c. Re-init commit viewer buttons on git group headers
+  initCommitButtons();
+  Object.keys(fv.selectedCommits).forEach(function(repoName) {
+    updateCommitIndicator(repoName);
+  });
+
   // 5. Restore active tab
   restoreViewState(container, state);
 

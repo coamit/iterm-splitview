@@ -128,6 +128,7 @@ function createGroupHeader(groupName, label) {
   groupBar.insertBefore(sel, insertBefore);
   sel.addEventListener('click', function(e) {
     if (e.target.classList.contains('fv-group-close')) return;
+    if (e.target.closest('.fv-commit-btn')) return;
     var tabs = document.querySelectorAll('.fv-tab[data-group="' + groupName + '"]');
     if (tabs.length === 0) {
       switchTabGroup(groupName);
@@ -140,6 +141,8 @@ function createGroupHeader(groupName, label) {
     var first = document.querySelector('.fv-tab.fv-group-visible[data-tab]');
     if (first) { activateTab(first.getAttribute('data-tab')); }
   });
+  // Add commit viewer button for git groups
+  addCommitButton(sel);
 }
 
 function pollGroupCount(groupName, repoName) {

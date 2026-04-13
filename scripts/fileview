@@ -112,9 +112,10 @@ _close_all() {
   stop_server
   rm -f "$TABS_FILE" "$ACTIVE_FILE" "$CWD_FILE" "$SEARCH_ROOT_FILE" "$COLLAPSED_FILE"
   rm -f "$_FV_SESSION_DIR/plan" "$_FV_SESSION_DIR/mode"
-  # Remove watched file and all per-repo git tab files
+  # Remove watched file, all per-repo git tab files, and commit selections
   rm -f "$WATCHED_FILE"
   rm -f "$_FV_SESSION_DIR"/tabs.git.*
+  rm -f "$_FV_SESSION_DIR"/commit.*
   _close_fileview_pane
 }
 
@@ -340,8 +341,11 @@ cmd_unwatch() {
       mv "$tmp" "$WATCHED_FILE"
     fi
 
-    # Remove tabs file
+    # Remove tabs file and commit selection
     rm -f "$(_git_tabs_file "$repo_name")"
+    local safe_rn="${repo_name// /_}"
+    safe_rn="${safe_rn////_}"
+    rm -f "$_FV_SESSION_DIR/commit.${safe_rn}"
     echo "Stopped watching $repo_name"
   done
 
