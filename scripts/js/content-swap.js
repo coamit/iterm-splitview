@@ -163,7 +163,14 @@ function performSwap(newBodyHtml) {
     if (newEpoch) fv.tsGenEpoch = newEpoch;
   }
 
-  // 9. Hide loading indicators
+  // 9. Inject viewed toggles into git tabs and restore viewed state
+  injectViewedToggles(container);
+  checkViewedFileChanges();
+  cleanupViewedState();
+  applyAllViewedStates();
+  updateAllViewedCounters();
+
+  // 10. Hide loading indicators
   fv.loadingToast.style.display = 'none';
   fv.isSwapInProgress = false;
 }

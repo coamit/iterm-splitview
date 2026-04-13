@@ -221,6 +221,8 @@ if (hash && hash.indexOf('fv-group:') === 0) {
 
 // --- Init diffs, then reveal content ---
 initializeDiffCollapse(bodyContainer);
+injectViewedToggles(bodyContainer);
+updateAllViewedCounters();
 var initHideStyle = document.getElementById('fv-init-hide');
 if (initHideStyle) initHideStyle.remove();
 var pageLoader = document.getElementById('fv-page-loader');
@@ -235,6 +237,18 @@ if (groupBar && !hashHandledGroup) {
   var activeGroupSelector = document.querySelector('.fv-group-sel.active');
   if (activeGroupSelector) switchTabGroup(activeGroupSelector.getAttribute('data-group'));
 }
+
+// --- Viewed actions (delegated, survives dynamic DOM updates) ---
+document.addEventListener('click', function(e) {
+  var actionEl = e.target.closest('.fv-viewed-action');
+  if (!actionEl) return;
+  e.stopPropagation();
+  var action = actionEl.getAttribute('data-viewed-action');
+  var group = actionEl.getAttribute('data-viewed-group');
+  if (!action || !group) return;
+  if (action === 'all') markAllViewed(group);
+  else if (action === 'reset') resetAllViewed(group);
+});
 
 // --- Start all pollers ---
 startLoadingPoll();

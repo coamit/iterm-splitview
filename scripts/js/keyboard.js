@@ -34,6 +34,7 @@ var shortcutMap = {
     var fp = getActiveFilePath();
     if (fp) { fetch('/_open-workspace?path=' + encodeURIComponent(fp)); showToast('Opened workspace in Cursor \u2713'); }
   },
+  'v': function() { toggleActiveTabViewed(); },
   ']': function() { navigateToAdjacentTab(1); },
   '[': function() { navigateToAdjacentTab(-1); },
   'w': function() { closeActiveTab(); }

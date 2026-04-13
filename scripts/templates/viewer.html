@@ -294,6 +294,33 @@ th { background: #2d3748; padding: 8px 12px; text-align: left !important; border
 td { padding: 8px 12px; border: 1px solid #4a5568; text-align: left !important; }
 tr:hover { background: #2a3040; }
 
+/* Viewed file toggle (git diff review) */
+.fv-viewed-toggle { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; margin-left: 6px; cursor: pointer; opacity: 0; transition: opacity 0.1s; flex-shrink: 0; border-radius: 3px; }
+.fv-tab:hover .fv-viewed-toggle, .fv-viewed-toggle.viewed { opacity: 1; }
+.fv-viewed-toggle svg { width: 12px; height: 12px; }
+.fv-viewed-toggle .fv-eye-open { display: block; color: #4b5263; }
+.fv-viewed-toggle .fv-eye-closed { display: none; color: #28c840; }
+.fv-viewed-toggle.viewed .fv-eye-open { display: none; }
+.fv-viewed-toggle.viewed .fv-eye-closed { display: block; }
+.fv-viewed-toggle:hover .fv-eye-open { color: #8a90a0; }
+.fv-tab.fv-file-viewed { opacity: 0.45; }
+.fv-tab.fv-file-viewed .fv-viewed-toggle { opacity: 1; }
+/* Viewed counter in group bar */
+.fv-viewed-counter { font-size: 10px; color: #6a7080; font-family: -apple-system, sans-serif; margin-left: 6px; white-space: nowrap; }
+.fv-viewed-counter .fv-viewed-fraction { color: #28c840; }
+.fv-viewed-actions { display: inline-flex; gap: 2px; margin-left: 4px; }
+.fv-viewed-action { cursor: pointer; font-size: 10px; color: #4b5263; padding: 0 3px; border-radius: 3px; }
+.fv-viewed-action:hover { color: #ccd0d4; background: rgba(255,255,255,0.06); }
+@media (prefers-color-scheme: light) {
+  .fv-viewed-toggle .fv-eye-open { color: #9ca3af; }
+  .fv-viewed-toggle .fv-eye-closed { color: #1a7f37; }
+  .fv-viewed-toggle:hover .fv-eye-open { color: #6a737d; }
+  .fv-tab.fv-file-viewed { opacity: 0.45; }
+  .fv-viewed-counter { color: #6a737d; }
+  .fv-viewed-counter .fv-viewed-fraction { color: #1a7f37; }
+  .fv-viewed-action { color: #9ca3af; }
+  .fv-viewed-action:hover { color: #24292e; background: rgba(0,0,0,0.04); }
+}
 /* Git watch modal */
 .fv-git-watch-title { color: #e8ecf0; }
 .fv-git-watch-input { background: #171b24; border: 1px solid #353b4a; color: #e8ecf0; }

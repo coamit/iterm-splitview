@@ -269,6 +269,7 @@ var shortcutsList = [
   { key: 'Ctrl+O', desc: 'Open file by name' },
   { key: 'Ctrl+P', desc: 'Find tab by name' },
   { key: 'Ctrl+D', desc: 'Jump to next diff' },
+  { key: 'Ctrl+V', desc: 'Toggle viewed (git files)' },
   { key: 'Ctrl+X', desc: 'Toggle collapsed/expanded diff' },
   { key: 'Ctrl+E', desc: 'Toggle raw/preview (markdown)' },
   { key: 'Ctrl+C', desc: 'Copy file path' },

@@ -140,7 +140,14 @@ function buildThemeCSS(theme) {
     '.fv-loading-toast-text { color: ' + theme.textMuted + '; }' +
     '.fv-empty-state { color: ' + theme.textMuted + '; }' +
     '.fv-binary-note { color: ' + theme.textMuted + '; }' +
-    '.fv-theme-grid-label { color: ' + theme.textMuted + '; }';
+    '.fv-theme-grid-label { color: ' + theme.textMuted + '; }' +
+    '.fv-viewed-toggle .fv-eye-open { color: ' + theme.textDim + '; }' +
+    '.fv-viewed-toggle .fv-eye-closed { color: ' + theme.diffAddLn + '; }' +
+    '.fv-viewed-toggle:hover .fv-eye-open { color: ' + theme.textMuted + '; }' +
+    '.fv-viewed-counter { color: ' + theme.textMuted + '; }' +
+    '.fv-viewed-counter .fv-viewed-fraction { color: ' + theme.diffAddLn + '; }' +
+    '.fv-viewed-action { color: ' + theme.textDim + '; }' +
+    '.fv-viewed-action:hover { color: ' + theme.text + '; background: ' + (theme.dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)') + '; }';
 }
 
 function applyTheme(id) {

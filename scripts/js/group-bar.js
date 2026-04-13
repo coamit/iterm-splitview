@@ -142,6 +142,189 @@ function createGroupHeader(groupName, label) {
   });
 }
 
+// --- Viewed files feature (git diff review) ---
+
+function getViewedToggleHtml() {
+  return '<span class="fv-viewed-toggle" title="Mark as viewed">' +
+    '<svg class="fv-eye-open" viewBox="0 0 16 16" fill="currentColor"><path d="M8 2c-2.8 0-5.2 1.7-6.8 4.3a1.5 1.5 0 0 0 0 1.4C2.8 10.3 5.2 12 8 12s5.2-1.7 6.8-4.3a1.5 1.5 0 0 0 0-1.4C13.2 3.7 10.8 2 8 2zm0 8.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/><circle cx="8" cy="7" r="2"/></svg>' +
+    '<svg class="fv-eye-closed" viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 1.5l13 13m-1.5-3.6A7.5 7.5 0 0 0 14.8 7.7a1.5 1.5 0 0 0 0-1.4C13.2 3.7 10.8 2 8 2c-1.1 0-2.2.3-3.1.7m-2.5 2A8.4 8.4 0 0 0 1.2 6.3a1.5 1.5 0 0 0 0 1.4C2.8 10.3 5.2 12 8 12c1.1 0 2.2-.3 3.1-.7"/><path d="M6 7a2 2 0 0 0 2.7 1.9M9.5 5.2A2 2 0 0 0 6.2 6.5"/></svg>' +
+    '</span>';
+}
+
+function computeFileContentHash(tabId) {
+  var panel = document.getElementById(tabId);
+  if (!panel) return '';
+  var codeLines = panel.querySelectorAll('.code-line');
+  if (codeLines.length === 0) return '';
+  // Use diff line count + first/last line content as a lightweight hash
+  var diffLines = panel.querySelectorAll('.code-line.diff-added, .code-line.diff-removed');
+  var first = diffLines.length > 0 ? (diffLines[0].textContent || '').substring(0, 40) : '';
+  var last = diffLines.length > 1 ? (diffLines[diffLines.length - 1].textContent || '').substring(0, 40) : '';
+  return diffLines.length + ':' + first + ':' + last;
+}
+
+function setFileViewed(filePath, viewed) {
+  if (viewed) {
+    fv.viewedFiles[filePath] = true;
+    // Snapshot content hash so we can detect changes
+    var tab = document.querySelector('.fv-tab[title="' + escapeCssSelector(filePath) + '"]');
+    if (tab) {
+      var tabId = tab.getAttribute('data-tab');
+      fv.viewedFileHashes[filePath] = computeFileContentHash(tabId);
+    }
+  } else {
+    delete fv.viewedFiles[filePath];
+    delete fv.viewedFileHashes[filePath];
+  }
+  applyViewedState(filePath);
+  updateAllViewedCounters();
+}
+
+function applyViewedState(filePath) {
+  var isViewed = !!fv.viewedFiles[filePath];
+  var tabs = document.querySelectorAll('.fv-tab[title="' + escapeCssSelector(filePath) + '"]');
+  tabs.forEach(function(tab) {
+    tab.classList.toggle('fv-file-viewed', isViewed);
+    var toggle = tab.querySelector('.fv-viewed-toggle');
+    if (toggle) {
+      toggle.classList.toggle('viewed', isViewed);
+      toggle.title = isViewed ? 'Mark as unviewed' : 'Mark as viewed';
+    }
+  });
+}
+
+function applyAllViewedStates() {
+  Object.keys(fv.viewedFiles).forEach(function(fp) {
+    applyViewedState(fp);
+  });
+}
+
+function toggleActiveTabViewed() {
+  var tab = document.querySelector('.fv-tab.active');
+  if (!tab) return;
+  var group = tab.getAttribute('data-group') || '';
+  if (group.indexOf('git.') !== 0) return;
+  var fp = tab.getAttribute('title');
+  if (!fp) return;
+  setFileViewed(fp, !fv.viewedFiles[fp]);
+}
+
+function markAllViewed(groupName) {
+  var tabs = document.querySelectorAll('.fv-tab[data-group="' + groupName + '"][data-tab]');
+  tabs.forEach(function(tab) {
+    var fp = tab.getAttribute('title');
+    if (fp) setFileViewed(fp, true);
+  });
+}
+
+function resetAllViewed(groupName) {
+  var tabs = document.querySelectorAll('.fv-tab[data-group="' + groupName + '"][data-tab]');
+  tabs.forEach(function(tab) {
+    var fp = tab.getAttribute('title');
+    if (fp) setFileViewed(fp, false);
+  });
+}
+
+function getViewedCount(groupName) {
+  var tabs = document.querySelectorAll('.fv-tab[data-group="' + groupName + '"][data-tab]');
+  var total = tabs.length;
+  var viewed = 0;
+  tabs.forEach(function(tab) {
+    var fp = tab.getAttribute('title');
+    if (fp && fv.viewedFiles[fp]) viewed++;
+  });
+  return { viewed: viewed, total: total };
+}
+
+function updateViewedCounter(groupName) {
+  var sel = document.querySelector('.fv-group-sel[data-group="' + groupName + '"]');
+  if (!sel) return;
+  var counts = getViewedCount(groupName);
+  if (counts.total === 0) {
+    // Remove counter if group has no tabs
+    var existing = sel.querySelector('.fv-viewed-counter');
+    if (existing) existing.remove();
+    return;
+  }
+  var counter = sel.querySelector('.fv-viewed-counter');
+  if (!counter) {
+    counter = document.createElement('span');
+    counter.className = 'fv-viewed-counter';
+    // Insert before the close button
+    var closeBtn = sel.querySelector('.fv-group-close');
+    if (closeBtn) {
+      sel.insertBefore(counter, closeBtn);
+    } else {
+      sel.appendChild(counter);
+    }
+  }
+  var fractionHtml = counts.viewed > 0
+    ? '<span class="fv-viewed-fraction">' + counts.viewed + '/' + counts.total + '</span>'
+    : '';
+  var actionsHtml = '<span class="fv-viewed-actions">' +
+    '<span class="fv-viewed-action" data-viewed-action="all" data-viewed-group="' + escapeHtml(groupName) + '" title="Mark all as viewed">&#10003;</span>' +
+    '<span class="fv-viewed-action" data-viewed-action="reset" data-viewed-group="' + escapeHtml(groupName) + '" title="Reset all">&#8635;</span>' +
+    '</span>';
+  counter.innerHTML = fractionHtml + actionsHtml;
+}
+
+function updateAllViewedCounters() {
+  document.querySelectorAll('.fv-group-sel[data-group^="git."]').forEach(function(sel) {
+    var groupName = sel.getAttribute('data-group');
+    updateViewedCounter(groupName);
+  });
+}
+
+function cleanupViewedState() {
+  // Remove viewed state for files no longer in any git tab
+  var gitFilePaths = {};
+  document.querySelectorAll('.fv-tab[data-group^="git."][data-tab]').forEach(function(tab) {
+    var fp = tab.getAttribute('title');
+    if (fp) gitFilePaths[fp] = true;
+  });
+  Object.keys(fv.viewedFiles).forEach(function(fp) {
+    if (!gitFilePaths[fp]) {
+      delete fv.viewedFiles[fp];
+      delete fv.viewedFileHashes[fp];
+    }
+  });
+}
+
+function checkViewedFileChanges() {
+  // If a file was marked viewed but its content changed, reset to unviewed
+  Object.keys(fv.viewedFiles).forEach(function(fp) {
+    var tab = document.querySelector('.fv-tab[title="' + escapeCssSelector(fp) + '"]');
+    if (!tab) return;
+    var tabId = tab.getAttribute('data-tab');
+    var currentHash = computeFileContentHash(tabId);
+    var savedHash = fv.viewedFileHashes[fp];
+    if (savedHash && currentHash && savedHash !== currentHash) {
+      delete fv.viewedFiles[fp];
+      delete fv.viewedFileHashes[fp];
+      applyViewedState(fp);
+    }
+  });
+}
+
+function injectViewedToggles(root) {
+  var container = root || document;
+  container.querySelectorAll('.fv-tab[data-group^="git."][data-tab]').forEach(function(tab) {
+    // Don't add duplicate toggles
+    if (tab.querySelector('.fv-viewed-toggle')) return;
+    var toggleHtml = getViewedToggleHtml();
+    var toggleWrapper = document.createElement('span');
+    toggleWrapper.innerHTML = toggleHtml;
+    var toggle = toggleWrapper.firstChild;
+    tab.appendChild(toggle);
+    toggle.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var fp = tab.getAttribute('title');
+      if (!fp) return;
+      setFileViewed(fp, !fv.viewedFiles[fp]);
+    });
+  });
+}
+
 function pollGroupCount(groupName, repoName) {
   var attempts = 0;
   var pollInterval = setInterval(function() {

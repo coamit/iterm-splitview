@@ -52,6 +52,10 @@ window.fv = {
   modalModeText: null,
   modalRootEl: null,
   // Diff counter dismiss handler
-  _diffCounterDismiss: null
+  _diffCounterDismiss: null,
+  // Viewed files state (git diff review) — keyed by file path
+  viewedFiles: {},
+  // Content hashes for detecting file changes — keyed by file path
+  viewedFileHashes: {}
 };
 var fv = window.fv;
