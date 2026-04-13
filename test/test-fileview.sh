@@ -10,6 +10,15 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 FIXTURE_DIR="$SCRIPT_DIR/fixtures"
 
+# Add project scripts to PATH so fileview is available
+export PATH="$PROJECT_DIR/scripts:$PATH"
+
+# In CI, fileview needs an iTerm session which doesn't exist — skip all tests
+if [ -n "${CI:-}" ]; then
+  echo "CLI tests: skipped in CI (needs iTerm2)"
+  exit 0
+fi
+
 PASS=0
 FAIL=0
 
