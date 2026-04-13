@@ -24,12 +24,23 @@ start_server() {
   port=$(python3 -c "import socket; s=socket.socket(); s.bind(('',0)); print(s.getsockname()[1]); s.close()")
   echo "$port" > "$SERVER_PORT_FILE"
   FILEVIEW_SCRIPT="$(realpath "${_FV_ENTRYPOINT:-$0}")" python3 -c "
-import http.server, socketserver, urllib.parse, os, sys, subprocess, json, threading, signal
+import http.server, socketserver, urllib.parse, os, sys, subprocess, json, threading, signal, glob
 
 DIR = sys.argv[1]
 TABS = os.path.join(DIR, 'tabs')
+WATCHED = os.path.join(DIR, 'watched')
+COLLAPSED = os.path.join(DIR, 'collapsed')
 SEARCH_ROOT = os.path.join(DIR, 'search_root')
 SCRIPT = os.environ.get('FILEVIEW_SCRIPT', '')
+TABS_LOCK = threading.Lock()
+
+def _all_git_tab_files():
+    return sorted(glob.glob(os.path.join(DIR, 'tabs.git.*')))
+
+def _all_tab_files():
+    result = [TABS]
+    result.extend(_all_git_tab_files())
+    return result
 
 SEARCH_TIMEOUT = 5
 SEARCH_EXCLUDES = ['.git', 'node_modules', '.cache', '__pycache__', '.DS_Store',
@@ -112,20 +123,44 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             qs = urllib.parse.parse_qs(parsed.query)
             fp = qs.get('path', [''])[0]
             new_active = qs.get('active', [''])[0]
-            if fp and os.path.exists(TABS):
-                with open(TABS) as f:
-                    lines = [l for l in f.read().splitlines() if l and l != fp]
-                with open(TABS, 'w') as f:
-                    f.write('\n'.join(lines) + '\n' if lines else '')
-                active_file = os.path.join(DIR, 'active')
-                if new_active:
-                    with open(active_file, 'w') as f:
-                        f.write(new_active)
-                elif lines:
-                    with open(active_file, 'w') as f:
-                        f.write(lines[0])
+            if fp:
+                with TABS_LOCK:
+                    all_remaining = []
+                    for tabfile in _all_tab_files():
+                        if os.path.exists(tabfile):
+                            with open(tabfile) as f:
+                                lines = [l for l in f.read().splitlines() if l and l != fp]
+                            with open(tabfile, 'w') as f:
+                                f.write('\n'.join(lines) + '\n' if lines else '')
+                            all_remaining.extend(lines)
+                    active_file = os.path.join(DIR, 'active')
+                    if new_active:
+                        with open(active_file, 'w') as f:
+                            f.write(new_active)
+                    elif all_remaining:
+                        with open(active_file, 'w') as f:
+                            f.write(all_remaining[0])
                 if SCRIPT:
                     subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self.send_response(204)
+            self.end_headers()
+            return
+        if parsed.path == '/_collapse':
+            qs = urllib.parse.parse_qs(parsed.query)
+            group = qs.get('group', [''])[0]
+            state = qs.get('state', [''])[0]
+            if group:
+                groups = set()
+                if os.path.exists(COLLAPSED):
+                    groups = set(l.strip() for l in open(COLLAPSED).readlines() if l.strip())
+                if state == 'open':
+                    groups.discard(group)
+                elif state == 'closed':
+                    groups.add(group)
+                else:
+                    groups.symmetric_difference_update({group})
+                with open(COLLAPSED, 'w') as f:
+                    f.write('\n'.join(sorted(groups)) + '\n' if groups else '')
             self.send_response(204)
             self.end_headers()
             return
@@ -181,8 +216,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             gen_val = tabs_val = ''
             try:
                 with open(os.path.join(DIR, 'index.html')) as f:
-                    head = f.read(20000)
-                m = re.search(r'data-fv-gen=\"(\d+)\"', head)
+                    head = f.read()
+                m = re.search(r'data-fv-gen=\"([^\"]+)\"', head)
                 if m: gen_val = m.group(1)
                 m2 = re.search(r'data-fv-tabs=\"(\d+)\"', head)
                 if m2: tabs_val = m2.group(1)
@@ -261,9 +296,124 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps(results).encode())
             return
+        if parsed.path == '/_git-settings':
+            qs = urllib.parse.parse_qs(parsed.query)
+            settings_dir = os.path.expanduser('~/.config/fileview')
+            os.makedirs(settings_dir, exist_ok=True)
+            settings_file = os.path.join(settings_dir, 'git_settings')
+            # Also keep a session-local copy for the watcher
+            session_settings = os.path.join(DIR, 'git_settings')
+            # Read current settings
+            settings = {'diff_mode': 'branch'}
+            if os.path.exists(settings_file):
+                try:
+                    settings = json.loads(open(settings_file).read())
+                except Exception:
+                    pass
+            # Update if params provided
+            new_mode = qs.get('diff_mode', [''])[0]
+            if new_mode in ('branch', 'local'):
+                settings['diff_mode'] = new_mode
+                for sf in [settings_file, session_settings]:
+                    with open(sf, 'w') as f:
+                        f.write(json.dumps(settings))
+                # Re-sync all watched repos with new mode, then regen
+                open(os.path.join(DIR, 'loading'), 'w').close()
+                self._resync_all_repos(new_mode)
+                # Set active to first file in first git tab file
+                for gtf in sorted(_all_git_tab_files()):
+                    if os.path.exists(gtf) and os.path.getsize(gtf) > 0:
+                        with open(gtf) as f:
+                            first = f.readline().strip()
+                        if first:
+                            with open(os.path.join(DIR, 'active'), 'w') as f:
+                                f.write(first)
+                        break
+                if SCRIPT:
+                    subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            new_watch = qs.get('watch', [''])[0]
+            if new_watch:
+                new_watch = os.path.expanduser(new_watch)
+                if os.path.isdir(new_watch):
+                    try:
+                        r = subprocess.run(['git', 'rev-parse', '--show-toplevel'],
+                            cwd=new_watch, capture_output=True, text=True, timeout=2)
+                        if r.returncode == 0:
+                            git_root = r.stdout.strip()
+                            watched_lines = []
+                            if os.path.exists(WATCHED):
+                                with open(WATCHED) as f:
+                                    watched_lines = [l.strip() for l in f.readlines() if l.strip()]
+                            if git_root not in watched_lines:
+                                watched_lines.append(git_root)
+                                with open(WATCHED, 'w') as f:
+                                    f.write('\n'.join(watched_lines) + '\n')
+                                settings['added'] = os.path.basename(git_root)
+                                # Do initial sync for the new repo immediately
+                                open(os.path.join(DIR, 'loading'), 'w').close()
+                                rname = os.path.basename(git_root)
+                                self._resync_repos([git_root], settings.get('diff_mode', 'branch'))
+                                # Don't change active file — client handles navigation via URL hash
+                                if SCRIPT:
+                                    subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                            else:
+                                settings['already_watching'] = os.path.basename(git_root)
+                        else:
+                            settings['error'] = 'Not a git repository'
+                    except Exception:
+                        settings['error'] = 'Failed to resolve git root'
+                else:
+                    settings['error'] = 'Directory not found'
+            # Return current watched repos
+            watched_repos = []
+            if os.path.exists(WATCHED):
+                with open(WATCHED) as f:
+                    watched_repos = [l.strip() for l in f.readlines() if l.strip()]
+            settings['watched'] = [os.path.basename(r) for r in watched_repos]
+            # Include per-repo tab counts
+            repo_counts = {}
+            for r in watched_repos:
+                rname = os.path.basename(r)
+                tf = os.path.join(DIR, 'tabs.git.' + rname)
+                if os.path.exists(tf):
+                    with open(tf) as f:
+                        repo_counts[rname] = len([l for l in f.read().splitlines() if l.strip()])
+                else:
+                    repo_counts[rname] = 0
+            settings['repo_counts'] = repo_counts
+            self._json_response(settings)
+            return
         if parsed.path == '/_refresh':
+            # Hard refresh: resync all watched repos, then regen
+            open(os.path.join(DIR, 'loading'), 'w').close()
+            # Read current diff mode
+            settings_file = os.path.join(os.path.expanduser('~/.config/fileview'), 'git_settings')
+            diff_mode = 'branch'
+            if os.path.exists(settings_file):
+                try:
+                    diff_mode = json.loads(open(settings_file).read()).get('diff_mode', 'branch')
+                except Exception:
+                    pass
+            self._resync_all_repos(diff_mode)
             if SCRIPT:
                 subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self.send_response(204)
+            self.end_headers()
+            return
+        if parsed.path == '/_unwatch':
+            qs = urllib.parse.parse_qs(parsed.query)
+            repo_name = qs.get('name', [''])[0]
+            if repo_name:
+                tabs_file = os.path.join(DIR, 'tabs.git.' + repo_name)
+                if os.path.exists(tabs_file):
+                    os.remove(tabs_file)
+                if os.path.exists(WATCHED):
+                    with open(WATCHED) as f:
+                        lines = [l for l in f.read().splitlines() if l and os.path.basename(l) != repo_name]
+                    with open(WATCHED, 'w') as f:
+                        f.write('\n'.join(lines) + '\n' if lines else '')
+                if SCRIPT:
+                    subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self.send_response(204)
             self.end_headers()
             return
@@ -273,18 +423,50 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if fp and os.path.isfile(fp):
                 # Signal loading state
                 open(os.path.join(DIR, 'loading'), 'w').close()
-                # Add to tabs
-                tabs_lines = []
-                if os.path.exists(TABS):
-                    with open(TABS) as f:
-                        tabs_lines = [l for l in f.read().splitlines() if l]
-                if fp not in tabs_lines:
-                    tabs_lines.append(fp)
-                    with open(TABS, 'w') as f:
-                        f.write('\n'.join(tabs_lines) + '\n')
-                # Set as active
-                with open(os.path.join(DIR, 'active'), 'w') as f:
-                    f.write(fp)
+                # Only route to git tab files for repos that are actively watched
+                watched_repos = set()
+                if os.path.exists(WATCHED):
+                    with open(WATCHED) as f:
+                        watched_repos = set(l.strip() for l in f.readlines() if l.strip())
+                watched_names = set(os.path.basename(r) for r in watched_repos)
+                target_tabs = TABS
+                for gtf in _all_git_tab_files():
+                    # Only check git tab files for watched repos
+                    gtf_name = os.path.basename(gtf).replace('tabs.git.', '', 1)
+                    if gtf_name not in watched_names:
+                        continue
+                    if os.path.exists(gtf):
+                        with open(gtf) as f:
+                            if fp in [l.strip() for l in f.readlines()]:
+                                target_tabs = gtf
+                                break
+                # If not already in a git tab file, check if it's a git-changed file in a watched repo
+                if target_tabs == TABS and watched_repos:
+                    git_root = self._get_git_root()
+                    if git_root and git_root in watched_repos:
+                        try:
+                            changed = set()
+                            for cmd in [['git','diff','--name-only'],['git','diff','--name-only','--cached'],['git','ls-files','--others','--exclude-standard']]:
+                                r = subprocess.run(cmd, cwd=git_root, capture_output=True, text=True, timeout=2)
+                                for l in r.stdout.splitlines():
+                                    if l.strip():
+                                        changed.add(os.path.normpath(os.path.join(git_root, l.strip())))
+                            if fp in changed:
+                                rname = os.path.basename(git_root)
+                                target_tabs = os.path.join(DIR, 'tabs.git.' + rname)
+                        except Exception:
+                            pass
+                # Add to the correct tab file (locked to prevent race with concurrent opens)
+                with TABS_LOCK:
+                    tabs_lines = []
+                    if os.path.exists(target_tabs):
+                        with open(target_tabs) as f:
+                            tabs_lines = [l for l in f.read().splitlines() if l]
+                    if fp not in tabs_lines:
+                        tabs_lines.append(fp)
+                        with open(target_tabs, 'w') as f:
+                            f.write('\n'.join(tabs_lines) + '\n')
+                # Don't change active file — client handles activation via URL hash
                 # Regenerate HTML
                 if SCRIPT:
                     subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -292,6 +474,69 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             return
         super().do_GET()
+
+    def _resync_repos(self, repos, diff_mode):
+        for repo_root in repos:
+            rname = os.path.basename(repo_root)
+            tabs_file = os.path.join(DIR, 'tabs.git.' + rname)
+            try:
+                if diff_mode == 'local':
+                    cmds = [['git','diff','--name-only'], ['git','diff','--name-only','--cached'], ['git','ls-files','--others','--exclude-standard']]
+                else:
+                    # Find merge base
+                    base = None
+                    for c in ['main', 'master']:
+                        r = subprocess.run(['git','rev-parse','--verify','origin/'+c], cwd=repo_root, capture_output=True, timeout=2)
+                        if r.returncode == 0:
+                            mb = subprocess.run(['git','merge-base','origin/'+c,'HEAD'], cwd=repo_root, capture_output=True, text=True, timeout=3)
+                            if mb.returncode == 0: base = mb.stdout.strip()
+                            break
+                    if base:
+                        cmds = [['git','diff','--name-only',base], ['git','ls-files','--others','--exclude-standard']]
+                    else:
+                        cmds = [['git','diff','--name-only'], ['git','diff','--name-only','--cached'], ['git','ls-files','--others','--exclude-standard']]
+                changed = set()
+                for cmd in cmds:
+                    r = subprocess.run(cmd, cwd=repo_root, capture_output=True, text=True, timeout=5)
+                    for l in r.stdout.splitlines():
+                        if l.strip():
+                            p = os.path.normpath(os.path.join(repo_root, l.strip()))
+                            if os.path.isfile(p): changed.add(p)
+                with open(tabs_file, 'w') as f:
+                    f.write('\n'.join(sorted(changed)) + '\n' if changed else '')
+            except Exception:
+                pass
+
+    def _resync_all_repos(self, diff_mode):
+        if not os.path.exists(WATCHED): return
+        with open(WATCHED) as f:
+            repos = [l.strip() for l in f.readlines() if l.strip()]
+        self._resync_repos(repos, diff_mode)
+
+    def _json_response(self, data, code=200):
+        self.send_response(code)
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps(data).encode())
+
+    def _get_git_root(self):
+        # Try active file's directory, then CWD
+        active_file = os.path.join(DIR, 'active')
+        dirs_to_try = []
+        if os.path.exists(active_file):
+            ap = open(active_file).read().strip()
+            if ap: dirs_to_try.append(os.path.dirname(ap))
+        cwd_file = os.path.join(DIR, 'cwd')
+        if os.path.exists(cwd_file):
+            dirs_to_try.append(open(cwd_file).read().strip())
+        for d in dirs_to_try:
+            if not d or not os.path.isdir(d): continue
+            try:
+                r = subprocess.run(['git', 'rev-parse', '--show-toplevel'],
+                    cwd=d, capture_output=True, text=True, timeout=2)
+                if r.returncode == 0: return r.stdout.strip()
+            except Exception: pass
+        return None
 
 class ThreadedServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
     daemon_threads = True

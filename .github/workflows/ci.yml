@@ -7,33 +7,26 @@ on:
     branches: [main]
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
+  lint-and-test:
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Install ShellCheck
-        run: sudo apt-get install -y shellcheck
+        run: brew install shellcheck
 
-      - name: Run ShellCheck on scripts
-        run: cd scripts && shellcheck -x fileview fileedit fileview-plan lib/*.sh
+      - name: Lint (ShellCheck + ESLint)
+        run: make lint
 
-      - name: Verify scripts are executable
-        run: |
-          for script in scripts/fileview scripts/fileedit scripts/fileview-plan; do
-            if [ ! -x "$script" ]; then
-              echo "ERROR: $script is not executable"
-              exit 1
-            fi
-          done
-          echo "All scripts are executable"
+      - name: JS Unit Tests
+        run: make test-js
 
-      - name: Verify shebangs
-        run: |
-          for script in scripts/fileview scripts/fileedit scripts/fileview-plan; do
-            head -1 "$script" | grep -q '^#!/bin/bash' || {
-              echo "ERROR: $script missing #!/bin/bash shebang"
-              exit 1
-            }
-          done
-          echo "All scripts have correct shebang"
+      - name: CLI Integration Tests
+        env:
+          CI: true
+        run: make test-cli
