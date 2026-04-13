@@ -135,6 +135,19 @@ cp claude-code/SKILL.md ~/.claude/skills/iterm-splitview/SKILL.md
 
 ## Changelog
 
+### 2026-04-13 — Modular JS, Linting, Tests & CI
+
+- **Modular JavaScript** — split 2100-line inline `<script>` into 11 focused modules (`tab-bar.js`, `search-modal.js`, `theme-engine.js`, etc.) loaded via `<script src>` tags; no build step needed
+- **ESLint** — custom rules matching project coding guidelines: max function length (40 lines), no single-letter variables, no empty catch blocks, strict equality
+- **ShellCheck** — static analysis for all bash scripts with warning severity
+- **JS unit tests** — 23 tests for pure functions (`escHtml`, `fuzzyMatch`, `fuzzyHighlight`) using Node's built-in test runner (`node --test`)
+- **CLI integration tests** — 13 end-to-end tests: open/close single and multiple files, duplicate detection, active tab preservation after close
+- **Browser smoke tests** — verify page serves, script tags present, no error indicators, content hash marker exists
+- **GitHub Actions CI** — runs lint + tests on every PR and push to main; blocks merge on failure
+- **CONTRIBUTING.md** — architecture guide, code standards, naming conventions, function size limits, error handling rules
+- **AGENTS.md** — coding guidelines for AI agents: feature-based organization, naming rules, refactoring checklist, "what NOT to do" list
+- **Makefile** — `make lint` (ShellCheck + ESLint), `make test` (Node + bash), `make check` (both)
+
 ### 2026-04-12 — In-Place Content Swap, Multi-Repo Watch & UX Improvements
 
 - **Zero-blank-page updates** — replaced `location.reload()` with in-place DOM swapping via `DOMParser`; old content stays visible until new content is fully initialized offscreen, then swapped in a single operation
