@@ -125,7 +125,22 @@ function buildThemeCSS(theme) {
     '.fv-tab[data-group^="git."].active::after { background: ' + theme.accent + '; }' +
     '.fv-group-sel[data-group^="git."].active { color: ' + theme.accent + '; border-bottom-color: ' + theme.accent + '; }' +
     '.fv-group-close { color: ' + theme.textDim + '; }' +
-    '.fv-group-close:hover { color: #ff5f57; }';
+    '.fv-group-close:hover { color: #ff5f57; }' +
+    '.fv-git-watch-title { color: ' + theme.textBright + '; }' +
+    '.fv-git-watch-input { background: ' + theme.bgAlt + '; border-color: ' + theme.border + '; color: ' + theme.textBright + '; }' +
+    '.fv-git-watch-btn { background: ' + theme.border + '; color: ' + theme.text + '; }' +
+    '.fv-git-watch-btn:hover { background: ' + theme.textDim + '; }' +
+    '.fv-git-watch-status { color: ' + theme.textMuted + '; }' +
+    '.fv-git-desc { color: ' + theme.textMuted + '; }' +
+    '.fv-git-hint { color: ' + theme.textMuted + '; }' +
+    '.fv-git-hint-key { color: ' + theme.text + '; }' +
+    '.fv-page-loader-spinner { border-color: ' + theme.border + '; border-top-color: ' + theme.text + '; }' +
+    '.fv-loading-toast { background: ' + theme.bgAlt + '; border-color: ' + theme.border + '; }' +
+    '.fv-loading-toast-spinner { border-color: ' + theme.border + '; border-top-color: ' + theme.accent + '; }' +
+    '.fv-loading-toast-text { color: ' + theme.textMuted + '; }' +
+    '.fv-empty-state { color: ' + theme.textMuted + '; }' +
+    '.fv-binary-note { color: ' + theme.textMuted + '; }' +
+    '.fv-theme-grid-label { color: ' + theme.textMuted + '; }';
 }
 
 function applyTheme(id) {
@@ -172,9 +187,9 @@ function renderThemeGrid() {
     (theme.dark ? darkThemes : lightThemes).push(id);
   });
   fv.themeGrid.innerHTML =
-    '<div style="grid-column:1/-1;font-size:10px;color:#6a7080;text-transform:uppercase;letter-spacing:0.5px;padding:4px 0;font-family:-apple-system,sans-serif">Dark</div>' +
+    '<div class="fv-theme-grid-label" style="grid-column:1/-1;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;padding:4px 0;font-family:-apple-system,sans-serif">Dark</div>' +
     darkThemes.map(function(id) { return renderThemeCard(id, current); }).join('') +
-    '<div style="grid-column:1/-1;font-size:10px;color:#6a7080;text-transform:uppercase;letter-spacing:0.5px;padding:8px 0 4px;font-family:-apple-system,sans-serif">Light</div>' +
+    '<div class="fv-theme-grid-label" style="grid-column:1/-1;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;padding:8px 0 4px;font-family:-apple-system,sans-serif">Light</div>' +
     lightThemes.map(function(id) { return renderThemeCard(id, current); }).join('');
 }
 

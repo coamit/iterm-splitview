@@ -36,11 +36,11 @@ function switchTabGroup(groupName) {
   if (!hasVisibleTabs) {
     document.querySelectorAll('.fv-tab-content.active').forEach(function(content) { content.classList.remove('active'); });
     var emptyDiv = document.createElement('div');
-    emptyDiv.className = 'fv-tab-content active';
+    emptyDiv.className = 'fv-tab-content active fv-empty-state';
     emptyDiv.id = 'fv-group-empty';
     var isGit = groupName.indexOf('git.') === 0;
     var msg = isGit ? 'No changes on this branch' : 'Press Ctrl+O to open a file';
-    emptyDiv.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 80px);color:#6a7080;font-size:13px;font-family:-apple-system,sans-serif';
+    emptyDiv.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 80px);font-size:13px;font-family:-apple-system,sans-serif';
     emptyDiv.textContent = msg;
     document.body.appendChild(emptyDiv);
   }

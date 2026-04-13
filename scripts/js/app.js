@@ -183,8 +183,9 @@ mermaid.initialize({ startOnLoad: true, theme: fv.isDark ? 'dark' : 'default' })
 // --- Loading toast (dynamically created) ---
 fv.loadingToast = document.createElement('div');
 fv.loadingToast.id = 'fv-loading';
-fv.loadingToast.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#171b24;border:1px solid #353b4a;border-radius:8px;padding:8px 16px;display:none;align-items:center;gap:8px;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,0.4)';
-fv.loadingToast.innerHTML = '<div style="width:14px;height:14px;border:2px solid #353b4a;border-top-color:#73b8f0;border-radius:50%;animation:fvspin 0.8s linear infinite"></div><span style="font-size:12px;color:#6a7080;font-family:-apple-system,sans-serif">Loading...</span>';
+fv.loadingToast.className = 'fv-loading-toast';
+fv.loadingToast.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);border-radius:8px;padding:8px 16px;display:none;align-items:center;gap:8px;z-index:999';
+fv.loadingToast.innerHTML = '<div class="fv-loading-toast-spinner" style="width:14px;height:14px;border-radius:50%;animation:fvspin 0.8s linear infinite"></div><span class="fv-loading-toast-text" style="font-size:12px;font-family:-apple-system,sans-serif">Loading...</span>';
 var spinnerStyle = document.createElement('style');
 spinnerStyle.textContent = '@keyframes fvspin{to{transform:rotate(360deg)}}';
 document.body.appendChild(spinnerStyle);

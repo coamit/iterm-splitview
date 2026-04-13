@@ -167,7 +167,7 @@ generate_file_body() {
       timeout 10 pandoc "$src_file" 2>/dev/null | sed '/<colgroup>/,/<\/colgroup>/d'
     fi
   else
-    printf '<p style="color:#6a7080;font-style:italic">Binary file — cannot render</p>\n'
+    printf '<p class="fv-binary-note" style="font-style:italic">Binary file — cannot render</p>\n'
   fi
 }
 
@@ -461,7 +461,7 @@ generate_tabbed_html() {
       printf '<div class="fv-tab-bar"><div class="fv-tab-spacer"></div>'
       printf '<div class="fv-tab-action" id="fv-refresh" title="Refresh"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 3a5 5 0 0 0-4.55 2.92.5.5 0 1 1-.9-.38A6 6 0 0 1 14 8a6 6 0 0 1-6 6 6 6 0 0 1-5.46-3.54.5.5 0 0 1 .92-.38A5 5 0 1 0 8 3z"/><path d="M6.5 1a.5.5 0 0 1 .5.5V5h3.5a.5.5 0 0 1 0 1H6.5a.5.5 0 0 1-.5-.5V1.5a.5.5 0 0 1 .5-.5z"/></svg></div>'
       printf '</div>\n'
-      printf '<div class="fv-tab-content active" id="fv-tab-empty" style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 50px);color:#6a7080;font-size:13px;font-family:-apple-system,sans-serif">Press Ctrl+O to open a file</div>\n'
+      printf '<div class="fv-tab-content active fv-empty-state" id="fv-tab-empty" style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 50px);font-size:13px;font-family:-apple-system,sans-serif">Press Ctrl+O to open a file</div>\n'
     } > "$body_tmp"
   else
     active_file=$(_resolve_active_file)
