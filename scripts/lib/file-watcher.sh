@@ -22,10 +22,11 @@ _collect_mtimes() {
   fi
   # Collect from watched git tab files only
   if [ -f "$WATCHED_FILE" ] && [ -s "$WATCHED_FILE" ]; then
-    while IFS= read -r repo_root; do
-      [ -z "$repo_root" ] && continue
+    while IFS= read -r line; do
+      [ -z "$line" ] && continue
+      _parse_watched_line "$line"
       local rname gtf
-      rname=$(basename "$repo_root")
+      rname="$WATCHED_DISPLAY_NAME"
       gtf=$(_git_tabs_file "$rname")
       [ -f "$gtf" ] && [ -s "$gtf" ] || continue
       while IFS= read -r fp; do
@@ -120,10 +121,11 @@ start_watcher() {
     # Initial git sync for all watched repos
     if [ -f "$WATCHED_FILE" ] && [ -s "$WATCHED_FILE" ]; then
       local any_changed=false
-      while IFS= read -r repo_root; do
-        [ -z "$repo_root" ] && continue
-        local rname
-        rname=$(basename "$repo_root")
+      while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        _parse_watched_line "$line"
+        local rname="$WATCHED_DISPLAY_NAME"
+        local repo_root="$WATCHED_GIT_ROOT"
         local rtf
         rtf=$(_git_tabs_file "$rname")
         if _sync_repo_tabs "$repo_root" "$rtf"; then
@@ -150,10 +152,11 @@ start_watcher() {
       if [ $git_poll_counter -ge 3 ]; then
         git_poll_counter=0
         if [ -f "$WATCHED_FILE" ] && [ -s "$WATCHED_FILE" ]; then
-          while IFS= read -r repo_root; do
-            [ -z "$repo_root" ] && continue
-            local rname
-            rname=$(basename "$repo_root")
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            _parse_watched_line "$line"
+            local rname="$WATCHED_DISPLAY_NAME"
+            local repo_root="$WATCHED_GIT_ROOT"
             local rtf
             rtf=$(_git_tabs_file "$rname")
             if _sync_repo_tabs "$repo_root" "$rtf"; then

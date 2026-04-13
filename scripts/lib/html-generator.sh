@@ -178,10 +178,10 @@ _show_loading() {
 _all_tab_files() {
   echo "$TABS_FILE"
   if [ -f "$WATCHED_FILE" ]; then
-    while IFS= read -r repo_root; do
-      [ -z "$repo_root" ] && continue
-      local name
-      name=$(basename "$repo_root")
+    while IFS= read -r line; do
+      [ -z "$line" ] && continue
+      _parse_watched_line "$line"
+      local name="$WATCHED_DISPLAY_NAME"
       local tf
       tf=$(_git_tabs_file "$name")
       [ -f "$tf" ] && echo "$tf"
@@ -289,10 +289,10 @@ _generate_tab_bar() {
   local -a repo_counts=()
   local has_any_git=false
   if [ -f "$WATCHED_FILE" ] && [ -s "$WATCHED_FILE" ]; then
-    while IFS= read -r repo_root; do
-      [ -z "$repo_root" ] && continue
-      local rname
-      rname=$(basename "$repo_root")
+    while IFS= read -r line; do
+      [ -z "$line" ] && continue
+      _parse_watched_line "$line"
+      local rname="$WATCHED_DISPLAY_NAME"
       local rtf
       rtf=$(_git_tabs_file "$rname")
       if [ -f "$rtf" ] && [ -s "$rtf" ]; then
@@ -374,10 +374,12 @@ _generate_tab_panels() {
 
   # Generate panels for each watched repo (with diff mode, using merge-base)
   if [ -f "$WATCHED_FILE" ] && [ -s "$WATCHED_FILE" ]; then
-    while IFS= read -r repo_root; do
-      [ -z "$repo_root" ] && continue
-      local rname rtf diff_base=""
-      rname=$(basename "$repo_root")
+    while IFS= read -r line; do
+      [ -z "$line" ] && continue
+      _parse_watched_line "$line"
+      local repo_root="$WATCHED_GIT_ROOT"
+      local rname="$WATCHED_DISPLAY_NAME"
+      local rtf diff_base=""
       rtf=$(_git_tabs_file "$rname")
       if [ -f "$rtf" ] && [ -s "$rtf" ]; then
         # Compute merge base for this repo (reset per repo)
@@ -434,8 +436,12 @@ generate_tabbed_html() {
     gtf_name=$(basename "$gtf" | sed 's/^tabs\.git\.//')
     local is_watched=false
     if [ -f "$WATCHED_FILE" ] && [ -s "$WATCHED_FILE" ]; then
-      while IFS= read -r wr; do
-        [ "$(basename "$wr")" = "$gtf_name" ] && { is_watched=true; break; }
+      while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        _parse_watched_line "$line"
+        local safe_name="${WATCHED_DISPLAY_NAME// /_}"
+        safe_name="${safe_name////_}"
+        [ "$safe_name" = "$gtf_name" ] && { is_watched=true; break; }
       done < "$WATCHED_FILE"
     fi
     [ "$is_watched" = false ] && rm -f "$gtf"
@@ -445,10 +451,11 @@ generate_tabbed_html() {
   [ -f "$TABS_FILE" ] && [ -s "$TABS_FILE" ] && has_files=true
   # Check if any watched repo has tabs (only consider repos in WATCHED_FILE)
   if [ -f "$WATCHED_FILE" ] && [ -s "$WATCHED_FILE" ]; then
-    while IFS= read -r repo_root; do
-      [ -z "$repo_root" ] && continue
+    while IFS= read -r line; do
+      [ -z "$line" ] && continue
+      _parse_watched_line "$line"
       local rname gtf
-      rname=$(basename "$repo_root")
+      rname="$WATCHED_DISPLAY_NAME"
       gtf=$(_git_tabs_file "$rname")
       [ -f "$gtf" ] && [ -s "$gtf" ] && { has_any_git=true; break; }
     done < "$WATCHED_FILE"

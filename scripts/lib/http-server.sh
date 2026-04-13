@@ -42,6 +42,39 @@ def _all_tab_files():
     result.extend(_all_git_tab_files())
     return result
 
+def _sanitize_name(name):
+    return name.replace(' ', '_').replace('/', '_')
+
+def _parse_watched_file():
+    \"\"\"Parse WATCHED_FILE, return list of (git_root, display_name) tuples.\"\"\"
+    result = []
+    if not os.path.exists(WATCHED):
+        return result
+    with open(WATCHED) as f:
+        for line in f.readlines():
+            line = line.strip()
+            if not line:
+                continue
+            if '|' in line:
+                git_root, display_name = line.split('|', 1)
+            else:
+                git_root, display_name = line, os.path.basename(line)
+            result.append((git_root, display_name))
+    return result
+
+def _git_tabs_path(display_name):
+    return os.path.join(DIR, 'tabs.git.' + _sanitize_name(display_name))
+
+def _disambiguate_repo_name(git_root, existing_names):
+    base = os.path.basename(git_root)
+    if base not in existing_names:
+        return base
+    parent = os.path.basename(os.path.dirname(git_root))
+    candidate = parent + '/' + base
+    if candidate not in existing_names:
+        return candidate
+    return git_root
+
 SEARCH_TIMEOUT = 5
 SEARCH_EXCLUDES = ['.git', 'node_modules', '.cache', '__pycache__', '.DS_Store',
                    'Library', '.Trash', '.npm', '.yarn', '.pnpm-store', 'vendor/bundle',
@@ -340,24 +373,22 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                             cwd=new_watch, capture_output=True, text=True, timeout=2)
                         if r.returncode == 0:
                             git_root = r.stdout.strip()
-                            watched_lines = []
-                            if os.path.exists(WATCHED):
-                                with open(WATCHED) as f:
-                                    watched_lines = [l.strip() for l in f.readlines() if l.strip()]
-                            if git_root not in watched_lines:
-                                watched_lines.append(git_root)
-                                with open(WATCHED, 'w') as f:
-                                    f.write('\n'.join(watched_lines) + '\n')
-                                settings['added'] = os.path.basename(git_root)
+                            watched = _parse_watched_file()
+                            watched_roots = [wr for wr, _ in watched]
+                            if git_root not in watched_roots:
+                                existing_names = set(wn for _, wn in watched)
+                                rname = _disambiguate_repo_name(git_root, existing_names)
+                                with open(WATCHED, 'a') as f:
+                                    f.write(git_root + '|' + rname + '\n')
+                                settings['added'] = rname
                                 # Do initial sync for the new repo immediately
                                 open(os.path.join(DIR, 'loading'), 'w').close()
-                                rname = os.path.basename(git_root)
-                                self._resync_repos([git_root], settings.get('diff_mode', 'branch'))
-                                # Don't change active file — client handles navigation via URL hash
+                                self._resync_repos([(git_root, rname)], settings.get('diff_mode', 'branch'))
                                 if SCRIPT:
                                     subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                             else:
-                                settings['already_watching'] = os.path.basename(git_root)
+                                existing_name = next(wn for wr, wn in watched if wr == git_root)
+                                settings['already_watching'] = existing_name
                         else:
                             settings['error'] = 'Not a git repository'
                     except Exception:
@@ -365,21 +396,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 else:
                     settings['error'] = 'Directory not found'
             # Return current watched repos
-            watched_repos = []
-            if os.path.exists(WATCHED):
-                with open(WATCHED) as f:
-                    watched_repos = [l.strip() for l in f.readlines() if l.strip()]
-            settings['watched'] = [os.path.basename(r) for r in watched_repos]
+            watched = _parse_watched_file()
+            settings['watched'] = [wn for _, wn in watched]
             # Include per-repo tab counts
             repo_counts = {}
-            for r in watched_repos:
-                rname = os.path.basename(r)
-                tf = os.path.join(DIR, 'tabs.git.' + rname)
+            for _, wn in watched:
+                tf = _git_tabs_path(wn)
                 if os.path.exists(tf):
                     with open(tf) as f:
-                        repo_counts[rname] = len([l for l in f.read().splitlines() if l.strip()])
+                        repo_counts[wn] = len([l for l in f.read().splitlines() if l.strip()])
                 else:
-                    repo_counts[rname] = 0
+                    repo_counts[wn] = 0
             settings['repo_counts'] = repo_counts
             self._json_response(settings)
             return
@@ -404,14 +431,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             qs = urllib.parse.parse_qs(parsed.query)
             repo_name = qs.get('name', [''])[0]
             if repo_name:
-                tabs_file = os.path.join(DIR, 'tabs.git.' + repo_name)
+                tabs_file = _git_tabs_path(repo_name)
                 if os.path.exists(tabs_file):
                     os.remove(tabs_file)
                 if os.path.exists(WATCHED):
-                    with open(WATCHED) as f:
-                        lines = [l for l in f.read().splitlines() if l and os.path.basename(l) != repo_name]
+                    watched = _parse_watched_file()
+                    remaining = [wr + '|' + wn for wr, wn in watched if wn != repo_name]
                     with open(WATCHED, 'w') as f:
-                        f.write('\n'.join(lines) + '\n' if lines else '')
+                        f.write('\n'.join(remaining) + '\n' if remaining else '')
                 if SCRIPT:
                     subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self.send_response(204)
@@ -424,16 +451,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 # Signal loading state
                 open(os.path.join(DIR, 'loading'), 'w').close()
                 # Only route to git tab files for repos that are actively watched
-                watched_repos = set()
-                if os.path.exists(WATCHED):
-                    with open(WATCHED) as f:
-                        watched_repos = set(l.strip() for l in f.readlines() if l.strip())
-                watched_names = set(os.path.basename(r) for r in watched_repos)
+                watched = _parse_watched_file()
+                watched_roots = set(wr for wr, _ in watched)
+                watched_safe_names = set(_sanitize_name(wn) for _, wn in watched)
                 target_tabs = TABS
                 for gtf in _all_git_tab_files():
                     # Only check git tab files for watched repos
                     gtf_name = os.path.basename(gtf).replace('tabs.git.', '', 1)
-                    if gtf_name not in watched_names:
+                    if gtf_name not in watched_safe_names:
                         continue
                     if os.path.exists(gtf):
                         with open(gtf) as f:
@@ -441,9 +466,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                                 target_tabs = gtf
                                 break
                 # If not already in a git tab file, check if it's a git-changed file in a watched repo
-                if target_tabs == TABS and watched_repos:
+                if target_tabs == TABS and watched_roots:
                     git_root = self._get_git_root()
-                    if git_root and git_root in watched_repos:
+                    if git_root and git_root in watched_roots:
                         try:
                             changed = set()
                             for cmd in [['git','diff','--name-only'],['git','diff','--name-only','--cached'],['git','ls-files','--others','--exclude-standard']]:
@@ -452,8 +477,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                                     if l.strip():
                                         changed.add(os.path.normpath(os.path.join(git_root, l.strip())))
                             if fp in changed:
-                                rname = os.path.basename(git_root)
-                                target_tabs = os.path.join(DIR, 'tabs.git.' + rname)
+                                rname = next((wn for wr, wn in watched if wr == git_root), os.path.basename(git_root))
+                                target_tabs = _git_tabs_path(rname)
                         except Exception:
                             pass
                 # Add to the correct tab file (locked to prevent race with concurrent opens)
@@ -476,14 +501,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         super().do_GET()
 
     def _resync_repos(self, repos, diff_mode):
-        for repo_root in repos:
-            rname = os.path.basename(repo_root)
-            tabs_file = os.path.join(DIR, 'tabs.git.' + rname)
+        \"\"\"repos is a list of (git_root, display_name) tuples.\"\"\"
+        for repo_root, rname in repos:
+            tabs_file = _git_tabs_path(rname)
             try:
                 if diff_mode == 'local':
                     cmds = [['git','diff','--name-only'], ['git','diff','--name-only','--cached'], ['git','ls-files','--others','--exclude-standard']]
                 else:
-                    # Find merge base
                     base = None
                     for c in ['main', 'master']:
                         r = subprocess.run(['git','rev-parse','--verify','origin/'+c], cwd=repo_root, capture_output=True, timeout=2)
@@ -508,10 +532,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 pass
 
     def _resync_all_repos(self, diff_mode):
-        if not os.path.exists(WATCHED): return
-        with open(WATCHED) as f:
-            repos = [l.strip() for l in f.readlines() if l.strip()]
-        self._resync_repos(repos, diff_mode)
+        watched = _parse_watched_file()
+        self._resync_repos(watched, diff_mode)
 
     def _json_response(self, data, code=200):
         self.send_response(code)
