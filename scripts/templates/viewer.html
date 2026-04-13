@@ -294,6 +294,27 @@ th { background: #2d3748; padding: 8px 12px; text-align: left !important; border
 td { padding: 8px 12px; border: 1px solid #4a5568; text-align: left !important; }
 tr:hover { background: #2a3040; }
 
+/* Git watch modal */
+.fv-git-watch-title { color: #e8ecf0; }
+.fv-git-watch-input { background: #171b24; border: 1px solid #353b4a; color: #e8ecf0; }
+.fv-git-watch-btn { background: #353b4a; color: #ccd0d4; }
+.fv-git-watch-btn:hover { background: #4b5263; }
+.fv-git-watch-status { color: #6a7080; }
+/* Git settings descriptions */
+.fv-git-desc { color: #6a7080; }
+.fv-git-hint { color: #6a7080; }
+.fv-git-hint-key { color: #ccd0d4; }
+/* Page loader */
+.fv-page-loader-spinner { border-color: #353b4a; border-top-color: #ccd0d4; }
+/* Loading toast */
+.fv-loading-toast { background: #171b24; border: 1px solid #353b4a; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+.fv-loading-toast-spinner { border: 2px solid #353b4a; border-top-color: #73b8f0; }
+.fv-loading-toast-text { color: #6a7080; }
+/* Empty state / binary note */
+.fv-empty-state { color: #6a7080; }
+.fv-binary-note { color: #6a7080; }
+/* Theme grid section labels */
+.fv-theme-grid-label { color: #6a7080; }
 @media (prefers-color-scheme: light) {
   body { color: #24292e; background: #ffffff; }
   .fv-tab-bar { background: #eaecef; border-bottom-color: #d0d7de; }
@@ -319,13 +340,28 @@ tr:hover { background: #2a3040; }
   .code-file-header { background: #f6f8fa; border-bottom-color: #e1e4e8; }
   .code-file-header .filename { color: #24292e; }
   .code-file-header .lang-badge { background: #e1e4e8; color: #6a737d; }
+  .fv-git-watch-title { color: #24292e; }
+  .fv-git-watch-input { background: #f6f8fa; border-color: #d0d7de; color: #24292e; }
+  .fv-git-watch-btn { background: #e1e4e8; color: #24292e; }
+  .fv-git-watch-btn:hover { background: #d0d7de; }
+  .fv-git-watch-status { color: #6a737d; }
+  .fv-git-desc { color: #6a737d; }
+  .fv-git-hint { color: #6a737d; }
+  .fv-git-hint-key { color: #24292e; }
+  .fv-page-loader-spinner { border-color: #d0d7de; border-top-color: #24292e; }
+  .fv-loading-toast { background: #ffffff; border-color: #d0d7de; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .fv-loading-toast-spinner { border-color: #d0d7de; border-top-color: #0366d6; }
+  .fv-loading-toast-text { color: #6a737d; }
+  .fv-empty-state { color: #6a737d; }
+  .fv-binary-note { color: #6a737d; }
+  .fv-theme-grid-label { color: #6a737d; }
 }
 </style>
 $theme_style$
 </head>
 <body>
 <div id="fv-page-loader" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:9999">
-  <div style="width:32px;height:32px;border:3px solid #353b4a;border-top-color:#ccd0d4;border-radius:50%;animation:fv-spin 0.7s linear infinite"></div>
+  <div class="fv-page-loader-spinner" style="width:32px;height:32px;border:3px solid;border-radius:50%;animation:fv-spin 0.7s linear infinite"></div>
 </div>
 <div id="fv-body-container">
 $body$
@@ -357,17 +393,17 @@ $body$
           <div class="fv-theme-card" id="fv-git-mode-branch" style="flex:1;cursor:pointer">
             <div style="padding:10px 12px;font-size:12px;font-family:-apple-system,sans-serif">
               <div style="font-weight:600;margin-bottom:4px">Branch changes</div>
-              <div style="color:#6a7080;font-size:11px">All changes since branching from main (PR view)</div>
+              <div class="fv-git-desc" style="font-size:11px">All changes since branching from main (PR view)</div>
             </div>
           </div>
           <div class="fv-theme-card" id="fv-git-mode-local" style="flex:1;cursor:pointer">
             <div style="padding:10px 12px;font-size:12px;font-family:-apple-system,sans-serif">
               <div style="font-weight:600;margin-bottom:4px">Local changes</div>
-              <div style="color:#6a7080;font-size:11px">Only uncommitted and staged changes</div>
+              <div class="fv-git-desc" style="font-size:11px">Only uncommitted and staged changes</div>
             </div>
           </div>
         </div>
-        <div style="margin-top:4px;font-size:11px;color:#6a7080;font-family:-apple-system,sans-serif">Use <span style="color:#ccd0d4">Ctrl+I</span> to watch a new repository.</div>
+        <div class="fv-git-hint" style="margin-top:4px;font-size:11px;font-family:-apple-system,sans-serif">Use <span class="fv-git-hint-key">Ctrl+I</span> to watch a new repository.</div>
       </div>
       <!-- Shortcuts -->
       <div class="fv-settings-pane" id="fv-settings-pane-shortcuts"></div>
@@ -378,12 +414,12 @@ $body$
   <div class="fv-settings" style="width:560px;max-height:160px;position:relative">
     <div class="fv-settings-close" id="fv-git-watch-close" style="position:absolute;top:10px;right:10px;z-index:1">&times;</div>
     <div style="padding:16px 18px;width:100%">
-      <div style="font-size:12px;font-weight:600;color:#e8ecf0;font-family:-apple-system,sans-serif;margin-bottom:12px">Watch Repository</div>
+      <div class="fv-git-watch-title" style="font-size:12px;font-weight:600;font-family:-apple-system,sans-serif;margin-bottom:12px">Watch Repository</div>
       <div style="display:flex;gap:10px;margin-bottom:8px">
-        <input type="text" id="fv-git-watch-input" placeholder="~/development/my-repo" style="flex:1;min-width:0;background:#171b24;border:1px solid #353b4a;border-radius:4px;padding:8px 12px;font-size:13px;color:#e8ecf0;outline:none;font-family:-apple-system,sans-serif" />
-        <button id="fv-git-watch-btn" style="width:70px;flex-shrink:0;background:#353b4a;border:none;border-radius:4px;padding:8px 0;font-size:12px;color:#ccd0d4;cursor:pointer;font-family:-apple-system,sans-serif">Watch</button>
+        <input type="text" id="fv-git-watch-input" class="fv-git-watch-input" placeholder="~/development/my-repo" style="flex:1;min-width:0;border-radius:4px;padding:8px 12px;font-size:13px;outline:none;font-family:-apple-system,sans-serif" />
+        <button id="fv-git-watch-btn" class="fv-git-watch-btn" style="width:70px;flex-shrink:0;border:none;border-radius:4px;padding:8px 0;font-size:12px;cursor:pointer;font-family:-apple-system,sans-serif">Watch</button>
       </div>
-      <div id="fv-git-watch-status" style="font-size:11px;color:#6a7080;font-family:-apple-system,sans-serif;min-height:16px"></div>
+      <div id="fv-git-watch-status" class="fv-git-watch-status" style="font-size:11px;font-family:-apple-system,sans-serif;min-height:16px"></div>
     </div>
   </div>
 </div>
