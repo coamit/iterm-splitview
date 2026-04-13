@@ -1,5 +1,9 @@
 #!/bin/bash
-# iterm.sh — iTerm2 pane management (profiles, splits, close)
+# iterm-pane.sh — iTerm2 pane management (profiles, splits, close)
+
+readonly _PANE_CACHE_TTL=60
+readonly _SERVER_READY_RETRIES=10
+readonly _SERVER_READY_DELAY=0.15
 
 _close_fileview_pane() {
   if [ ! -f "$PANE_SESSION_ID_FILE" ]; then
@@ -31,13 +35,7 @@ APPLESCRIPT
 _ensure_dynamic_profile() {
   mkdir -p "$_DYNAMIC_PROFILES_DIR"
   local url
-  if [ -f "$SERVER_PORT_FILE" ]; then
-    local port
-    port=$(cat "$SERVER_PORT_FILE")
-    url="http://localhost:${port}/index.html"
-  else
-    url="file://$VIEW_HTML"
-  fi
+  url=$(_build_server_url)
   cat > "$_PROFILE_FILE" << PROFILE
 {
   "Profiles": [{
@@ -52,23 +50,21 @@ PROFILE
   sleep 0.15
 }
 
-# Check if tracked pane still exists (with 60s cache)
-_check_pane_exists() {
+_build_server_url() {
+  if [ -f "$SERVER_PORT_FILE" ]; then
+    local port
+    port=$(cat "$SERVER_PORT_FILE")
+    echo "http://localhost:${port}/index.html"
+  else
+    echo "file://$VIEW_HTML"
+  fi
+}
+
+# Check if tracked pane still exists via AppleScript
+_query_pane_alive() {
   local tracked_pane_id="$1"
-  local file_age=999
-  if command -v stat &>/dev/null; then
-    local file_mtime now_epoch
-    file_mtime=$(stat -f %m "$PANE_SESSION_ID_FILE" 2>/dev/null || echo 0)
-    now_epoch=$(date +%s)
-    file_age=$(( now_epoch - file_mtime ))
-  fi
-
-  if [ "$file_age" -lt 60 ]; then
-    return 0
-  fi
-
   local pane_exists
-  pane_exists=$(osascript <<APPLESCRIPT
+  pane_exists=$(osascript 2>/dev/null <<APPLESCRIPT
     tell application "iTerm2"
       repeat with w in windows
         repeat with t in tabs of w
@@ -80,17 +76,57 @@ _check_pane_exists() {
       return "no"
     end tell
 APPLESCRIPT
-  )
-  if [ "$pane_exists" = "yes" ]; then
+  ) || pane_exists="no"
+  [ "$pane_exists" = "yes" ]
+}
+
+# Check if tracked pane still exists (with TTL cache)
+_check_pane_exists() {
+  local tracked_pane_id="$1"
+  local file_age
+  file_age=$(_pane_file_age)
+
+  # Cache hit: file was touched recently, assume pane is alive
+  if [ "$file_age" -lt "$_PANE_CACHE_TTL" ]; then
+    return 0
+  fi
+
+  # Cache miss: ask iTerm directly
+  if _query_pane_alive "$tracked_pane_id"; then
     touch "$PANE_SESSION_ID_FILE"
     return 0
   fi
+
+  # Pane is dead — clean up stale session ID
   rm -f "$PANE_SESSION_ID_FILE"
+  return 1
+}
+
+_pane_file_age() {
+  local file_mtime now_epoch
+  file_mtime=$(stat -f %m "$PANE_SESSION_ID_FILE" 2>/dev/null || echo 0)
+  now_epoch=$(date +%s)
+  echo $(( now_epoch - file_mtime ))
+}
+
+_wait_for_server() {
+  if [ ! -f "$SERVER_PORT_FILE" ]; then
+    return 1
+  fi
+  local port attempt
+  port=$(cat "$SERVER_PORT_FILE")
+  for (( attempt = 0; attempt < _SERVER_READY_RETRIES; attempt++ )); do
+    if curl -sf "http://localhost:${port}/_gen" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep "$_SERVER_READY_DELAY"
+  done
   return 1
 }
 
 _create_split_pane() {
   local session_uuid="$1"
+  _wait_for_server || true
   _ensure_dynamic_profile
   local new_pane_id
   new_pane_id=$(osascript <<APPLESCRIPT
@@ -110,7 +146,9 @@ _create_split_pane() {
     end tell
 APPLESCRIPT
   )
-  echo "$new_pane_id" > "$PANE_SESSION_ID_FILE"
+  if [ -n "$new_pane_id" ]; then
+    echo "$new_pane_id" > "$PANE_SESSION_ID_FILE"
+  fi
   rm -f "$_PROFILE_FILE"
 }
 
@@ -120,8 +158,16 @@ _open_or_reuse_pane() {
   if [ -f "$PANE_SESSION_ID_FILE" ]; then
     local tracked_pane_id
     tracked_pane_id=$(cat "$PANE_SESSION_ID_FILE")
-    if [ -n "$tracked_pane_id" ] && _check_pane_exists "$tracked_pane_id"; then
-      return 0
+    if [ -n "$tracked_pane_id" ]; then
+      # Always verify pane is alive — bypass cache on open
+      if _query_pane_alive "$tracked_pane_id"; then
+        touch "$PANE_SESSION_ID_FILE"
+        return 0
+      fi
+      # Pane is dead — clean up stale file
+      rm -f "$PANE_SESSION_ID_FILE"
+    else
+      rm -f "$PANE_SESSION_ID_FILE"
     fi
   fi
 
