@@ -156,6 +156,6 @@ function pollGroupCount(groupName, repoName) {
           clearInterval(pollInterval);
         }
       })
-      .catch(function() {});
+      .catch(function() { /* non-critical */ });
   }, POLL_GROUP_COUNT_INTERVAL);
 }

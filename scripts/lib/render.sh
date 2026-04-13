@@ -401,7 +401,6 @@ _generate_tab_panels() {
 }
 
 generate_tabbed_html() {
-  local force="${1:-}"
 
   # Lock to prevent concurrent regen (watcher + _regen subprocess)
   local lockfile="$_FV_SESSION_DIR/regen.lock"

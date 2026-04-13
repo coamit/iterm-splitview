@@ -213,7 +213,7 @@ function openSettings(section) {
   fetch('/_git-settings')
     .then(function(r) { return r.json(); })
     .then(function(data) { updateGitModeUI(data.diff_mode || 'branch'); })
-    .catch(function() {});
+    .catch(function() { /* non-critical */ });
   switchSettingsSection(s);
   fv.settingsOverlay.classList.add('visible');
 }

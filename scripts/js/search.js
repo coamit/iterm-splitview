@@ -214,7 +214,7 @@ function fetchFsTextSearch(query) {
           '<span class="fv-modal-content">' + escapedContent.trim() + '</span></li>';
       }).join('') : '<li class="fv-modal-empty">No results</li>';
     })
-    .catch(function() {});
+    .catch(function() { /* non-critical */ });
 }
 
 function fetchFsFileSearch(query) {
@@ -233,7 +233,7 @@ function fetchFsFileSearch(query) {
       fv.modalList.innerHTML = fv.modalItems.length ? fv.modalItems.map(renderFsFileItem).join('')
         : '<li class="fv-modal-empty">No results</li>';
     })
-    .catch(function() {});
+    .catch(function() { /* non-critical */ });
 }
 
 function renderModal(query) {
@@ -292,7 +292,7 @@ function fetchSearchRoot() {
       fv.currentSearchRoot = data.root;
       updateSearchRootDisplay();
     })
-    .catch(function() {});
+    .catch(function() { /* non-critical */ });
 }
 
 function startEditSearchRoot() {
