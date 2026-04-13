@@ -36,7 +36,9 @@ _ensure_dynamic_profile() {
   mkdir -p "$_DYNAMIC_PROFILES_DIR"
   local url
   url=$(_build_server_url)
-  cat > "$_PROFILE_FILE" << PROFILE
+  local tmp_file
+  tmp_file=$(mktemp "$_DYNAMIC_PROFILES_DIR/.fileview-XXXXXX")
+  cat > "$tmp_file" << PROFILE
 {
   "Profiles": [{
     "Name": "$_PROFILE_NAME",
@@ -47,6 +49,7 @@ _ensure_dynamic_profile() {
   }]
 }
 PROFILE
+  mv "$tmp_file" "$_PROFILE_FILE"
   sleep 0.15
 }
 
