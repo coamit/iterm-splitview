@@ -80,6 +80,25 @@ SEARCH_EXCLUDES = ['.git', 'node_modules', '.cache', '__pycache__', '.DS_Store',
                    'Library', '.Trash', '.npm', '.yarn', '.pnpm-store', 'vendor/bundle',
                    '.vscode', '.cursor', '.docker', '.local/share', '.oh-my-zsh']
 
+def _file_search_rank(path, query):
+    \"\"\"Rank a file path by how well it matches the query.
+    Lower rank = better match.
+    0: exact filename match (with or without extension)
+    1: filename starts with query
+    2: filename contains query
+    3: path-only match (query not in filename)
+    \"\"\"
+    q = query.lower()
+    fname = os.path.basename(path).lower()
+    fname_no_ext = fname.rsplit('.', 1)[0] if '.' in fname else fname
+    if fname == q or fname_no_ext == q:
+        return 0
+    if fname.startswith(q) or fname_no_ext.startswith(q):
+        return 1
+    if q in fname:
+        return 2
+    return 3
+
 def get_search_root():
     if os.path.exists(SEARCH_ROOT):
         root = open(SEARCH_ROOT).read().strip()
@@ -324,6 +343,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 if not path: continue
                 abs_path = os.path.normpath(os.path.join(cwd, path))
                 results.append({'file': abs_path, 'fname': os.path.basename(abs_path), 'fpath': abs_path})
+            if query and results:
+                results.sort(key=lambda r: _file_search_rank(r['fname'], query))
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
