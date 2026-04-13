@@ -189,11 +189,31 @@ function renderFileSearchModal(query) {
   }).join('') : renderEmptyState(query ? 'No matching tabs' : 'No tabs open');
 }
 
+function renderTextSearchItem(item, i, queryLower) {
+  var cls = 'fv-modal-item text-result' + (i === fv.modalSelectedIdx ? ' selected' : '');
+  var escapedContent = item.content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  if (queryLower) {
+    var highlightRegex = new RegExp('(' + queryLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    escapedContent = escapedContent.replace(highlightRegex, '<mark>$1</mark>');
+  }
+  return '<li class="' + cls + '" data-idx="' + i + '">' +
+    '<span class="fv-modal-fname">' + escapeHtml(item.fname) + '<span class="fv-modal-line">:' + item.line + '</span></span>' +
+    '<span class="fv-modal-content">' + escapedContent.trim() + '</span></li>';
+}
+
+function handleSearchError(err) {
+  if (err && err.name === 'AbortError') return;
+  console.error('Search failed:', err);
+  fv.modalItems = [];
+  fv.modalList.innerHTML = renderEmptyState('Search failed');
+}
+
 function fetchTextSearch(query) {
   if (fv.fileSearchAbort) fv.fileSearchAbort.abort();
   if (!query || query.length < SEARCH_MIN_QUERY_LEN) { fv.modalItems = []; fv.modalList.innerHTML = renderEmptyState('Type to search\u2026'); return; }
   showModalLoading();
   fv.fileSearchAbort = new AbortController();
+  var queryLower = query.toLowerCase();
   fetch('/_search-text?q=' + encodeURIComponent(query) + '&limit=' + SEARCH_RESULTS_LIMIT, { signal: fv.fileSearchAbort.signal })
     .then(function(res) { return res.json(); })
     .then(function(results) {
@@ -202,20 +222,11 @@ function fetchTextSearch(query) {
         return !openPaths[item.file.toLowerCase()];
       });
       fv.modalSelectedIdx = Math.min(fv.modalSelectedIdx, Math.max(0, fv.modalItems.length - 1));
-      var queryLower = query.toLowerCase();
       fv.modalList.innerHTML = fv.modalItems.length ? fv.modalItems.map(function(item, i) {
-        var cls = 'fv-modal-item text-result' + (i === fv.modalSelectedIdx ? ' selected' : '');
-        var escapedContent = item.content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        if (queryLower) {
-          var highlightRegex = new RegExp('(' + queryLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
-          escapedContent = escapedContent.replace(highlightRegex, '<mark>$1</mark>');
-        }
-        return '<li class="' + cls + '" data-idx="' + i + '">' +
-          '<span class="fv-modal-fname">' + item.filename + '<span class="fv-modal-line">:' + item.line + '</span></span>' +
-          '<span class="fv-modal-content">' + escapedContent.trim() + '</span></li>';
-      }).join('') : '<li class="fv-modal-empty">No results</li>';
+        return renderTextSearchItem(item, i, queryLower);
+      }).join('') : renderEmptyState('No results');
     })
-    .catch(function() { /* non-critical */ });
+    .catch(handleSearchError);
 }
 
 function fetchFileSearch(query) {
@@ -227,14 +238,16 @@ function fetchFileSearch(query) {
     .then(function(res) { return res.json(); })
     .then(function(results) {
       var openPaths = getOpenFilePaths();
-      fv.modalItems = results.filter(function(item) {
+      fv.modalItems = results.map(function(item) {
+        return { file: item.file, filename: item.fname, filepath: item.fpath };
+      }).filter(function(item) {
         return !openPaths[item.file.toLowerCase()];
       });
       fv.modalSelectedIdx = Math.min(fv.modalSelectedIdx, Math.max(0, fv.modalItems.length - 1));
       fv.modalList.innerHTML = fv.modalItems.length ? fv.modalItems.map(renderFileSearchItem).join('')
-        : '<li class="fv-modal-empty">No results</li>';
+        : renderEmptyState('No results');
     })
-    .catch(function() { /* non-critical */ });
+    .catch(handleSearchError);
 }
 
 function renderSearchModal(query) {
@@ -320,10 +333,25 @@ function startEditSearchRoot() {
     fv.modalInput.focus();
   }
   input.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); commit(); }
-    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); input.remove(); fv.modalRootEl.style.display = ''; fv.modalInput.focus(); }
+    // Stop all key events from reaching the global shortcut handler
+    e.stopPropagation();
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+    if (e.key === 'Escape') { e.preventDefault(); input.remove(); fv.modalRootEl.style.display = ''; fv.modalInput.focus(); }
   });
   input.addEventListener('blur', commit);
+}
+
+function deriveSearchRootFromActiveFile() {
+  var activePath = getActiveFilePath();
+  if (!activePath) return false;
+  var dir = activePath.substring(0, activePath.lastIndexOf('/'));
+  if (!dir) return false;
+  fv.currentSearchRoot = dir;
+  updateSearchRootDisplay();
+  // Sync the server-side root so subsequent searches use it
+  fetch('/_search-root?path=' + encodeURIComponent(dir))
+    .catch(function(err) { console.error('Failed to sync search root:', err); });
+  return true;
 }
 
 function openSearchModal(mode) {
@@ -335,7 +363,9 @@ function openSearchModal(mode) {
   fv.modalInput.placeholder = cfg.placeholder;
   fv.modalModeText.innerHTML = cfg.label;
   if (isFilesystemMode(fv.modalMode)) {
-    fetchSearchRoot();
+    if (!deriveSearchRootFromActiveFile()) {
+      fetchSearchRoot();
+    }
   }
   updateSearchRootDisplay();
   renderSearchModal('');
