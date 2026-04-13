@@ -41,6 +41,7 @@ var themes = {
     hljsTheme: 'atom-one-light' }
 };
 
+// eslint-disable-next-line max-lines-per-function
 function buildThemeCSS(theme) {
   return 'body { color: ' + theme.text + '; background: ' + theme.bg + '; }' +
     '.fv-tab-bar { background: ' + theme.bgAlt + '; border-bottom-color: ' + theme.border + '; }' +
@@ -211,7 +212,7 @@ function openSettings(section) {
   var s = section || 'appearance';
   renderThemeGrid();
   fetch('/_git-settings')
-    .then(function(r) { return r.json(); })
+    .then(function(res) { return res.json(); })
     .then(function(data) { updateGitModeUI(data.diff_mode || 'branch'); })
     .catch(function() { /* non-critical */ });
   switchSettingsSection(s);

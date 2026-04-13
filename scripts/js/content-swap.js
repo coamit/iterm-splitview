@@ -1,9 +1,10 @@
-// swap.js — Content initialization, view state save/restore, performSwap, polling infrastructure
+// content-swap.js — Content initialization, view state save/restore, performSwap, polling infrastructure
 var fv = window.fv;
 
 // --- Reusable initialization: hljs + line numbers + diff attrs + mermaid prep ---
+// eslint-disable-next-line max-lines-per-function
 function initializeContent(root) {
-  root.querySelectorAll('pre code').forEach(function(block) {
+  root.querySelectorAll('pre code').forEach(function(block) { // eslint-disable-line max-lines-per-function
     if (block.closest('pre.mermaid') || block.classList.contains('mermaid')) return;
     var plainText = block.textContent;
     var lang = (block.className.match(/language-(\S+)/) || block.className.match(/sourceCode\s+(\S+)/) || [])[1] || '';
@@ -34,19 +35,19 @@ function initializeContent(root) {
         Object.keys(removedMap).forEach(function(afterLine) {
           var removedLines = removedMap[afterLine];
           var targetIdx = parseInt(afterLine, 10);
-          var targetEl = codeLines[targetIdx] || null;
+          var targetElement = codeLines[targetIdx] || null;
           removedLines.forEach(function(text) {
             var row = document.createElement('div');
             row.className = 'code-line diff-removed';
             row.innerHTML = '<span class="ln"></span><span class="lc">' + text + '</span>';
-            insertions.push({ before: targetEl, el: row });
+            insertions.push({ before: targetElement, el: row });
           });
         });
         insertions.reverse().forEach(function(ins) {
           if (ins.before) wrapper.insertBefore(ins.el, ins.before);
           else wrapper.appendChild(ins.el);
         });
-      } catch(e) { /* non-critical */ }
+      } catch(_e) { /* non-critical */ }
     }
     block.innerHTML = '';
     block.style.padding = '0';
@@ -69,9 +70,9 @@ function saveViewState() {
     ? fv.lastOpenedFilePath
     : (activeTab ? activeTab.getAttribute('title') : '');
   fv.lastOpenedFilePath = '';
-  var activeGroupSel = document.querySelector('.fv-group-sel.active');
-  var activeGroup = activeGroupSel ? activeGroupSel.getAttribute('data-group') : 'files';
-  var wasOnLoadingGroup = activeGroupSel && fv.loadingGroups[activeGroup];
+  var activeGroupSelector = document.querySelector('.fv-group-sel.active');
+  var activeGroup = activeGroupSelector ? activeGroupSelector.getAttribute('data-group') : 'files';
+  var wasOnLoadingGroup = activeGroupSelector && fv.loadingGroups[activeGroup];
   return {
     scrollTop: window.scrollY,
     activeTabPath: activeTabPath,
@@ -82,19 +83,19 @@ function saveViewState() {
 
 function restoreViewState(container, state) {
   if (state.wasOnLoadingGroup) {
-    switchGroup(state.activeGroup);
+    switchTabGroup(state.activeGroup);
     var first = document.querySelector('.fv-tab.fv-group-visible[data-tab]');
     if (first) activateTab(first.getAttribute('data-tab'));
   } else if (state.activeTabPath) {
-    var restoredTab = container.querySelector('.fv-tab[title="' + escSelector(state.activeTabPath) + '"]');
+    var restoredTab = container.querySelector('.fv-tab[title="' + escapeCssSelector(state.activeTabPath) + '"]');
     if (restoredTab) {
       var restoredGroup = restoredTab.getAttribute('data-group');
       if (restoredGroup && container.querySelector('.fv-group-bar')) {
-        switchGroup(restoredGroup);
+        switchTabGroup(restoredGroup);
       }
       activateTab(restoredTab.getAttribute('data-tab'));
     } else {
-      switchGroup(state.activeGroup);
+      switchTabGroup(state.activeGroup);
       var first = document.querySelector('.fv-tab.fv-group-visible[data-tab]');
       if (first) activateTab(first.getAttribute('data-tab'));
     }
@@ -102,7 +103,7 @@ function restoreViewState(container, state) {
     var groupBar = container.querySelector('.fv-group-bar');
     if (groupBar) {
       var defGroup = container.querySelector('.fv-group-sel.active');
-      if (defGroup) switchGroup(defGroup.getAttribute('data-group'));
+      if (defGroup) switchTabGroup(defGroup.getAttribute('data-group'));
     }
     var first = document.querySelector('.fv-tab.fv-group-visible[data-tab]') || document.querySelector('.fv-tab[data-tab]');
     if (first) activateTab(first.getAttribute('data-tab'));
@@ -111,8 +112,8 @@ function restoreViewState(container, state) {
 }
 
 function performSwap(newBodyHtml) {
-  if (fv.swapInProgress) return;
-  fv.swapInProgress = true;
+  if (fv.isSwapInProgress) return;
+  fv.isSwapInProgress = true;
 
   // 1. Save state
   var state = saveViewState();
@@ -121,7 +122,7 @@ function performSwap(newBodyHtml) {
   var offscreen = document.createElement('div');
   offscreen.innerHTML = newBodyHtml;
   initializeContent(offscreen);
-  initDiffCollapseOn(offscreen);
+  initializeDiffCollapse(offscreen);
 
   // 3. Swap into live DOM
   var container = document.getElementById('fv-body-container');
@@ -134,8 +135,8 @@ function performSwap(newBodyHtml) {
   updateGroupCounts();
   Object.keys(fv.loadingGroups).forEach(function(gn) {
     if (document.querySelectorAll('.fv-tab[data-group="' + gn + '"][data-tab]').length > 0) {
-      var lp = document.getElementById(fv.loadingGroups[gn]);
-      if (lp) lp.remove();
+      var loadingPanel = document.getElementById(fv.loadingGroups[gn]);
+      if (loadingPanel) loadingPanel.remove();
       delete fv.loadingGroups[gn];
     }
   });
@@ -144,9 +145,9 @@ function performSwap(newBodyHtml) {
   restoreViewState(container, state);
 
   // 6. Mermaid rendering (needs live DOM)
-  var mermaidEls = container.querySelectorAll('.mermaid:not([data-processed])');
-  if (mermaidEls.length > 0) {
-    try { mermaid.run({ nodes: mermaidEls }); } catch(e) { /* non-critical */ }
+  var mermaidElements = container.querySelectorAll('.mermaid:not([data-processed])');
+  if (mermaidElements.length > 0) {
+    try { mermaid.run({ nodes: mermaidElements }); } catch(_e) { /* non-critical */ }
   }
 
   // 7. Ensure content visible
@@ -164,18 +165,18 @@ function performSwap(newBodyHtml) {
 
   // 9. Hide loading indicators
   fv.loadingToast.style.display = 'none';
-  fv.swapInProgress = false;
+  fv.isSwapInProgress = false;
 }
 
 // --- Poller infrastructure ---
 function abortPoller(name) {
-  var p = fv.pollers[name];
-  if (p.xhr) { p.xhr.abort(); p.xhr = null; }
+  var poller = fv.pollers[name];
+  if (poller.xhr) { poller.xhr.abort(); poller.xhr = null; }
 }
 
 function stopPoller(name) {
-  var p = fv.pollers[name];
-  if (p.id) { clearInterval(p.id); p.id = null; }
+  var poller = fv.pollers[name];
+  if (poller.id) { clearInterval(poller.id); poller.id = null; }
   abortPoller(name);
 }
 
@@ -199,10 +200,10 @@ function pollLoading() {
         var showIt = response.loading && fv.lastOpenTriggered === 0 && (Date.now() - fv.pageLoadTime) > PAGE_LOAD_GRACE_MS;
         fv.loadingToast.style.display = showIt ? 'flex' : 'none';
         if (!response.loading) stopPoller('loading');
-      } catch(e) { /* non-critical */ }
+      } catch(_e) { /* non-critical */ }
     };
     xhr.send();
-  } catch(e) { /* non-critical */ }
+  } catch(_e) { /* non-critical */ }
 }
 
 function startLoadingPoll() {
@@ -211,9 +212,10 @@ function startLoadingPoll() {
 }
 
 // --- Auto-reload poller ---
+// eslint-disable-next-line max-lines-per-function
 function pollReload() {
   abortPoller('reload');
-  if (fv.swapInProgress) return;
+  if (fv.isSwapInProgress) return;
   try {
     var xhr = new XMLHttpRequest();
     fv.pollers.reload.xhr = xhr;
@@ -236,10 +238,10 @@ function pollReload() {
               loadingXhr.send();
               var loadingStatus = JSON.parse(loadingXhr.responseText);
               if (loadingStatus.loading) return;
-            } catch(e) { /* non-critical */ }
+            } catch(_e) { /* non-critical */ }
             fv.lastOpenTriggered = 0;
           }
-          if (fv.swapInProgress) return;
+          if (fv.isSwapInProgress) return;
           var fetchXhr = new XMLHttpRequest();
           fetchXhr.open('GET', '/index.html?t=' + Date.now(), true);
           fetchXhr.onload = function() {
@@ -253,10 +255,10 @@ function pollReload() {
           };
           fetchXhr.send();
         }
-      } catch(e) { /* non-critical */ }
+      } catch(_e) { /* non-critical */ }
     };
     xhr.send();
-  } catch(e) { /* non-critical */ }
+  } catch(_e) { /* non-critical */ }
 }
 
 function startReloadPoll() {

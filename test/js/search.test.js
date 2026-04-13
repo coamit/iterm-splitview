@@ -5,7 +5,7 @@ var path = require('path');
 
 // Load search.js source and extract pure functions
 var searchSource = fs.readFileSync(
-  path.join(__dirname, '../../scripts/js/search.js'), 'utf8'
+  path.join(__dirname, '../../scripts/js/search-modal.js'), 'utf8'
 );
 
 // Extract fuzzyMatch — pure function, no dependencies

@@ -1,4 +1,4 @@
-// diff.js — Diff context marking, hunk navigation, counter badge, collapse toggle
+// diff-viewer.js — Diff context marking, hunk navigation, counter badge, collapse toggle
 var fv = window.fv;
 
 function createDiffSeparator() {
@@ -14,9 +14,10 @@ function createDiffSeparator() {
   return { spacerA: spacerA, sep: sep, spacerB: spacerB };
 }
 
+// eslint-disable-next-line max-lines-per-function
 function markDiffContext(panel) {
   var allCodeLines = panel.querySelectorAll('.code-lines');
-  allCodeLines.forEach(function(codeBlock) {
+  allCodeLines.forEach(function(codeBlock) { // eslint-disable-line max-lines-per-function
     var lines = Array.from(codeBlock.querySelectorAll('.code-line'));
     var diffIndices = [];
     lines.forEach(function(line, idx) {
@@ -28,8 +29,8 @@ function markDiffContext(panel) {
     // Mark context lines
     var contextSet = {};
     diffIndices.forEach(function(idx) {
-      for (var c = Math.max(0, idx - DIFF_CONTEXT_LINES); c <= Math.min(lines.length - 1, idx + DIFF_CONTEXT_LINES); c++) {
-        contextSet[c] = true;
+      for (var ci = Math.max(0, idx - DIFF_CONTEXT_LINES); ci <= Math.min(lines.length - 1, idx + DIFF_CONTEXT_LINES); ci++) {
+        contextSet[ci] = true;
       }
     });
     lines.forEach(function(line, idx) {
@@ -38,8 +39,8 @@ function markDiffContext(panel) {
       }
     });
     // Add separators between non-adjacent context groups
-    var visibleIndices = Object.keys(contextSet).map(Number).concat(diffIndices).sort(function(a, b) { return a - b; });
-    var unique = visibleIndices.filter(function(v, i, a) { return !i || v !== a[i - 1]; });
+    var visibleIndices = Object.keys(contextSet).map(Number).concat(diffIndices).sort(function(first, second) { return first - second; });
+    var unique = visibleIndices.filter(function(val, idx, arr) { return !idx || val !== arr[idx - 1]; });
 
     // Separator at top if first visible line isn't line 1
     if (unique.length > 0 && unique[0] > 0) {
@@ -85,7 +86,7 @@ function getDiffHunks() {
   return hunks;
 }
 
-function _clearDiffCounterListeners() {
+function removeDiffCounterListeners() {
   if (fv._diffCounterDismiss) {
     document.removeEventListener('click', fv._diffCounterDismiss);
     document.removeEventListener('keydown', fv._diffCounterDismiss);
@@ -98,12 +99,12 @@ function showDiffCounter() {
   if (hunks.length === 0 || fv.currentDiffIdx < 0) return;
   fv.diffCounterBadge.textContent = (fv.currentDiffIdx + 1) + '/' + hunks.length;
   fv.diffCounterBadge.classList.add('visible');
-  _clearDiffCounterListeners();
+  removeDiffCounterListeners();
   fv._diffCounterDismiss = function(e) {
     if (e.type === 'keydown' && e.ctrlKey && e.key === 'd') return;
     fv.diffCounterBadge.classList.remove('visible');
     document.querySelectorAll('.code-line.diff-focus').forEach(function(el) { el.classList.remove('diff-focus'); });
-    _clearDiffCounterListeners();
+    removeDiffCounterListeners();
   };
   setTimeout(function() {
     document.addEventListener('click', fv._diffCounterDismiss);
@@ -141,15 +142,15 @@ function toggleDiffCollapse() {
   var addedLines = panel.querySelectorAll('.code-line.diff-added').length;
   if (totalLines > 0 && addedLines === totalLines) return;
   var codeBlocks = panel.querySelectorAll('pre, .code-lines');
-  codeBlocks.forEach(function(b) { b.style.transition = 'opacity 0.06s ease-out'; b.style.opacity = '0'; });
+  codeBlocks.forEach(function(block) { block.style.transition = 'opacity 0.06s ease-out'; block.style.opacity = '0'; });
   setTimeout(function() {
     panel.classList.toggle('diff-collapsed');
-    codeBlocks.forEach(function(b) { b.style.transition = 'opacity 0.08s ease-in'; b.style.opacity = '1'; });
-    setTimeout(function() { codeBlocks.forEach(function(b) { b.style.transition = ''; }); }, SWAP_FADE_IN_MS);
+    codeBlocks.forEach(function(block) { block.style.transition = 'opacity 0.08s ease-in'; block.style.opacity = '1'; });
+    setTimeout(function() { codeBlocks.forEach(function(block) { block.style.transition = ''; }); }, SWAP_FADE_IN_MS);
   }, SWAP_FADE_OUT_MS);
 }
 
-function initDiffCollapseOn(root) {
+function initializeDiffCollapse(root) {
   var panels = root.querySelectorAll('.fv-tab-content');
   panels.forEach(function(panel) {
     if (panel.querySelector('.code-line.diff-added, .code-line.diff-removed')) {

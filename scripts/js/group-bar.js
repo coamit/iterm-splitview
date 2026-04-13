@@ -1,40 +1,40 @@
-// groups.js — Group switching, counts, loading states, unwatch, group headers, polling
+// group-bar.js — Group switching, counts, loading states, unwatch, group headers, polling
 var fv = window.fv;
 
-function switchGroup(groupName) {
+function switchTabGroup(groupName) {
   // Save current group's active tab before switching
-  var curGroupSel = document.querySelector('.fv-group-sel.active');
-  if (curGroupSel) {
-    var curGroup = curGroupSel.getAttribute('data-group');
-    var curActive = document.querySelector('.fv-tab.active[data-group="' + curGroup + '"]');
-    if (curActive) fv.groupLastTab[curGroup] = curActive.getAttribute('title');
+  var currentGroupSelector = document.querySelector('.fv-group-sel.active');
+  if (currentGroupSelector) {
+    var currentGroup = currentGroupSelector.getAttribute('data-group');
+    var currentActiveTab = document.querySelector('.fv-tab.active[data-group="' + currentGroup + '"]');
+    if (currentActiveTab) fv.groupLastTab[currentGroup] = currentActiveTab.getAttribute('title');
   }
-  document.querySelectorAll('.fv-group-sel').forEach(function(s) {
-    s.classList.toggle('active', s.getAttribute('data-group') === groupName);
+  document.querySelectorAll('.fv-group-sel').forEach(function(sel) {
+    sel.classList.toggle('active', sel.getAttribute('data-group') === groupName);
   });
   // Show only tabs from active group
-  document.querySelectorAll('.fv-tab-bar .fv-tab[data-group]').forEach(function(t) {
-    t.classList.toggle('fv-group-visible', t.getAttribute('data-group') === groupName);
+  document.querySelectorAll('.fv-tab-bar .fv-tab[data-group]').forEach(function(tab) {
+    tab.classList.toggle('fv-group-visible', tab.getAttribute('data-group') === groupName);
   });
   // Show + button only for files group
   var addBtn = document.getElementById('fv-add-file');
   if (addBtn) addBtn.style.display = (groupName === 'files') ? '' : 'none';
   // Hide all loading panels, show the one for this group if loading
-  document.querySelectorAll('[data-loading-group]').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('[data-loading-group]').forEach(function(panel) { panel.classList.remove('active'); });
   var existingEmpty = document.getElementById('fv-group-empty');
   if (existingEmpty) existingEmpty.remove();
 
   // Check if this group is in loading state
   if (fv.loadingGroups[groupName]) {
-    document.querySelectorAll('.fv-tab-content.active').forEach(function(c) { c.classList.remove('active'); });
-    var lp = document.getElementById(fv.loadingGroups[groupName]);
-    if (lp) lp.classList.add('active');
+    document.querySelectorAll('.fv-tab-content.active').forEach(function(content) { content.classList.remove('active'); });
+    var loadingPanel = document.getElementById(fv.loadingGroups[groupName]);
+    if (loadingPanel) loadingPanel.classList.add('active');
     return;
   }
 
   var hasVisibleTabs = document.querySelector('.fv-tab.fv-group-visible[data-tab]');
   if (!hasVisibleTabs) {
-    document.querySelectorAll('.fv-tab-content.active').forEach(function(c) { c.classList.remove('active'); });
+    document.querySelectorAll('.fv-tab-content.active').forEach(function(content) { content.classList.remove('active'); });
     var emptyDiv = document.createElement('div');
     emptyDiv.className = 'fv-tab-content active';
     emptyDiv.id = 'fv-group-empty';
@@ -57,9 +57,9 @@ function updateGroupCounts() {
 
 function showGroupLoading(groupName, label) {
   // Remove existing tabs for this group
-  document.querySelectorAll('.fv-tab[data-group="' + groupName + '"]').forEach(function(t) { t.remove(); });
-  document.querySelectorAll('.fv-tab-content').forEach(function(p) {
-    if (p.id && p.id.indexOf('fv-tab-' + groupName + '-') === 0) p.remove();
+  document.querySelectorAll('.fv-tab[data-group="' + groupName + '"]').forEach(function(tab) { tab.remove(); });
+  document.querySelectorAll('.fv-tab-content').forEach(function(panel) {
+    if (panel.id && panel.id.indexOf('fv-tab-' + groupName + '-') === 0) panel.remove();
   });
   // Create a loading content panel tied to this group
   var panelId = 'fv-loading-' + groupName.replace(/\./g, '-');
@@ -69,7 +69,7 @@ function showGroupLoading(groupName, label) {
     panel.className = 'fv-tab-content';
     panel.id = panelId;
     panel.setAttribute('data-loading-group', groupName);
-    panel.innerHTML = '<div class="fv-tab-loading-content">Loading ' + escHtml(label) + '</div>';
+    panel.innerHTML = '<div class="fv-tab-loading-content">Loading ' + escapeHtml(label) + '</div>';
     document.body.appendChild(panel);
   }
   fv.loadingGroups[groupName] = panelId;
@@ -77,7 +77,7 @@ function showGroupLoading(groupName, label) {
   // If this group is active, show the loading panel
   var activeSel = document.querySelector('.fv-group-sel.active');
   if (activeSel && activeSel.getAttribute('data-group') === groupName) {
-    document.querySelectorAll('.fv-tab-content.active').forEach(function(c) { c.classList.remove('active'); });
+    document.querySelectorAll('.fv-tab-content.active').forEach(function(content) { content.classList.remove('active'); });
     var loadPanel = document.getElementById(panelId);
     if (loadPanel) loadPanel.classList.add('active');
   }
@@ -90,7 +90,7 @@ function showGitLoading(modeLabel) {
   });
 }
 
-function handleUnwatch(btn) {
+function removeWatchedRepository(btn) {
   var repoName = btn.getAttribute('data-unwatch');
   if (!repoName) return;
   var groupName = 'git.' + repoName;
@@ -101,21 +101,21 @@ function handleUnwatch(btn) {
   }
   var targetGroup = prevGroup ? prevGroup.getAttribute('data-group') : 'files';
   if (sel) sel.remove();
-  document.querySelectorAll('.fv-tab[data-group="' + groupName + '"]').forEach(function(t) { t.remove(); });
-  document.querySelectorAll('.fv-tab-content').forEach(function(p) {
-    if (p.id && p.id.indexOf('fv-tab-' + groupName + '-') === 0) p.remove();
+  document.querySelectorAll('.fv-tab[data-group="' + groupName + '"]').forEach(function(tab) { tab.remove(); });
+  document.querySelectorAll('.fv-tab-content').forEach(function(panel) {
+    if (panel.id && panel.id.indexOf('fv-tab-' + groupName + '-') === 0) panel.remove();
   });
-  var lp = document.getElementById('fv-loading-' + groupName.replace(/\./g, '-'));
-  if (lp) lp.remove();
+  var loadingPanel = document.getElementById('fv-loading-' + groupName.replace(/\./g, '-'));
+  if (loadingPanel) loadingPanel.remove();
   delete fv.loadingGroups[groupName];
-  switchGroup(targetGroup);
+  switchTabGroup(targetGroup);
   var first = document.querySelector('.fv-tab.fv-group-visible[data-tab]');
   if (first) activateTab(first.getAttribute('data-tab'));
   fetch('/_unwatch?name=' + encodeURIComponent(repoName));
   showToast('Stopped watching ' + repoName + ' \u2713');
 }
 
-function addGroupHeader(groupName, label) {
+function createGroupHeader(groupName, label) {
   var groupBar = document.querySelector('.fv-group-bar');
   if (!groupBar) return;
   if (groupBar.querySelector('[data-group="' + groupName + '"]')) return;
@@ -124,19 +124,19 @@ function addGroupHeader(groupName, label) {
   var sel = document.createElement('span');
   sel.className = 'fv-group-sel';
   sel.setAttribute('data-group', groupName);
-  sel.innerHTML = '&#9095; ' + escHtml(label) + ' <span class="fv-group-count">0</span><span class="fv-group-close" data-unwatch="' + escHtml(label) + '" title="Stop watching">&times;</span>';
+  sel.innerHTML = '&#9095; ' + escapeHtml(label) + ' <span class="fv-group-count">0</span><span class="fv-group-close" data-unwatch="' + escapeHtml(label) + '" title="Stop watching">&times;</span>';
   groupBar.insertBefore(sel, insertBefore);
   sel.addEventListener('click', function(e) {
     if (e.target.classList.contains('fv-group-close')) return;
     var tabs = document.querySelectorAll('.fv-tab[data-group="' + groupName + '"]');
     if (tabs.length === 0) {
-      switchGroup(groupName);
+      switchTabGroup(groupName);
       showGroupLoading(groupName, label + ' changes');
       fv.lastOpenTriggered = 0;
       fetch('/_refresh');
       return;
     }
-    switchGroup(groupName);
+    switchTabGroup(groupName);
     var first = document.querySelector('.fv-tab.fv-group-visible[data-tab]');
     if (first) { activateTab(first.getAttribute('data-tab')); }
   });
@@ -148,7 +148,7 @@ function pollGroupCount(groupName, repoName) {
     attempts++;
     if (attempts > POLL_GROUP_COUNT_MAX_ATTEMPTS) { clearInterval(pollInterval); return; }
     fetch('/_git-settings')
-      .then(function(r) { return r.json(); })
+      .then(function(res) { return res.json(); })
       .then(function(data) {
         if (data.repo_counts && data.repo_counts[repoName] > 0) {
           var badge = document.querySelector('.fv-group-sel[data-group="' + groupName + '"] .fv-group-count');

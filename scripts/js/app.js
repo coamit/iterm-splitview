@@ -1,4 +1,4 @@
-// init.js — DOM refs, pollers start, hash restore, group init, mermaid init, page reveal, event wiring
+// app.js — DOM refs, pollers start, hash restore, group init, mermaid init, page reveal, event wiring
 var fv = window.fv;
 
 // --- Acquire DOM refs ---
@@ -61,12 +61,12 @@ fv.themeGrid.addEventListener('click', function(e) {
 });
 
 // + buttons (top-level, not lost on swap)
-var addFileBtn = document.getElementById('fv-add-file');
-if (addFileBtn) addFileBtn.addEventListener('click', function() { toggleModal('fs-files'); });
-var addGitBtn = document.getElementById('fv-add-git');
-if (addGitBtn) addGitBtn.addEventListener('click', function() { openGitWatch(); });
-var settingsBtn = document.getElementById('fv-settings-btn');
-if (settingsBtn) settingsBtn.addEventListener('click', function() { openSettings(); });
+var addFileButton = document.getElementById('fv-add-file');
+if (addFileButton) addFileButton.addEventListener('click', function() { toggleSearchModal('fs-files'); });
+var addGitButton = document.getElementById('fv-add-git');
+if (addGitButton) addGitButton.addEventListener('click', function() { openGitWatch(); });
+var settingsButton = document.getElementById('fv-settings-btn');
+if (settingsButton) settingsButton.addEventListener('click', function() { openSettings(); });
 
 // Git mode buttons (inside settings)
 if (fv.gitModeBranch) fv.gitModeBranch.addEventListener('click', function() {
@@ -93,11 +93,11 @@ fv.gitWatchOverlay.addEventListener('click', function(e) {
 });
 
 // Refresh button
-var refreshBtn = document.getElementById('fv-refresh');
-if (refreshBtn) {
-  refreshBtn.addEventListener('click', function() {
-    refreshBtn.style.opacity = '0.3';
-    refreshBtn.style.pointerEvents = 'none';
+var refreshButton = document.getElementById('fv-refresh');
+if (refreshButton) {
+  refreshButton.addEventListener('click', function() {
+    refreshButton.style.opacity = '0.3';
+    refreshButton.style.pointerEvents = 'none';
     showToast('Refreshing\u2026', true, true);
     fv.lastOpenTriggered = 0;
     fetch('/_refresh');
@@ -111,7 +111,7 @@ if (fv.gitWatchBtn && fv.gitWatchInput) {
     if (!path) return;
     if (fv.gitWatchStatus) fv.gitWatchStatus.textContent = 'Adding...';
     fetch('/_git-settings?watch=' + encodeURIComponent(path))
-      .then(function(r) { return r.json(); })
+      .then(function(res) { return res.json(); })
       .then(function(data) {
         if (data.error) {
           if (fv.gitWatchStatus) fv.gitWatchStatus.textContent = data.error;
@@ -122,16 +122,16 @@ if (fv.gitWatchBtn && fv.gitWatchInput) {
           fv.gitWatchInput.value = '';
           closeGitWatch();
           var groupName = 'git.' + data.added;
-          addGroupHeader(groupName, data.added);
+          createGroupHeader(groupName, data.added);
           var loadPanelId = 'fv-loading-' + groupName.replace(/\./g, '-');
           var loadPanel = document.createElement('div');
           loadPanel.className = 'fv-tab-content';
           loadPanel.id = loadPanelId;
           loadPanel.setAttribute('data-loading-group', groupName);
-          loadPanel.innerHTML = '<div class="fv-tab-loading-content">Loading ' + escHtml(data.added) + ' changes\u2026</div>';
+          loadPanel.innerHTML = '<div class="fv-tab-loading-content">Loading ' + escapeHtml(data.added) + ' changes\u2026</div>';
           document.body.appendChild(loadPanel);
           fv.loadingGroups[groupName] = loadPanelId;
-          switchGroup(groupName);
+          switchTabGroup(groupName);
           history.replaceState(null, '', '#fv-group:' + groupName);
         }
       });
@@ -152,12 +152,12 @@ fv.modalInput.addEventListener('input', function() {
   fv.modalSelectedIdx = 0;
   if (fv.modalMode === 'fs-text' || fv.modalMode === 'fs-files') {
     clearTimeout(fv.searchTimer);
-    fv.searchTimer = setTimeout(function() { renderModal(fv.modalInput.value); }, SEARCH_DEBOUNCE_FS_MS);
+    fv.searchTimer = setTimeout(function() { renderSearchModal(fv.modalInput.value); }, SEARCH_DEBOUNCE_FS_MS);
   } else if (fv.modalMode === 'text' || fv.modalMode === 'text-active') {
     clearTimeout(fv.searchTimer);
-    fv.searchTimer = setTimeout(function() { renderModal(fv.modalInput.value); }, SEARCH_DEBOUNCE_TEXT_MS);
+    fv.searchTimer = setTimeout(function() { renderSearchModal(fv.modalInput.value); }, SEARCH_DEBOUNCE_TEXT_MS);
   } else {
-    renderModal(fv.modalInput.value);
+    renderSearchModal(fv.modalInput.value);
   }
 });
 
@@ -169,7 +169,7 @@ fv.modalList.addEventListener('click', function(e) {
 
 // Modal overlay click
 fv.modalOverlay.addEventListener('click', function(e) {
-  if (e.target === fv.modalOverlay) closeModal();
+  if (e.target === fv.modalOverlay) closeSearchModal();
 });
 
 // --- Initialize content ---
@@ -185,18 +185,18 @@ fv.loadingToast = document.createElement('div');
 fv.loadingToast.id = 'fv-loading';
 fv.loadingToast.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#171b24;border:1px solid #353b4a;border-radius:8px;padding:8px 16px;display:none;align-items:center;gap:8px;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,0.4)';
 fv.loadingToast.innerHTML = '<div style="width:14px;height:14px;border:2px solid #353b4a;border-top-color:#73b8f0;border-radius:50%;animation:fvspin 0.8s linear infinite"></div><span style="font-size:12px;color:#6a7080;font-family:-apple-system,sans-serif">Loading...</span>';
-var fvSpinStyle = document.createElement('style');
-fvSpinStyle.textContent = '@keyframes fvspin{to{transform:rotate(360deg)}}';
-document.body.appendChild(fvSpinStyle);
+var spinnerStyle = document.createElement('style');
+spinnerStyle.textContent = '@keyframes fvspin{to{transform:rotate(360deg)}}';
+document.body.appendChild(spinnerStyle);
 document.body.appendChild(fv.loadingToast);
 
 // --- Hash restore (one-time) ---
 var hash = window.location.hash.substring(1);
 if (hash && hash.indexOf('fv-group:') === 0) {
   var targetGroup = hash.substring('fv-group:'.length);
-  var targetGroupSel = document.querySelector('.fv-group-sel[data-group="' + targetGroup + '"]');
-  if (targetGroupSel) {
-    switchGroup(targetGroup);
+  var targetGroupSelector = document.querySelector('.fv-group-sel[data-group="' + targetGroup + '"]');
+  if (targetGroupSelector) {
+    switchTabGroup(targetGroup);
     var firstTab = document.querySelector('.fv-tab.fv-group-visible[data-tab]');
     if (firstTab) {
       activateTab(firstTab.getAttribute('data-tab'));
@@ -205,11 +205,11 @@ if (hash && hash.indexOf('fv-group:') === 0) {
   history.replaceState(null, '', window.location.pathname);
 } else if (hash && hash.indexOf('fv-path:') === 0) {
   var targetPath = decodeURIComponent(hash.substring('fv-path:'.length));
-  var matchTab = document.querySelector('.fv-tab[title="' + escSelector(targetPath) + '"]');
+  var matchTab = document.querySelector('.fv-tab[title="' + escapeCssSelector(targetPath) + '"]');
   if (matchTab) {
     var matchGroup = matchTab.getAttribute('data-group');
     if (matchGroup && document.querySelector('.fv-group-bar')) {
-      switchGroup(matchGroup);
+      switchTabGroup(matchGroup);
     }
     activateTab(matchTab.getAttribute('data-tab'));
   }
@@ -219,9 +219,9 @@ if (hash && hash.indexOf('fv-group:') === 0) {
 }
 
 // --- Init diffs, then reveal content ---
-initDiffCollapseOn(bodyContainer);
-var initHide = document.getElementById('fv-init-hide');
-if (initHide) initHide.remove();
+initializeDiffCollapse(bodyContainer);
+var initHideStyle = document.getElementById('fv-init-hide');
+if (initHideStyle) initHideStyle.remove();
 var pageLoader = document.getElementById('fv-page-loader');
 if (pageLoader) pageLoader.remove();
 var activeContent = document.querySelector('.fv-tab-content.active');
@@ -231,8 +231,8 @@ if (activeContent) activeContent.classList.add('fv-reveal');
 var groupBar = document.querySelector('.fv-group-bar');
 var hashHandledGroup = hash && hash.indexOf('fv-group:') === 0;
 if (groupBar && !hashHandledGroup) {
-  var activeGroupSel = document.querySelector('.fv-group-sel.active');
-  if (activeGroupSel) switchGroup(activeGroupSel.getAttribute('data-group'));
+  var activeGroupSelector = document.querySelector('.fv-group-sel.active');
+  if (activeGroupSelector) switchTabGroup(activeGroupSelector.getAttribute('data-group'));
 }
 
 // --- Start all pollers ---

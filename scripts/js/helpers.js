@@ -1,11 +1,11 @@
 // helpers.js — Utility functions
 var fv = window.fv;
 
-function escHtml(s) {
+function escapeHtml(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function escSelector(s) {
+function escapeCssSelector(s) {
   return s.replace(/"/g, '\\"');
 }
 
@@ -39,7 +39,7 @@ function createElement(tag, className, attrs) {
   var el = document.createElement(tag);
   if (className) el.className = className;
   if (attrs) {
-    Object.keys(attrs).forEach(function(k) { el.setAttribute(k, attrs[k]); });
+    Object.keys(attrs).forEach(function(key) { el.setAttribute(key, attrs[key]); });
   }
   return el;
 }

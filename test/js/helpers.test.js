@@ -9,55 +9,55 @@ var helpersSource = fs.readFileSync(
   path.join(__dirname, '../../scripts/js/helpers.js'), 'utf8'
 );
 
-// Extract escHtml — it's a pure function with no dependencies
-var escHtml = new Function(
-  'return ' + helpersSource.match(/function escHtml\([^)]*\)\s*\{[^}]+\}/)[0]
+// Extract escapeHtml — it's a pure function with no dependencies
+var escapeHtml = new Function(
+  'return ' + helpersSource.match(/function escapeHtml\([^)]*\)\s*\{[^}]+\}/)[0]
 )();
 
-// Extract escSelector
-var escSelector = new Function(
-  'return ' + helpersSource.match(/function escSelector\([^)]*\)\s*\{[^}]+\}/)[0]
+// Extract escapeCssSelector
+var escapeCssSelector = new Function(
+  'return ' + helpersSource.match(/function escapeCssSelector\([^)]*\)\s*\{[^}]+\}/)[0]
 )();
 
-describe('escHtml', function() {
+describe('escapeHtml', function() {
   it('escapes ampersands', function() {
-    assert.equal(escHtml('a & b'), 'a &amp; b');
+    assert.equal(escapeHtml('a & b'), 'a &amp; b');
   });
 
   it('escapes angle brackets', function() {
-    assert.equal(escHtml('<div>'), '&lt;div&gt;');
+    assert.equal(escapeHtml('<div>'), '&lt;div&gt;');
   });
 
   it('escapes double quotes', function() {
-    assert.equal(escHtml('"hello"'), '&quot;hello&quot;');
+    assert.equal(escapeHtml('"hello"'), '&quot;hello&quot;');
   });
 
   it('handles strings with no special characters', function() {
-    assert.equal(escHtml('hello world'), 'hello world');
+    assert.equal(escapeHtml('hello world'), 'hello world');
   });
 
   it('handles empty string', function() {
-    assert.equal(escHtml(''), '');
+    assert.equal(escapeHtml(''), '');
   });
 
   it('escapes multiple special characters in one string', function() {
     assert.equal(
-      escHtml('<a href="x&y">'),
+      escapeHtml('<a href="x&y">'),
       '&lt;a href=&quot;x&amp;y&quot;&gt;'
     );
   });
 });
 
-describe('escSelector', function() {
+describe('escapeCssSelector', function() {
   it('escapes double quotes for CSS selectors', function() {
-    assert.equal(escSelector('path/to/"file"'), 'path/to/\\"file\\"');
+    assert.equal(escapeCssSelector('path/to/"file"'), 'path/to/\\"file\\"');
   });
 
   it('handles strings without quotes', function() {
-    assert.equal(escSelector('/path/to/file.js'), '/path/to/file.js');
+    assert.equal(escapeCssSelector('/path/to/file.js'), '/path/to/file.js');
   });
 
   it('handles empty string', function() {
-    assert.equal(escSelector(''), '');
+    assert.equal(escapeCssSelector(''), '');
   });
 });

@@ -1,4 +1,4 @@
-// search.js — Fuzzy matching, search modals, modal rendering, file/text search
+// search-modal.js — Fuzzy matching, search modals, modal rendering, file/text search
 var fv = window.fv;
 
 function fuzzyMatch(text, query) {
@@ -34,9 +34,9 @@ function getTabData() {
   var data = [];
   tabs.forEach(function(tab) {
     var title = tab.getAttribute('title') || '';
-    var fname = title.split('/').pop();
-    var fpath = title;
-    data.push({ tabId: tab.getAttribute('data-tab'), fname: fname, fpath: fpath });
+    var filename = title.split('/').pop();
+    var filepath = title;
+    data.push({ tabId: tab.getAttribute('data-tab'), filename: filename, filepath: filepath });
   });
   return data;
 }
@@ -44,19 +44,20 @@ function getTabData() {
 function getOpenFilePaths() {
   var paths = {};
   document.querySelectorAll('.fv-tab[data-tab]').forEach(function(tab) {
-    var p = (tab.getAttribute('title') || '').toLowerCase();
-    if (p) paths[p] = true;
+    var fp = (tab.getAttribute('title') || '').toLowerCase();
+    if (fp) paths[fp] = true;
   });
   return paths;
 }
 
+// eslint-disable-next-line max-lines-per-function
 function searchText(query, activeOnly) {
   if (!query || query.length < SEARCH_MIN_QUERY_LEN) return [];
   var results = [];
   var queryLower = query.toLowerCase();
   var tabs = getTabData();
   var tabMap = {};
-  tabs.forEach(function(t) { tabMap[t.tabId] = t; });
+  tabs.forEach(function(tabData) { tabMap[tabData.tabId] = tabData; });
   var panels = activeOnly
     ? [document.querySelector('.fv-tab-content.active')].filter(Boolean)
     : document.querySelectorAll('.fv-tab-content');
@@ -73,24 +74,24 @@ function searchText(query, activeOnly) {
       if (fuzzyMatch(text, queryLower)) {
         var ln = line.querySelector('.ln');
         var lineNum = ln ? ln.textContent.trim() : '?';
-        results.push({ tabId: tabId, fname: tab.fname, lineNum: lineNum, lineEl: line, content: text });
+        results.push({ tabId: tabId, filename: tab.filename, lineNum: lineNum, lineEl: line, content: text });
       }
     });
-    var mdEls = panel.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li, td, th, blockquote, a, strong, em, code:not(.code-line code)');
+    var markdownElements = panel.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li, td, th, blockquote, a, strong, em, code:not(.code-line code)');
     var seen = new Set();
-    mdEls.forEach(function(el) {
+    markdownElements.forEach(function(el) {
       if (results.length >= SEARCH_RESULTS_LIMIT) return;
       if (el.closest('.code-line') || el.closest('.code-file-header')) return;
       var text = el.textContent;
       if (seen.has(text)) return;
       seen.add(text);
       if (fuzzyMatch(text, queryLower)) {
-        results.push({ tabId: tabId, fname: tab.fname, lineNum: '\u2014', lineEl: el, content: text.substring(0, 200) });
+        results.push({ tabId: tabId, filename: tab.filename, lineNum: '\u2014', lineEl: el, content: text.substring(0, 200) });
       }
     });
   });
-  results.sort(function(a, b) {
-    var al = a.content.toLowerCase(), bl = b.content.toLowerCase();
+  results.sort(function(first, second) {
+    var al = first.content.toLowerCase(), bl = second.content.toLowerCase();
     var aExact = al.indexOf(queryLower) !== -1 ? 1 : 0;
     var bExact = bl.indexOf(queryLower) !== -1 ? 1 : 0;
     return bExact - aExact;
@@ -98,15 +99,15 @@ function searchText(query, activeOnly) {
   return results;
 }
 
-function showLoading() {
+function showModalLoading() {
   fv.modalList.innerHTML = '<li class="fv-modal-loading">Searching</li>';
 }
 
-function emptyState(msg) {
+function renderEmptyState(msg) {
   return '<li class="fv-modal-empty">' + msg + '</li>';
 }
 
-function relPath(fullPath) {
+function getRelativePath(fullPath) {
   if (fv.currentSearchRoot && fullPath.indexOf(fv.currentSearchRoot) === 0) {
     var rel = fullPath.slice(fv.currentSearchRoot.length);
     if (rel.charAt(0) === '/') rel = rel.slice(1);
@@ -115,13 +116,13 @@ function relPath(fullPath) {
   return fullPath;
 }
 
-function renderFsFileItem(item, i) {
+function renderFileSearchItem(item, i) {
   var cls = 'fv-modal-item' + (i === fv.modalSelectedIdx ? ' selected' : '');
-  var rel = relPath(item.fpath);
+  var rel = getRelativePath(item.filepath);
   var dir = rel.lastIndexOf('/') >= 0 ? rel.slice(0, rel.lastIndexOf('/')) : '';
-  var fname = fv.fsFileQuery ? fuzzyHighlight(item.fname, fv.fsFileQuery) : escHtml(item.fname);
+  var filename = fv.fileSearchQuery ? fuzzyHighlight(item.filename, fv.fileSearchQuery) : escapeHtml(item.filename);
   return '<li class="' + cls + '" data-idx="' + i + '"><span class="fv-modal-fname">' +
-    fname + '</span>' + (dir ? '<span class="fv-modal-fpath">' + escHtml(dir) + '</span>' : '') + '</li>';
+    filename + '</span>' + (dir ? '<span class="fv-modal-fpath">' + escapeHtml(dir) + '</span>' : '') + '</li>';
 }
 
 function renderShortcutsModal(query) {
@@ -133,11 +134,11 @@ function renderShortcutsModal(query) {
     return '<li class="fv-modal-item shortcut-item">' +
       '<span class="fv-shortcut-key">' + (query ? fuzzyHighlight(s.key, query) : s.key) + '</span>' +
       '<span class="fv-shortcut-desc">' + (query ? fuzzyHighlight(s.desc, query) : s.desc) + '</span></li>';
-  }).join('') : emptyState('No matching shortcuts');
+  }).join('') : renderEmptyState('No matching shortcuts');
 }
 
 function renderTextSearchModal(query) {
-  if (!query || query.length < SEARCH_MIN_QUERY_LEN) { fv.modalItems = []; fv.modalList.innerHTML = emptyState('Type to search\u2026'); return; }
+  if (!query || query.length < SEARCH_MIN_QUERY_LEN) { fv.modalItems = []; fv.modalList.innerHTML = renderEmptyState('Type to search\u2026'); return; }
   var results = searchText(query, fv.modalMode === 'text-active');
   fv.modalItems = results;
   fv.modalSelectedIdx = Math.min(fv.modalSelectedIdx, Math.max(0, fv.modalItems.length - 1));
@@ -145,18 +146,18 @@ function renderTextSearchModal(query) {
     var cls = 'fv-modal-item text-result' + (i === fv.modalSelectedIdx ? ' selected' : '');
     var highlighted = fuzzyHighlight(item.content, query);
     return '<li class="' + cls + '" data-idx="' + i + '">' +
-      '<span class="fv-modal-fname">' + item.fname + '<span class="fv-modal-line">:' + item.lineNum + '</span></span>' +
+      '<span class="fv-modal-fname">' + item.filename + '<span class="fv-modal-line">:' + item.lineNum + '</span></span>' +
       '<span class="fv-modal-content">' + highlighted.trim() + '</span></li>';
-  }).join('') : emptyState('No results');
+  }).join('') : renderEmptyState('No results');
 }
 
 function getGroupData() {
   var groups = [];
   document.querySelectorAll('.fv-group-sel').forEach(function(sel) {
-    var g = sel.getAttribute('data-group');
+    var group = sel.getAttribute('data-group');
     var label = sel.textContent.replace(/\d+$/, '').replace(/\u00d7$/, '').trim();
     var count = sel.querySelector('.fv-group-count');
-    groups.push({ group: g, label: label, count: count ? count.textContent : '0', isGroup: true });
+    groups.push({ group: group, label: label, count: count ? count.textContent : '0', isGroup: true });
   });
   return groups;
 }
@@ -165,36 +166,36 @@ function renderFileSearchModal(query) {
   var tabs = getTabData();
   var groups = document.querySelector('.fv-group-bar') ? getGroupData() : [];
 
-  var filteredGroups = query ? groups.filter(function(g) {
-    return fuzzyMatch(g.label, query) || fuzzyMatch(g.group, query);
+  var filteredGroups = query ? groups.filter(function(grp) {
+    return fuzzyMatch(grp.label, query) || fuzzyMatch(grp.group, query);
   }) : groups;
-  var filteredTabs = query ? tabs.filter(function(t) {
-    return fuzzyMatch(t.fname, query) || fuzzyMatch(t.fpath, query);
+  var filteredTabs = query ? tabs.filter(function(tabData) {
+    return fuzzyMatch(tabData.filename, query) || fuzzyMatch(tabData.filepath, query);
   }) : tabs;
 
   fv.modalItems = [];
-  filteredGroups.forEach(function(g) { fv.modalItems.push(g); });
-  filteredTabs.forEach(function(t) { fv.modalItems.push(t); });
+  filteredGroups.forEach(function(grp) { fv.modalItems.push(grp); });
+  filteredTabs.forEach(function(tabData) { fv.modalItems.push(tabData); });
 
   fv.modalSelectedIdx = Math.min(fv.modalSelectedIdx, Math.max(0, fv.modalItems.length - 1));
   fv.modalList.innerHTML = fv.modalItems.length ? fv.modalItems.map(function(item, i) {
     var cls = 'fv-modal-item' + (i === fv.modalSelectedIdx ? ' selected' : '');
     if (item.isGroup) {
       return '<li class="' + cls + '" data-idx="' + i + '"><span class="fv-modal-fname" style="color:#a78bfa">' +
-        (query ? fuzzyHighlight(item.label, query) : escHtml(item.label)) + '</span><span class="fv-group-count">' + item.count + '</span></li>';
+        (query ? fuzzyHighlight(item.label, query) : escapeHtml(item.label)) + '</span><span class="fv-group-count">' + item.count + '</span></li>';
     }
     return '<li class="' + cls + '" data-idx="' + i + '"><span class="fv-modal-fname">' +
-      (query ? fuzzyHighlight(item.fname, query) : item.fname) + '</span><span class="fv-modal-fpath">' + item.fpath + '</span></li>';
-  }).join('') : emptyState(query ? 'No matching tabs' : 'No tabs open');
+      (query ? fuzzyHighlight(item.filename, query) : item.filename) + '</span><span class="fv-modal-fpath">' + item.filepath + '</span></li>';
+  }).join('') : renderEmptyState(query ? 'No matching tabs' : 'No tabs open');
 }
 
-function fetchFsTextSearch(query) {
-  if (fv.fsSearchAbort) fv.fsSearchAbort.abort();
-  if (!query || query.length < SEARCH_MIN_QUERY_LEN) { fv.modalItems = []; fv.modalList.innerHTML = emptyState('Type to search\u2026'); return; }
-  showLoading();
-  fv.fsSearchAbort = new AbortController();
-  fetch('/_search-text?q=' + encodeURIComponent(query) + '&limit=' + SEARCH_RESULTS_LIMIT, { signal: fv.fsSearchAbort.signal })
-    .then(function(r) { return r.json(); })
+function fetchTextSearch(query) {
+  if (fv.fileSearchAbort) fv.fileSearchAbort.abort();
+  if (!query || query.length < SEARCH_MIN_QUERY_LEN) { fv.modalItems = []; fv.modalList.innerHTML = renderEmptyState('Type to search\u2026'); return; }
+  showModalLoading();
+  fv.fileSearchAbort = new AbortController();
+  fetch('/_search-text?q=' + encodeURIComponent(query) + '&limit=' + SEARCH_RESULTS_LIMIT, { signal: fv.fileSearchAbort.signal })
+    .then(function(res) { return res.json(); })
     .then(function(results) {
       var openPaths = getOpenFilePaths();
       fv.modalItems = results.filter(function(item) {
@@ -206,40 +207,40 @@ function fetchFsTextSearch(query) {
         var cls = 'fv-modal-item text-result' + (i === fv.modalSelectedIdx ? ' selected' : '');
         var escapedContent = item.content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         if (queryLower) {
-          var re = new RegExp('(' + queryLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
-          escapedContent = escapedContent.replace(re, '<mark>$1</mark>');
+          var highlightRegex = new RegExp('(' + queryLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+          escapedContent = escapedContent.replace(highlightRegex, '<mark>$1</mark>');
         }
         return '<li class="' + cls + '" data-idx="' + i + '">' +
-          '<span class="fv-modal-fname">' + item.fname + '<span class="fv-modal-line">:' + item.line + '</span></span>' +
+          '<span class="fv-modal-fname">' + item.filename + '<span class="fv-modal-line">:' + item.line + '</span></span>' +
           '<span class="fv-modal-content">' + escapedContent.trim() + '</span></li>';
       }).join('') : '<li class="fv-modal-empty">No results</li>';
     })
     .catch(function() { /* non-critical */ });
 }
 
-function fetchFsFileSearch(query) {
-  if (fv.fsSearchAbort) fv.fsSearchAbort.abort();
-  showLoading();
-  fv.fsFileQuery = query || '';
-  fv.fsSearchAbort = new AbortController();
-  fetch('/_search-files?q=' + encodeURIComponent(query) + '&limit=' + SEARCH_RESULTS_LIMIT, { signal: fv.fsSearchAbort.signal })
-    .then(function(r) { return r.json(); })
+function fetchFileSearch(query) {
+  if (fv.fileSearchAbort) fv.fileSearchAbort.abort();
+  showModalLoading();
+  fv.fileSearchQuery = query || '';
+  fv.fileSearchAbort = new AbortController();
+  fetch('/_search-files?q=' + encodeURIComponent(query) + '&limit=' + SEARCH_RESULTS_LIMIT, { signal: fv.fileSearchAbort.signal })
+    .then(function(res) { return res.json(); })
     .then(function(results) {
       var openPaths = getOpenFilePaths();
       fv.modalItems = results.filter(function(item) {
         return !openPaths[item.file.toLowerCase()];
       });
       fv.modalSelectedIdx = Math.min(fv.modalSelectedIdx, Math.max(0, fv.modalItems.length - 1));
-      fv.modalList.innerHTML = fv.modalItems.length ? fv.modalItems.map(renderFsFileItem).join('')
+      fv.modalList.innerHTML = fv.modalItems.length ? fv.modalItems.map(renderFileSearchItem).join('')
         : '<li class="fv-modal-empty">No results</li>';
     })
     .catch(function() { /* non-critical */ });
 }
 
-function renderModal(query) {
+function renderSearchModal(query) {
   if (fv.modalMode === 'shortcuts') return renderShortcutsModal(query);
-  if (fv.modalMode === 'fs-text') return fetchFsTextSearch(query);
-  if (fv.modalMode === 'fs-files') return fetchFsFileSearch(query);
+  if (fv.modalMode === 'fs-text') return fetchTextSearch(query);
+  if (fv.modalMode === 'fs-files') return fetchFileSearch(query);
   if (fv.modalMode === 'text' || fv.modalMode === 'text-active') return renderTextSearchModal(query);
   renderFileSearchModal(query);
 }
@@ -273,10 +274,10 @@ var modalModeConfig = {
   'shortcuts':   { placeholder: 'Filter shortcuts...',       label: 'Keyboard Shortcuts' }
 };
 
-function isFsMode(m) { return m === 'fs-text' || m === 'fs-files'; }
+function isFilesystemMode(mode) { return mode === 'fs-text' || mode === 'fs-files'; }
 
 function updateSearchRootDisplay() {
-  if (!isFsMode(fv.modalMode)) {
+  if (!isFilesystemMode(fv.modalMode)) {
     fv.modalRootEl.style.display = 'none';
     return;
   }
@@ -287,7 +288,7 @@ function updateSearchRootDisplay() {
 
 function fetchSearchRoot() {
   fetch('/_search-root')
-    .then(function(r) { return r.json(); })
+    .then(function(res) { return res.json(); })
     .then(function(data) {
       fv.currentSearchRoot = data.root;
       updateSearchRootDisplay();
@@ -308,7 +309,7 @@ function startEditSearchRoot() {
     var val = input.value.trim();
     if (val && val !== fv.currentSearchRoot) {
       fetch('/_search-root?path=' + encodeURIComponent(val))
-        .then(function(r) { return r.json(); })
+        .then(function(res) { return res.json(); })
         .then(function(data) {
           fv.currentSearchRoot = data.root;
           updateSearchRootDisplay();
@@ -325,7 +326,7 @@ function startEditSearchRoot() {
   input.addEventListener('blur', commit);
 }
 
-function openModal(mode) {
+function openSearchModal(mode) {
   fv.modalMode = mode || 'files';
   fv.modalInput.value = '';
   fv.modalSelectedIdx = 0;
@@ -333,24 +334,24 @@ function openModal(mode) {
   fv.modalInput.style.display = '';
   fv.modalInput.placeholder = cfg.placeholder;
   fv.modalModeText.innerHTML = cfg.label;
-  if (isFsMode(fv.modalMode)) {
+  if (isFilesystemMode(fv.modalMode)) {
     fetchSearchRoot();
   }
   updateSearchRootDisplay();
-  renderModal('');
+  renderSearchModal('');
   fv.modalOverlay.classList.add('visible');
   setTimeout(function() { fv.modalInput.focus(); }, MODAL_FOCUS_DELAY_MS);
 }
 
-function closeModal() {
+function closeSearchModal() {
   clearTimeout(fv.searchTimer);
-  if (fv.fsSearchAbort) { fv.fsSearchAbort.abort(); fv.fsSearchAbort = null; }
+  if (fv.fileSearchAbort) { fv.fileSearchAbort.abort(); fv.fileSearchAbort = null; }
   fv.modalOverlay.classList.remove('visible');
 }
 
-function toggleModal(mode) {
-  if (fv.modalOverlay.classList.contains('visible') && fv.modalMode === mode) closeModal();
-  else openModal(mode);
+function toggleSearchModal(mode) {
+  if (fv.modalOverlay.classList.contains('visible') && fv.modalMode === mode) closeSearchModal();
+  else openSearchModal(mode);
 }
 
 function highlightLineUntilDismiss(lineEl) {
@@ -380,8 +381,8 @@ function selectModalItem() {
   if (fv.modalItems.length === 0) return;
   var item = fv.modalItems[fv.modalSelectedIdx];
   if (item.isGroup) {
-    closeModal();
-    switchGroup(item.group);
+    closeSearchModal();
+    switchTabGroup(item.group);
     var first = document.querySelector('.fv-tab.fv-group-visible[data-tab]');
     if (first) {
       activateTab(first.getAttribute('data-tab'));
@@ -391,7 +392,7 @@ function selectModalItem() {
   }
   if (fv.modalMode === 'fs-text' || fv.modalMode === 'fs-files') {
     var filePath = item.file;
-    closeModal();
+    closeSearchModal();
     createLoadingTab(filePath);
     fv.lastOpenTriggered = Date.now();
     fetch('/_open?path=' + encodeURIComponent(filePath));
@@ -400,7 +401,7 @@ function selectModalItem() {
   var wasText = fv.modalMode === 'text' || fv.modalMode === 'text-active';
   activateTab(item.tabId);
   history.replaceState(null, '', '#' + item.tabId);
-  closeModal();
+  closeSearchModal();
   if (wasText && item.lineEl) {
     setTimeout(function() { highlightLineUntilDismiss(item.lineEl); }, MODAL_FOCUS_DELAY_MS);
   }

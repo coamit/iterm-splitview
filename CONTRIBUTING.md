@@ -2,6 +2,26 @@
 
 Architecture, code standards, and guidelines for maintaining a clean, readable codebase.
 
+## Development
+
+```bash
+make lint          # ShellCheck (bash) + ESLint (JS)
+make test          # JS unit tests + CLI integration tests + browser smoke tests
+make check         # Both lint and test
+
+make lint-shell    # ShellCheck only
+make lint-js       # ESLint only
+make test-js       # JS unit tests only (node --test)
+make test-cli      # CLI integration tests only (needs iTerm2)
+make test-browser  # Browser smoke tests only (needs iTerm2)
+```
+
+**Requirements**: Node 18+, ShellCheck (`brew install shellcheck`), iTerm2 (for CLI/browser tests).
+
+CI runs `make lint` + `make test-js` + `make test-cli` on every PR via GitHub Actions. All checks must pass before merge.
+
+---
+
 ## Architecture
 
 ### Feature-Based File Organization

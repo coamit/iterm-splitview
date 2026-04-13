@@ -68,7 +68,7 @@ fi
 
 echo "Test: JS files are servable"
 JS_FAIL=0
-for jsfile in constants state helpers theme tabs groups swap diff search shortcuts init; do
+for jsfile in constants state helpers theme-engine tab-bar group-bar content-swap diff-viewer search-modal keyboard app; do
   HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/js/${jsfile}.js")
   if [ "$HTTP_CODE" != "200" ]; then
     fail "js/${jsfile}.js serves" "Got HTTP $HTTP_CODE"
