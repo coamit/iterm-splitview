@@ -45,6 +45,7 @@ document.addEventListener('keydown', function(e) {
     var handler = shortcutMap[e.key];
     if (handler) {
       e.preventDefault();
+      fvLog('shortcut', { key: e.key });
       handler();
       return;
     }

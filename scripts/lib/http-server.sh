@@ -23,8 +23,10 @@ start_server() {
   local port
   port=$(python3 -c "import socket; s=socket.socket(); s.bind(('',0)); print(s.getsockname()[1]); s.close()")
   echo "$port" > "$SERVER_PORT_FILE"
-  FILEVIEW_SCRIPT="$(realpath "${_FV_ENTRYPOINT:-$0}")" python3 -c "
-import http.server, socketserver, urllib.parse, os, sys, subprocess, json, threading, signal, glob
+  local log_file
+  log_file=$(_fv_log_path)
+  FILEVIEW_SCRIPT="$(realpath "${_FV_ENTRYPOINT:-$0}")" FILEVIEW_LOG="${log_file}" python3 -c "
+import http.server, socketserver, urllib.parse, os, sys, subprocess, json, threading, signal, glob, datetime
 
 DIR = sys.argv[1]
 TABS = os.path.join(DIR, 'tabs')
@@ -32,7 +34,20 @@ WATCHED = os.path.join(DIR, 'watched')
 COLLAPSED = os.path.join(DIR, 'collapsed')
 SEARCH_ROOT = os.path.join(DIR, 'search_root')
 SCRIPT = os.environ.get('FILEVIEW_SCRIPT', '')
+LOG_FILE = os.environ.get('FILEVIEW_LOG', '')
 TABS_LOCK = threading.Lock()
+
+def _write_log(op, data, level='info'):
+    if not LOG_FILE: return
+    entry = json.dumps({
+        'ts': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        'src': 'server', 'lvl': level, 'op': op, 'data': data
+    })
+    try:
+        with open(LOG_FILE, 'a') as lf:
+            lf.write(entry + '\n')
+    except Exception:
+        pass
 
 def _all_git_tab_files():
     return sorted(glob.glob(os.path.join(DIR, 'tabs.git.*')))
@@ -167,8 +182,12 @@ def run_piped_search(file_cmd, query, cwd, limit):
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
         super().__init__(*a, directory=DIR, **kw)
-    def log_message(self, *a):
-        pass
+    def log_message(self, fmt, *args):
+        path = self.path.split('?')[0] if hasattr(self, 'path') else ''
+        if path in ('/_gen', '/_loading'):
+            return
+        status = args[1] if len(args) > 1 else ''
+        _write_log('http_request', {'method': self.command, 'path': path, 'status': status})
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path == '/_close':
@@ -176,6 +195,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             fp = qs.get('path', [''])[0]
             new_active = qs.get('active', [''])[0]
             if fp:
+                _write_log('tab_close', {'path': fp, 'next_active': new_active})
                 with TABS_LOCK:
                     all_remaining = []
                     for tabfile in _all_tab_files():
@@ -220,6 +240,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             qs = urllib.parse.parse_qs(parsed.query)
             fp = qs.get('path', [''])[0]
             if fp:
+                _write_log('open_in_editor', {'path': fp})
                 subprocess.Popen(['open', '-a', 'Cursor', fp], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self.send_response(204)
             self.end_headers()
@@ -245,6 +266,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             qs = urllib.parse.parse_qs(parsed.query)
             new_theme = qs.get('set', [''])[0]
             if new_theme:
+                _write_log('theme_change', {'theme': new_theme})
                 os.makedirs(os.path.dirname(theme_file), exist_ok=True)
                 with open(theme_file, 'w') as f:
                     f.write(new_theme)
@@ -315,7 +337,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                             results.append({'file': filepath, 'fname': os.path.basename(parts[0]),
                                             'line': parts[1], 'content': parts[2]})
                 except FileNotFoundError:
-                    pass
+                    _write_log('search_text_error', {'query': query, 'error': 'rg not found'}, level='error')
+            _write_log('search_text', {'query': query, 'result_count': len(results)})
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
@@ -345,6 +368,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 results.append({'file': abs_path, 'fname': os.path.basename(abs_path), 'fpath': abs_path})
             if query and results:
                 results.sort(key=lambda r: _file_search_rank(r['fname'], query))
+            _write_log('search_files', {'query': query, 'result_count': len(results)})
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
@@ -367,6 +391,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             # Update if params provided
             new_mode = qs.get('diff_mode', [''])[0]
             if new_mode in ('branch', 'local'):
+                _write_log('git_mode_change', {'mode': new_mode})
                 settings['diff_mode'] = new_mode
                 for sf in [settings_file, session_settings]:
                     with open(sf, 'w') as f:
@@ -412,10 +437,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                                 settings['already_watching'] = existing_name
                         else:
                             settings['error'] = 'Not a git repository'
-                    except Exception:
+                            _write_log('watch_error', {'path': new_watch, 'error': 'not a git repository'}, level='error')
+                    except Exception as ex:
                         settings['error'] = 'Failed to resolve git root'
+                        _write_log('watch_error', {'path': new_watch, 'error': str(ex)}, level='error')
                 else:
                     settings['error'] = 'Directory not found'
+                    _write_log('watch_error', {'path': new_watch, 'error': 'directory not found'}, level='error')
             # Return current watched repos
             watched = _parse_watched_file()
             settings['watched'] = [wn for _, wn in watched]
@@ -452,6 +480,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             qs = urllib.parse.parse_qs(parsed.query)
             repo_name = qs.get('name', [''])[0]
             if repo_name:
+                _write_log('repo_unwatch', {'repo': repo_name})
                 tabs_file = _git_tabs_path(repo_name)
                 if os.path.exists(tabs_file):
                     os.remove(tabs_file)
@@ -571,6 +600,28 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return
         super().do_GET()
 
+    def do_POST(self):
+        if self.path == '/_log':
+            try:
+                length = int(self.headers.get('Content-Length', 0))
+                body = self.rfile.read(length)
+                entries = json.loads(body)
+                if isinstance(entries, list) and LOG_FILE:
+                    ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
+                    with open(LOG_FILE, 'a') as lf:
+                        for entry in entries[:50]:
+                            entry['src'] = 'client'
+                            if 'ts' not in entry:
+                                entry['ts'] = ts
+                            lf.write(json.dumps(entry) + '\n')
+            except Exception:
+                pass
+            self.send_response(204)
+            self.end_headers()
+            return
+        self.send_response(405)
+        self.end_headers()
+
     def _resync_repos(self, repos, diff_mode):
         \"\"\"repos is a list of (git_root, display_name) tuples.\"\"\"
         for repo_root, rname in repos:
@@ -599,8 +650,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                             if os.path.isfile(p): changed.add(p)
                 with open(tabs_file, 'w') as f:
                     f.write('\n'.join(sorted(changed)) + '\n' if changed else '')
-            except Exception:
-                pass
+            except Exception as ex:
+                _write_log('resync_error', {'repo': rname, 'error': str(ex)}, level='error')
 
     def _resync_all_repos(self, diff_mode):
         watched = _parse_watched_file()

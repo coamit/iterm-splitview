@@ -113,10 +113,13 @@ _sync_repo_tabs() {
 
 start_watcher() {
   stop_watcher
+  local _watcher_log_file
+  _watcher_log_file=$(_fv_log_path)
   (
     local last_mtimes
     last_mtimes=$(_collect_mtimes)
     local git_poll_counter=0
+    _fv_log "watcher_start" "{}"
 
     # Initial git sync for all watched repos
     if [ -f "$WATCHED_FILE" ] && [ -s "$WATCHED_FILE" ]; then
@@ -132,7 +135,10 @@ start_watcher() {
           any_changed=true
         fi
       done < "$WATCHED_FILE"
-      [ "$any_changed" = true ] && generate_tabbed_html
+      if [ "$any_changed" = true ]; then
+        _fv_log "watcher_initial_sync" "{\"changed\":true}"
+        generate_tabbed_html
+      fi
     fi
 
     while true; do
@@ -145,6 +151,7 @@ start_watcher() {
       if [ "$cur_mtimes" != "$last_mtimes" ]; then
         last_mtimes="$cur_mtimes"
         needs_regen=true
+        _fv_log "watcher_file_change" "{}"
       fi
 
       # Poll git status for each watched repo every ~6s (every 3rd cycle)
@@ -162,15 +169,17 @@ start_watcher() {
             if _sync_repo_tabs "$repo_root" "$rtf"; then
               needs_regen=true
               last_mtimes=$(_collect_mtimes)
+              _fv_log "watcher_git_sync" "{\"repo\":\"$rname\"}"
             fi
           done < "$WATCHED_FILE"
         fi
       fi
 
       if [ "$needs_regen" = true ]; then
+        _fv_log "watcher_regen" "{}"
         generate_tabbed_html
       fi
     done
-  ) &
+  ) 2>>"${_watcher_log_file:-/dev/null}" &
   echo $! > "$WATCHER_PID"
 }

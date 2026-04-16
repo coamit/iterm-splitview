@@ -2,6 +2,7 @@
 var fv = window.fv;
 
 function switchTabGroup(groupName) {
+  fvLog('group_switch', { group: groupName });
   // Save current group's active tab before switching
   var currentGroupSelector = document.querySelector('.fv-group-sel.active');
   if (currentGroupSelector) {

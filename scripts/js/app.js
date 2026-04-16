@@ -240,14 +240,21 @@ if (groupBar && !hashHandledGroup) {
 startLoadingPoll();
 startReloadPoll();
 startTimestampPoll();
+_startLogFlusher();
+fvLog('page_load', { tabCount: fv.tabCount });
+
+// --- Flush logs before tab closes ---
+window.addEventListener('beforeunload', function() { _stopLogFlusher(); });
 
 // --- Visibility change handler ---
 document.addEventListener('visibilitychange', function() {
   if (document.hidden) {
     stopAllPollers();
+    _stopLogFlusher();
   } else {
     startLoadingPoll();
     startReloadPoll();
     startTimestampPoll();
+    _startLogFlusher();
   }
 });

@@ -118,6 +118,7 @@ function jumpToDiff(direction) {
   fv.currentDiffIdx += direction;
   if (fv.currentDiffIdx >= hunks.length) fv.currentDiffIdx = 0;
   if (fv.currentDiffIdx < 0) fv.currentDiffIdx = hunks.length - 1;
+  fvLog('diff_jump', { index: fv.currentDiffIdx, total: hunks.length });
   document.querySelectorAll('.code-line.diff-focus').forEach(function(el) { el.classList.remove('diff-focus'); });
   var hunk = hunks[fv.currentDiffIdx];
   var allLines = Array.from(hunk.closest('.code-lines').querySelectorAll('.code-line'));

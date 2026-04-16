@@ -17,6 +17,8 @@ SCRIPT_DIR="$(cd "$(dirname "$(realpath "$0")")" && pwd)"
 # Source libraries
 # shellcheck source=lib/session.sh
 source "$SCRIPT_DIR/lib/session.sh"
+# shellcheck source=lib/logging.sh
+source "$SCRIPT_DIR/lib/logging.sh"
 # shellcheck source=lib/path-resolver.sh
 source "$SCRIPT_DIR/lib/path-resolver.sh"
 # shellcheck source=lib/file-detection.sh
@@ -34,6 +36,9 @@ source "$SCRIPT_DIR/lib/iterm-pane.sh"
 
 # Copy template to cache (always sync — source may have changed)
 cp "$SCRIPT_DIR/templates/viewer.html" "$VIEW_TEMPLATE"
+
+# Initialize session logging
+_fv_log_init
 
 # --- GC: clean up stale sessions from dead iTerm tabs ---
 
@@ -89,6 +94,7 @@ _gc_stale_sessions() {
 
 _gc_kill_session() {
   local session_dir="$1"
+  _fv_log "gc_kill" "{\"session\":\"$(basename "$session_dir")\"}"
   for pidfile in "$session_dir/watcher.pid" "$session_dir/server.pid"; do
     if [ -f "$pidfile" ]; then
       local pid
@@ -125,6 +131,17 @@ _add_file_to_tabs() {
   fi
 }
 
+# Build a JSON array string from positional args for logging
+_fv_args_json() {
+  local json="["
+  local sep=""
+  for arg in "$@"; do
+    json="${json}${sep}\"${arg}\""
+    sep=","
+  done
+  echo "${json}]"
+}
+
 _generate_and_launch() {
   if ! generate_tabbed_html; then
     return 1
@@ -137,6 +154,7 @@ _generate_and_launch() {
 # --- CLI Commands ---
 
 cmd_open() {
+  _fv_log "cmd_open" "{\"args\":$(_fv_args_json "$@")}"
   _show_loading
   touch "$TABS_FILE"
   echo "$PWD" > "$CWD_FILE"
@@ -153,6 +171,7 @@ cmd_open() {
     abs_path=$(_resolve_path "$src_file")
     if [ ! -f "$abs_path" ]; then
       echo "fileview: file not found: $src_file" >&2
+      _fv_log_error "file_not_found" "{\"path\":\"$src_file\"}"
       continue
     fi
     # If the file is already in any git tab file, just activate it without duplicating
@@ -182,6 +201,7 @@ cmd_open() {
 }
 
 cmd_close() {
+  _fv_log "cmd_close" "{\"args\":$(_fv_args_json "$@")}"
   if [ $# -eq 0 ]; then
     _close_all
     return 0
@@ -240,6 +260,7 @@ cmd_close() {
 }
 
 cmd_diff() {
+  _fv_log "cmd_diff" "{\"args\":$(_fv_args_json "$@")}"
   local custom_name="" dirs=()
   _parse_diff_args "$@"
 
@@ -252,6 +273,7 @@ cmd_diff() {
     git_root=$(git -C "$(_resolve_path "$dir")" rev-parse --show-toplevel 2>/dev/null)
     if [ -z "$git_root" ]; then
       echo "fileview: not a git repository: $dir" >&2
+      _fv_log_error "not_git_repo" "{\"dir\":\"$dir\"}"
       continue
     fi
 
@@ -317,6 +339,7 @@ _resolve_diff_repo_name() {
 }
 
 cmd_unwatch() {
+  _fv_log "cmd_unwatch" "{\"args\":$(_fv_args_json "$@")}"
   # Default to current directory if no args
   local dirs=("${@:-.}")
 
@@ -419,6 +442,6 @@ case "$1" in
   unwatch)      shift; cmd_unwatch "$@" ;;
   list)         cmd_list ;;
   search-root)  shift; cmd_search_root "$@" ;;
-  _regen)       generate_tabbed_html ;;
+  _regen)       _fv_log "regen" "{}"; generate_tabbed_html ;;
   *)            echo "Usage: fileview {open|close|diff|unwatch|list|search-root} [file ...]" >&2; exit 1 ;;
 esac

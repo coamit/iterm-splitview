@@ -47,7 +47,7 @@ function initializeContent(root) {
           if (ins.before) wrapper.insertBefore(ins.el, ins.before);
           else wrapper.appendChild(ins.el);
         });
-      } catch(_e) { /* non-critical */ }
+      } catch(_e) { fvLogError('diff_removed_parse', { message: _e && _e.message || '' }); }
     }
     block.innerHTML = '';
     block.style.padding = '0';
@@ -111,6 +111,7 @@ function restoreViewState(container, state) {
   window.scrollTo(0, state.scrollTop);
 }
 
+// eslint-disable-next-line max-lines-per-function
 function performSwap(newBodyHtml) {
   if (fv.isSwapInProgress) return;
   fv.isSwapInProgress = true;
@@ -147,7 +148,7 @@ function performSwap(newBodyHtml) {
   // 6. Mermaid rendering (needs live DOM)
   var mermaidElements = container.querySelectorAll('.mermaid:not([data-processed])');
   if (mermaidElements.length > 0) {
-    try { mermaid.run({ nodes: mermaidElements }); } catch(_e) { /* non-critical */ }
+    try { mermaid.run({ nodes: mermaidElements }); } catch(_e) { fvLogError('mermaid_render', { message: _e && _e.message || '' }); }
   }
 
   // 7. Ensure content visible
@@ -174,9 +175,10 @@ function performSwap(newBodyHtml) {
     if (newEpoch) fv.tsGenEpoch = newEpoch;
   }
 
-  // 9. Hide loading indicators
+  // 9. Hide loading indicators and log completion
   fv.loadingToast.style.display = 'none';
   fv.isSwapInProgress = false;
+  fvLog('content_swap', { genTime: fv.genTime, tabCount: fv.tabCount });
 }
 
 // --- Poller infrastructure ---
@@ -211,10 +213,10 @@ function pollLoading() {
         var showIt = response.loading && fv.lastOpenTriggered === 0 && (Date.now() - fv.pageLoadTime) > PAGE_LOAD_GRACE_MS;
         fv.loadingToast.style.display = showIt ? 'flex' : 'none';
         if (!response.loading) stopPoller('loading');
-      } catch(_e) { /* non-critical */ }
+      } catch(_e) { fvLogError('loading_poll_parse', { message: _e && _e.message || '' }); }
     };
     xhr.send();
-  } catch(_e) { /* non-critical */ }
+  } catch(_e) { fvLogError('loading_poll_xhr', { message: _e && _e.message || '' }); }
 }
 
 function startLoadingPoll() {
@@ -236,6 +238,7 @@ function pollReload() {
       try {
         var response = JSON.parse(xhr.responseText);
         if (response.gen && response.gen !== fv.genTime) {
+          fvLog('reload_detected', { oldGen: fv.genTime, newGen: response.gen });
           var closeGuard = fv.pendingCloses > 0 || (Date.now() - fv.lastCloseCompleted) < CLOSE_GUARD_MS;
           if (closeGuard || (Date.now() - fv.pageLoadTime) < PAGE_LOAD_GRACE_MS) {
             if (closeGuard) fv.genTime = response.gen;
@@ -249,7 +252,7 @@ function pollReload() {
               loadingXhr.send();
               var loadingStatus = JSON.parse(loadingXhr.responseText);
               if (loadingStatus.loading) return;
-            } catch(_e) { /* non-critical */ }
+            } catch(_e) { fvLogError('loading_check', { message: _e && _e.message || '' }); }
             fv.lastOpenTriggered = 0;
           }
           if (fv.isSwapInProgress) return;
@@ -266,10 +269,10 @@ function pollReload() {
           };
           fetchXhr.send();
         }
-      } catch(_e) { /* non-critical */ }
+      } catch(_e) { fvLogError('reload_poll_parse', { message: _e && _e.message || '' }); }
     };
     xhr.send();
-  } catch(_e) { /* non-critical */ }
+  } catch(_e) { fvLogError('reload_poll_xhr', { message: _e && _e.message || '' }); }
 }
 
 function startReloadPoll() {

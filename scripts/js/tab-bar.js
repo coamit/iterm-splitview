@@ -14,6 +14,7 @@ function activateTab(tabId) {
       switchTabGroup(tabGroup);
     }
     tab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    fvLog('tab_activate', { tabId: tabId, path: tab.getAttribute('title') || '' });
   }
 }
 
@@ -163,6 +164,7 @@ function attachBodyListeners(root) {
         document.querySelectorAll('.fv-tab-content.active').forEach(function(panel) { panel.classList.remove('active'); });
         switchTabGroup(closedGroup);
       }
+      fvLog('tab_close', { path: filePath });
       fv.pendingCloses++;
       fetch('/_close?path=' + encodeURIComponent(filePath) + '&active=' + encodeURIComponent(newActivePath))
         .finally(function() { fv.pendingCloses--; fv.lastCloseCompleted = Date.now(); });

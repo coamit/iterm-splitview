@@ -23,6 +23,8 @@ module.exports = [
         mermaid: "readonly",
         sessionStorage: "readonly",
         // Cross-module functions (defined in other script files)
+        fvLog: "readonly",
+        fvLogError: "readonly",
         escapeHtml: "readonly",
         escapeCssSelector: "readonly",
         showToast: "readonly",

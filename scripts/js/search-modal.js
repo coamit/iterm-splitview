@@ -203,7 +203,7 @@ function renderTextSearchItem(item, i, queryLower) {
 
 function handleSearchError(err) {
   if (err && err.name === 'AbortError') return;
-  console.error('Search failed:', err);
+  fvLogError('search_error', { message: err && err.message || String(err) });
   fv.modalItems = [];
   fv.modalList.innerHTML = renderEmptyState('Search failed');
 }
@@ -354,7 +354,7 @@ function deriveSearchRootFromActiveFile() {
   updateSearchRootDisplay();
   // Sync the server-side root so subsequent searches use it
   fetch('/_search-root?path=' + encodeURIComponent(dir))
-    .catch(function(err) { console.error('Failed to sync search root:', err); });
+    .catch(function(err) { fvLogError('search_root_sync', { message: err && err.message || String(err) }); });
   return true;
 }
 
@@ -391,7 +391,7 @@ function closeSearchModal() {
 
 function toggleSearchModal(mode) {
   if (fv.modalOverlay.classList.contains('visible') && fv.modalMode === mode) closeSearchModal();
-  else openSearchModal(mode);
+  else { fvLog('search_open', { mode: mode }); openSearchModal(mode); }
 }
 
 function highlightLineUntilDismiss(lineEl) {
@@ -432,6 +432,7 @@ function selectModalItem() {
   }
   if (fv.modalMode === 'fs-text' || fv.modalMode === 'fs-files') {
     var filePath = item.file;
+    fvLog('search_select', { mode: fv.modalMode, file: filePath });
     closeSearchModal();
     createLoadingTab(filePath);
     fv.lastOpenTriggered = Date.now();
