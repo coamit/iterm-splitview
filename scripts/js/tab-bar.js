@@ -217,6 +217,14 @@ function attachBodyListeners(root) {
     tab.addEventListener('click', function() {
       fv.currentDiffIdx = -1;
       fv.diffCounterBadge.classList.remove('visible');
+      // Update revision panel when switching tabs
+      setTimeout(onTabSwitchRefreshRevision, 50);
+    });
+  });
+  root.querySelectorAll('.fv-history-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      toggleRevisionPanel();
     });
   });
   // Toolbar buttons (inside body container, lost on swap)

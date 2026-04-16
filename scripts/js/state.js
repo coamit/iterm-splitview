@@ -52,6 +52,10 @@ window.fv = {
   modalModeText: null,
   modalRootEl: null,
   // Diff counter dismiss handler
-  _diffCounterDismiss: null
+  _diffCounterDismiss: null,
+  // Revision history panel
+  revisionPanelOpen: false,
+  revisionActiveCommit: null,   // full_hash of selected commit, or null (live)
+  revisionFilePath: null         // file path the panel is showing history for
 };
 var fv = window.fv;

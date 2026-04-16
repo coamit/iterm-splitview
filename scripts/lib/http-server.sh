@@ -465,6 +465,56 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_response(204)
             self.end_headers()
             return
+        if parsed.path == '/_file-history':
+            import hashlib, datetime
+            qs = urllib.parse.parse_qs(parsed.query)
+            fp = qs.get('path', [''])[0]
+            commits = []
+            if fp and os.path.isfile(fp):
+                d = os.path.dirname(fp)
+                try:
+                    r = subprocess.run(
+                        ['git', 'log', '--follow', '--format=%H|%s|%ai', '-n', '50', '--', fp],
+                        cwd=d, capture_output=True, text=True, timeout=5)
+                    now = datetime.datetime.now(datetime.timezone.utc)
+                    for line in r.stdout.strip().splitlines():
+                        if not line: continue
+                        parts = line.split('|', 2)
+                        if len(parts) < 3: continue
+                        h, subject, date_str = parts
+                        try:
+                            dt = datetime.datetime.fromisoformat(date_str)
+                            diff_sec = int((now - dt.astimezone(datetime.timezone.utc)).total_seconds())
+                            if diff_sec < 60: ago = f'{diff_sec}s ago'
+                            elif diff_sec < 3600: ago = f'{diff_sec // 60}m ago'
+                            elif diff_sec < 86400: ago = f'{diff_sec // 3600}h ago'
+                            else: ago = f'{diff_sec // 86400}d ago'
+                        except Exception:
+                            ago = date_str[:10]
+                        commits.append({'hash': h[:7], 'full_hash': h, 'subject': subject[:80], 'ago': ago})
+                except Exception:
+                    pass
+            self._json_response(commits)
+            return
+        if parsed.path == '/_file-revision':
+            import hashlib
+            qs = urllib.parse.parse_qs(parsed.query)
+            fp = qs.get('path', [''])[0]
+            commit = qs.get('commit', [''])[0]
+            if fp:
+                safe_key = hashlib.md5(fp.encode()).hexdigest()[:16]
+                rev_file = os.path.join(DIR, 'rev.' + safe_key)
+                if commit and commit != 'current':
+                    with open(rev_file, 'w') as f:
+                        f.write(commit)
+                else:
+                    if os.path.exists(rev_file):
+                        os.remove(rev_file)
+                if SCRIPT:
+                    subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self.send_response(204)
+            self.end_headers()
+            return
         if parsed.path == '/_open':
             qs = urllib.parse.parse_qs(parsed.query)
             fp = qs.get('path', [''])[0]

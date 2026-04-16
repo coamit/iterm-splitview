@@ -16,6 +16,18 @@ _build_diff_attrs() {
   fi
 }
 
+# Build diff attrs from pre-computed added/removed values (used in revision mode)
+_build_diff_attrs_from() {
+  local added="$1" removed="$2"
+  if [ -n "$added" ]; then
+    printf ' data-diff-added="%s"' "$added"
+  fi
+  if [ -n "$removed" ] && [ "$removed" != "{}" ]; then
+    local removed_escaped="${removed//\'/\&#39;}"
+    printf " data-diff-removed='%s'" "$removed_escaped"
+  fi
+}
+
 _git_file_status() {
   local file="$1" git_root="$2" diff_base="${3:-}"
   # Check if file is untracked
@@ -61,16 +73,19 @@ _build_diff_stats_html() {
 }
 
 _render_code_file() {
-  local src_file="$1" lang="$2" diff_attrs="$3" diff_stats="$4"
+  local src_file="$1" lang="$2" diff_attrs="$3" diff_stats="$4" rev_hash="${5:-}" orig_filename="${6:-}"
   local filename lang_display
-  filename=$(basename "$src_file")
+  filename="${orig_filename:-$(basename "$src_file")}"
   lang_display="${lang:-${src_file##*.}}"
+  local rev_attr=""
+  [ -n "$rev_hash" ] && rev_attr=" data-revision=\"${rev_hash}\""
 
-  printf '<div class="code-file-wrapper">\n'
+  printf '<div class="code-file-wrapper"%s>\n' "$rev_attr"
   printf '  <div class="code-file-header">\n'
   printf '    <span class="filename">%s</span>\n' "$filename"
   [ -n "$diff_stats" ] && printf '    %s\n' "$diff_stats"
   printf '    <span class="diff-view-mode">collapsed</span>\n'
+  printf '    <span class="fv-history-btn" title="Revision history (Ctrl+L)"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:-1px"><path d="M1.5 8a6.5 6.5 0 1 1 13 0 6.5 6.5 0 0 1-13 0ZM8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0Zm.5 4.75a.75.75 0 0 0-1.5 0v3.5c0 .199.079.390.22.530l2.5 2.5a.749.749 0 1 0 1.06-1.06L8.5 8.44V4.75Z"/></svg></span>\n'
   printf '    <span class="lang-badge">%s</span>\n' "$lang_display"
   printf '  </div>\n'
 
@@ -86,28 +101,72 @@ generate_file_body() {
   local diff_base="${3:-}"
   local git_root="${4:-}"
 
+  # --- Revision override: check if user is viewing a specific commit for this file ---
+  local rev_hash="" rev_tmpfile="" diff_src_file="$src_file" rev_end_ref=""
+  local safe_key
+  safe_key=$(printf '%s' "$src_file" | md5 -q 2>/dev/null || printf '%s' "$src_file" | md5sum 2>/dev/null | cut -d' ' -f1)
+  local rev_file="$_FV_SESSION_DIR/rev.${safe_key:0:16}"
+  if [ -f "$rev_file" ]; then
+    rev_hash=$(cat "$rev_file" 2>/dev/null)
+    if [ -n "$rev_hash" ]; then
+      [ -z "$git_root" ] && git_root=$(git -C "$(dirname "$src_file")" rev-parse --show-toplevel 2>/dev/null)
+      if [ -n "$git_root" ]; then
+        local rel_path_rev
+        rel_path_rev=$(git -C "$git_root" ls-files --full-name -- "$src_file" 2>/dev/null)
+        if [ -n "$rel_path_rev" ]; then
+          local ext="${src_file##*.}"
+          rev_tmpfile=$(mktemp "/tmp/fv-rev-XXXXXX.${ext}")
+          if git -C "$git_root" show "${rev_hash}:${rel_path_rev}" > "$rev_tmpfile" 2>/dev/null; then
+            rev_end_ref="$rev_hash"
+            # Empty tree hash — used as base for first commit (no parent)
+            local EMPTY_TREE="4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+            if git -C "$git_root" rev-parse --verify "${rev_hash}^" &>/dev/null; then
+              diff_base="${rev_hash}^"
+            else
+              diff_base="$EMPTY_TREE"
+            fi
+            diff_src_file="$src_file"  # original path for diff computation
+            src_file="$rev_tmpfile"    # tmpfile for content rendering
+            mode="diff"
+          else
+            rm -f "$rev_tmpfile"; rev_tmpfile=""; rev_hash=""
+          fi
+        fi
+      fi
+    fi
+  fi
+  # --- End revision override ---
+
   # In diff mode, render all files as code (with line numbers + diff highlighting)
   if _is_code_file "$src_file" || [ "$mode" = "diff" ]; then
     local lang diff_attrs="" diff_stats=""
     lang=$(_lang_from_ext "$src_file")
 
     if [ "$mode" = "diff" ]; then
-      [ -z "$git_root" ] && git_root=$(git -C "$(dirname "$src_file")" rev-parse --show-toplevel 2>/dev/null)
+      [ -z "$git_root" ] && git_root=$(git -C "$(dirname "$diff_src_file")" rev-parse --show-toplevel 2>/dev/null)
       local added removed file_status
-      added=$(_get_diff_added "$src_file" "$diff_base" "$git_root")
-      removed=$(_get_diff_removed "$src_file" "$diff_base" "$git_root")
-      diff_attrs=$(_build_diff_attrs "$src_file" "$diff_base" "$git_root")
-      local rel_path
-      rel_path=$(git -C "$git_root" ls-files --full-name -- "$src_file" 2>/dev/null)
-      if [ -z "$rel_path" ]; then
-        # Untracked file — strip git root prefix (case-insensitive for macOS)
-        local lower_root lower_file
-        lower_root=$(echo "$git_root" | tr '[:upper:]' '[:lower:]')
-        lower_file=$(echo "$src_file" | tr '[:upper:]' '[:lower:]')
-        rel_path="${lower_file#"$lower_root"/}"
+      if [ -n "$rev_end_ref" ]; then
+        # Revision mode: diff between parent and this commit for the original file path
+        added=$(_get_diff_added "$diff_src_file" "$diff_base" "$git_root" "$rev_end_ref")
+        removed=$(_get_diff_removed "$diff_src_file" "$diff_base" "$git_root" "$rev_end_ref")
+        diff_attrs=$(_build_diff_attrs_from "$added" "$removed")
+        diff_stats=$(_build_diff_stats_html "$added" "$removed" "modified")
+      else
+        added=$(_get_diff_added "$src_file" "$diff_base" "$git_root")
+        removed=$(_get_diff_removed "$src_file" "$diff_base" "$git_root")
+        diff_attrs=$(_build_diff_attrs "$src_file" "$diff_base" "$git_root")
+        local rel_path
+        rel_path=$(git -C "$git_root" ls-files --full-name -- "$src_file" 2>/dev/null)
+        if [ -z "$rel_path" ]; then
+          # Untracked file — strip git root prefix (case-insensitive for macOS)
+          local lower_root lower_file
+          lower_root=$(echo "$git_root" | tr '[:upper:]' '[:lower:]')
+          lower_file=$(echo "$src_file" | tr '[:upper:]' '[:lower:]')
+          rel_path="${lower_file#"$lower_root"/}"
+        fi
+        file_status=$(_git_file_status "$rel_path" "$git_root" "$diff_base")
+        diff_stats=$(_build_diff_stats_html "$added" "$removed" "$file_status")
       fi
-      file_status=$(_git_file_status "$rel_path" "$git_root" "$diff_base")
-      diff_stats=$(_build_diff_stats_html "$added" "$removed" "$file_status")
     fi
 
     local is_markdown=false
@@ -119,15 +178,18 @@ generate_file_body() {
       preview_html=$(timeout 10 pandoc "$src_file" 2>/dev/null | sed '/<colgroup>/,/<\/colgroup>/d')
 
       local filename lang_display
-      filename=$(basename "$src_file")
+      filename=$([ -n "$rev_hash" ] && basename "$diff_src_file" || basename "$src_file")
       lang_display="${lang:-${src_file##*.}}"
+      local rev_attr=""
+      [ -n "$rev_hash" ] && rev_attr=" data-revision=\"${rev_hash}\""
 
-      printf '<div class="code-file-wrapper">\n'
+      printf '<div class="code-file-wrapper"%s>\n' "$rev_attr"
       printf '  <div class="code-file-header">\n'
       printf '    <span class="filename">%s</span>\n' "$filename"
       [ -n "$diff_stats" ] && printf '    %s\n' "$diff_stats"
       printf '    <span class="fv-md-toggle"><span class="fv-md-toggle-btn active" data-view="raw">Raw</span><span class="fv-md-toggle-btn" data-view="preview">Preview</span></span>\n'
       printf '    <span class="diff-view-mode">collapsed</span>\n'
+      printf '    <span class="fv-history-btn" title="Revision history (Ctrl+L)"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:-1px"><path d="M1.5 8a6.5 6.5 0 1 1 13 0 6.5 6.5 0 0 1-13 0ZM8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0Zm.5 4.75a.75.75 0 0 0-1.5 0v3.5c0 .199.079.390.22.530l2.5 2.5a.749.749 0 1 0 1.06-1.06L8.5 8.44V4.75Z"/></svg></span>\n'
       printf '    <span class="lang-badge">%s</span>\n' "$lang_display"
       printf '  </div>\n'
       printf '  <div class="fv-raw-view">\n'
@@ -140,7 +202,9 @@ generate_file_body() {
       printf '  </div>\n'
       printf '</div>\n'
     else
-      _render_code_file "$src_file" "$lang" "$diff_attrs" "$diff_stats"
+      local orig_fn=""
+      [ -n "$rev_hash" ] && orig_fn=$(basename "$diff_src_file")
+      _render_code_file "$src_file" "$lang" "$diff_attrs" "$diff_stats" "$rev_hash" "$orig_fn"
     fi
   elif _is_text_file "$src_file"; then
     local is_md=false
@@ -152,6 +216,7 @@ generate_file_body() {
       printf '  <div class="code-file-header">\n'
       printf '    <span class="filename">%s</span>\n' "$filename"
       printf '    <span class="fv-md-toggle"><span class="fv-md-toggle-btn" data-view="raw">Raw</span><span class="fv-md-toggle-btn active" data-view="preview">Preview</span></span>\n'
+      printf '    <span class="fv-history-btn" title="Revision history (Ctrl+L)"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:-1px"><path d="M1.5 8a6.5 6.5 0 1 1 13 0 6.5 6.5 0 0 1-13 0ZM8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0Zm.5 4.75a.75.75 0 0 0-1.5 0v3.5c0 .199.079.390.22.530l2.5 2.5a.749.749 0 1 0 1.06-1.06L8.5 8.44V4.75Z"/></svg></span>\n'
       printf '    <span class="lang-badge">md</span>\n'
       printf '  </div>\n'
       printf '  <div class="fv-raw-view" style="display:none">\n'
@@ -169,6 +234,8 @@ generate_file_body() {
   else
     printf '<p class="fv-binary-note" style="font-style:italic">Binary file — cannot render</p>\n'
   fi
+  # Clean up revision tmpfile
+  [ -n "$rev_tmpfile" ] && rm -f "$rev_tmpfile"
 }
 
 _show_loading() {

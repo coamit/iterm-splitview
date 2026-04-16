@@ -36,7 +36,8 @@ var shortcutMap = {
   },
   ']': function() { navigateToAdjacentTab(1); },
   '[': function() { navigateToAdjacentTab(-1); },
-  'w': function() { closeActiveTab(); }
+  'w': function() { closeActiveTab(); },
+  'l': function() { toggleRevisionPanel(); }
 };
 
 document.addEventListener('keydown', function(e) {

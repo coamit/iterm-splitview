@@ -154,6 +154,17 @@ function performSwap(newBodyHtml) {
   var newActive = document.querySelector('.fv-tab-content.active');
   if (newActive) newActive.classList.add('fv-reveal');
 
+  // 7b. Update revision badges + reopen panel if it was open
+  updateRevisionBadges();
+  if (fv.revisionPanelOpen) {
+    var fp = getActiveFilePath();
+    if (fp && fp !== fv.revisionFilePath) {
+      fv.revisionFilePath = fp;
+      fv.revisionActiveCommit = null;
+      _loadHistory(fp);
+    }
+  }
+
   // 8. Update metadata from new content
   var newMarker = container.querySelector('[data-fv-gen]');
   if (newMarker) {
