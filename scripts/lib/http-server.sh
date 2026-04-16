@@ -165,7 +165,7 @@ def run_piped_search(file_cmd, query, cwd, limit):
     return results
 
 def _is_open_tab(fp):
-    \"\"\"Return True only if fp is currently open in a fileview tab.\"\"\"\
+    # Return True only if fp is currently open in a fileview tab
     for tabfile in _all_tab_files():
         if os.path.exists(tabfile):
             try:
