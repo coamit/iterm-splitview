@@ -140,7 +140,26 @@ function buildThemeCSS(theme) {
     '.fv-loading-toast-text { color: ' + theme.textMuted + '; }' +
     '.fv-empty-state { color: ' + theme.textMuted + '; }' +
     '.fv-binary-note { color: ' + theme.textMuted + '; }' +
-    '.fv-theme-grid-label { color: ' + theme.textMuted + '; }';
+    '.fv-theme-grid-label { color: ' + theme.textMuted + '; }' +
+    '.fv-revision-panel { background: ' + theme.bgAlt + '; border-left-color: ' + theme.border + '; }' +
+    '.fv-revision-header { border-bottom-color: ' + theme.border + '; }' +
+    '.fv-revision-title { color: ' + theme.text + '; }' +
+    '.fv-revision-close { color: ' + theme.textMuted + '; }' +
+    '.fv-revision-close:hover { color: ' + theme.textBright + '; background: ' + theme.border + '; }' +
+    '.fv-revision-item { border-bottom-color: ' + theme.bg + '; }' +
+    '.fv-revision-item:hover { background: ' + theme.bg + '; }' +
+    '.fv-revision-item.active { background: ' + theme.bgHover + '; border-left-color: ' + theme.accent + '; }' +
+    '.fv-revision-item.fv-revision-live.active { border-left-color: ' + theme.diffAddLn + '; }' +
+    '.fv-revision-hash { color: ' + theme.accent + '; }' +
+    '.fv-revision-live .fv-revision-hash { color: ' + theme.diffAddLn + '; }' +
+    '.fv-revision-ago { color: ' + theme.textDim + '; }' +
+    '.fv-revision-subject { color: ' + theme.textMuted + '; }' +
+    '.fv-revision-item.active .fv-revision-subject { color: ' + theme.text + '; }' +
+    '.fv-revision-loading, .fv-revision-empty { color: ' + theme.textDim + '; }' +
+    '.fv-revision-spinner { border-color: ' + theme.border + '; border-top-color: ' + theme.accent + '; }' +
+    '.fv-rev-badge { color: ' + theme.accent + '; }' +
+    '.fv-history-btn { color: ' + theme.textDim + '; }' +
+    '.fv-history-btn:hover { color: ' + theme.text + '; }';
 }
 
 function applyTheme(id) {

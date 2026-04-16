@@ -2,6 +2,7 @@
 var fv = window.fv;
 var _revisionDebounceTimer = null;
 var _revisionLoadingTimer = null;
+var _revisionLoadingPollId = null;
 
 // --- Panel DOM management ---
 
@@ -123,14 +124,33 @@ function _renderCommitList(list, filePath, commits) {
 }
 
 function _selectRevision(filePath, commit) {
-  // Safety timeout: clear panel spinner after 4s even if performSwap doesn't run
-  // (e.g. hash unchanged when returning to live state that was already current)
+  // Reset genTime so pollReload always detects a change, even if content hash is identical
+  fv.genTime = null;
+  // Start /_loading poll to keep spinner alive for exactly as long as regen runs
+  _startRevisionLoadingPoll();
+  fetch('/_file-revision?path=' + encodeURIComponent(filePath) + '&commit=' + encodeURIComponent(commit));
+}
+
+function _startRevisionLoadingPoll() {
+  _stopRevisionLoadingPoll();
+  // Safety fallback: clear spinner after 30s if performSwap never fires
   if (_revisionLoadingTimer) clearTimeout(_revisionLoadingTimer);
   _revisionLoadingTimer = setTimeout(function() {
     _revisionLoadingTimer = null;
     _setRevisionLoading(false);
-  }, 4000);
-  fetch('/_file-revision?path=' + encodeURIComponent(filePath) + '&commit=' + encodeURIComponent(commit));
+    _stopRevisionLoadingPoll();
+  }, 30000);
+  // Poll /_loading every 500ms while regen is running
+  // Spinner clears via performSwap → updateRevisionBadges when content hits DOM
+  _revisionLoadingPollId = setInterval(function() {
+    fetch('/_loading').then(function(r) { return r.json(); }).then(function(data) {
+      if (!data.loading) _stopRevisionLoadingPoll();
+    }).catch(function() { _stopRevisionLoadingPoll(); });
+  }, 500);
+}
+
+function _stopRevisionLoadingPoll() {
+  if (_revisionLoadingPollId) { clearInterval(_revisionLoadingPollId); _revisionLoadingPollId = null; }
 }
 
 // --- Revision badge in file header ---
@@ -149,7 +169,8 @@ function updateRevisionBadges() {
       fname.appendChild(badge);
     }
   });
-  // Swap complete — clear loading spinner + cancel safety timeout
+  // Swap complete — stop poll, cancel safety timeout, clear spinner
+  _stopRevisionLoadingPoll();
   if (_revisionLoadingTimer) { clearTimeout(_revisionLoadingTimer); _revisionLoadingTimer = null; }
   _setRevisionLoading(false);
 }
@@ -159,8 +180,6 @@ function onTabSwitchRefreshRevision() {
   if (!fv.revisionPanelOpen) return;
   var fp = getActiveFilePath();
   if (fp && fp !== fv.revisionFilePath) {
-    fv.revisionFilePath = fp;
-    fv.revisionActiveCommit = null;
-    _loadHistory(fp);
+    closeRevisionPanel();
   }
 }

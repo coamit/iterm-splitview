@@ -140,6 +140,8 @@ cmd_open() {
   _show_loading
   touch "$TABS_FILE"
   echo "$PWD" > "$CWD_FILE"
+  # Clear any leftover revision state so files always open in live mode
+  rm -f "$_FV_SESSION_DIR"/rev.*
 
   if [ $# -eq 0 ]; then
     # No files — just open the pane with existing tabs (or empty)

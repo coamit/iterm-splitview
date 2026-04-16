@@ -234,8 +234,8 @@ generate_file_body() {
   else
     printf '<p class="fv-binary-note" style="font-style:italic">Binary file — cannot render</p>\n'
   fi
-  # Clean up revision tmpfile
-  [ -n "$rev_tmpfile" ] && rm -f "$rev_tmpfile"
+  # Clean up revision tmpfile (use if/then to avoid set -e triggering on false condition)
+  if [ -n "$rev_tmpfile" ]; then rm -f "$rev_tmpfile"; fi
 }
 
 _show_loading() {
@@ -424,7 +424,7 @@ _generate_panels_for_group() {
     [ "$fp" = "$active_file" ] && active_class=" active"
     {
       printf '<div class="fv-tab-content%s" id="fv-tab-%s-%d">\n' "$active_class" "$group_id" "$idx"
-      generate_file_body "$fp" "$mode" "$diff_base" "$git_root"
+      generate_file_body "$fp" "$mode" "$diff_base" "$git_root" || true
       printf '</div>\n'
     } >> "$body_tmp"
     idx=$((idx + 1))
@@ -548,6 +548,11 @@ generate_tabbed_html() {
   # Use content hash as gen value — only triggers reload when content actually changes
   local gen_hash
   gen_hash=$(md5 -q "$body_tmp" 2>/dev/null || md5sum "$body_tmp" 2>/dev/null | cut -d' ' -f1)
+  # Append active revision state so live/revision always produce different hashes
+  # even when file content is identical (e.g. latest commit = current working copy)
+  for rf in "$_FV_SESSION_DIR"/rev.*; do
+    [ -f "$rf" ] && gen_hash="${gen_hash}_$(head -c 8 "$rf" 2>/dev/null)"
+  done
   # Prepend the marker with the content hash
   local body_with_marker
   body_with_marker=$(mktemp)

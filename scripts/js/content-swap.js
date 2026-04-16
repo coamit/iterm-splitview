@@ -154,14 +154,12 @@ function performSwap(newBodyHtml) {
   var newActive = document.querySelector('.fv-tab-content.active');
   if (newActive) newActive.classList.add('fv-reveal');
 
-  // 7b. Update revision badges + reopen panel if it was open
+  // 7b. Update revision badges; keep panel open only if it's for the current file
   updateRevisionBadges();
   if (fv.revisionPanelOpen) {
     var fp = getActiveFilePath();
     if (fp && fp !== fv.revisionFilePath) {
-      fv.revisionFilePath = fp;
-      fv.revisionActiveCommit = null;
-      _loadHistory(fp);
+      closeRevisionPanel();
     }
   }
 

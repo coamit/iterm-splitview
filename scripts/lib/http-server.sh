@@ -474,7 +474,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 d = os.path.dirname(fp)
                 try:
                     r = subprocess.run(
-                        ['git', 'log', '--follow', '--format=%H|%s|%ai', '-n', '50', '--', fp],
+                        ['git', 'log', '--follow', '--no-merges', '--format=%H|%s|%ai', '-n', '50', '--', fp],
                         cwd=d, capture_output=True, text=True, timeout=5)
                     now = datetime.datetime.now(datetime.timezone.utc)
                     for line in r.stdout.strip().splitlines():
@@ -510,6 +510,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 else:
                     if os.path.exists(rev_file):
                         os.remove(rev_file)
+                # Touch loading file so /_loading accurately reflects regen state
+                open(os.path.join(DIR, 'loading'), 'w').close()
                 if SCRIPT:
                     subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self.send_response(204)
