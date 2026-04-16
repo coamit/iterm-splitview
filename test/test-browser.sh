@@ -60,15 +60,15 @@ fi
 
 echo "Test: Script tags present"
 SCRIPT_COUNT=$(curl -s "$BASE_URL/index.html" | grep -c '<script src="js/' || echo 0)
-if [ "$SCRIPT_COUNT" -ge 8 ]; then
+if [ "$SCRIPT_COUNT" -ge 9 ]; then
   pass "$SCRIPT_COUNT JS module script tags found"
 else
-  fail "at least 8 JS script tags" "Found $SCRIPT_COUNT"
+  fail "at least 9 JS script tags" "Found $SCRIPT_COUNT"
 fi
 
 echo "Test: JS files are servable"
 JS_FAIL=0
-for jsfile in constants state helpers theme-engine tab-bar group-bar content-swap diff-viewer search-modal keyboard app; do
+for jsfile in constants state helpers theme-engine tab-bar group-bar content-swap diff-viewer revision-history search-modal keyboard app; do
   HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/js/${jsfile}.js")
   if [ "$HTTP_CODE" != "200" ]; then
     fail "js/${jsfile}.js serves" "Got HTTP $HTTP_CODE"

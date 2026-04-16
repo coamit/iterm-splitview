@@ -217,8 +217,8 @@ function attachBodyListeners(root) {
     tab.addEventListener('click', function() {
       fv.currentDiffIdx = -1;
       fv.diffCounterBadge.classList.remove('visible');
-      // Update revision panel when switching tabs
-      setTimeout(onTabSwitchRefreshRevision, 50);
+      // Close history panel when switching to a different file
+      setTimeout(onTabSwitchCloseRevisionPanel, 50);
     });
   });
   root.querySelectorAll('.fv-history-btn').forEach(function(btn) {

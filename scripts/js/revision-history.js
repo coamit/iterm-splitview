@@ -3,6 +3,10 @@ var fv = window.fv;
 var _revisionDebounceTimer = null;
 var _revisionLoadingTimer = null;
 var _revisionLoadingPollId = null;
+// Safety timeout: generous upper bound so the spinner never gets permanently
+// stuck. In practice, performSwap fires first and clears the spinner accurately.
+// pandoc has a 10s shell timeout; ~15s covers regen + polling headroom.
+var REVISION_POLL_SAFETY_TIMEOUT_MS = 15000;
 
 // --- Panel DOM management ---
 
@@ -93,7 +97,9 @@ function _renderCommitList(list, filePath, commits) {
 
   commits.forEach(function(c) {
     var isActive = fv.revisionActiveCommit === c.full_hash ? ' active' : '';
-    html += '<div class="fv-revision-item' + isActive + '" data-commit="' + escapeHtml(c.full_hash) + '" data-short="' + escapeHtml(c.hash) + '">' +
+    // data-commit holds the full hash for selection; escapeHtml on all fields
+    // prevents XSS even when commit messages contain HTML special characters.
+    html += '<div class="fv-revision-item' + isActive + '" data-commit="' + escapeHtml(c.full_hash) + '">' +
       '<div class="fv-revision-row1">' +
         '<span class="fv-revision-hash">' + escapeHtml(c.hash) + '</span>' +
         '<span class="fv-revision-ago">' + escapeHtml(c.ago) + '</span>' +
@@ -124,24 +130,36 @@ function _renderCommitList(list, filePath, commits) {
 }
 
 function _selectRevision(filePath, commit) {
-  // Reset genTime so pollReload always detects a change, even if content hash is identical
+  // Reset genTime so pollReload always detects a change, even when the rendered
+  // HTML hash is identical to the previously-seen hash (e.g. switching between
+  // two different revisions that produce byte-identical output, or returning to
+  // live when the live file hasn't changed since the last revision was loaded).
+  // pollReload uses genTime as its primary "has anything changed" signal, so
+  // nulling it guarantees at least one swap will fire after this selection.
   fv.genTime = null;
   // Start /_loading poll to keep spinner alive for exactly as long as regen runs
   _startRevisionLoadingPoll();
-  fetch('/_file-revision?path=' + encodeURIComponent(filePath) + '&commit=' + encodeURIComponent(commit));
+  fetch('/_file-revision?path=' + encodeURIComponent(filePath) + '&commit=' + encodeURIComponent(commit))
+    .catch(function() {
+      // Network or server error — stop spinner and notify user
+      _finalizeRevisionLoading();
+      showToast('Failed to load revision \u2014 server error');
+    });
 }
 
 function _startRevisionLoadingPoll() {
   _stopRevisionLoadingPoll();
-  // Safety fallback: clear spinner after 30s if performSwap never fires
+  // Safety fallback: clear spinner if performSwap never fires (e.g. live view
+  // already at current hash, or regen failure). REVISION_POLL_SAFETY_TIMEOUT_MS
+  // is generous enough not to fire before any realistic regen completes.
   if (_revisionLoadingTimer) clearTimeout(_revisionLoadingTimer);
   _revisionLoadingTimer = setTimeout(function() {
     _revisionLoadingTimer = null;
-    _setRevisionLoading(false);
-    _stopRevisionLoadingPoll();
-  }, 30000);
-  // Poll /_loading every 500ms while regen is running
-  // Spinner clears via performSwap → updateRevisionBadges when content hits DOM
+    _finalizeRevisionLoading();
+  }, REVISION_POLL_SAFETY_TIMEOUT_MS);
+  // Poll /_loading every 500ms while regen is running.
+  // The spinner is cleared precisely by performSwap → finalizeRevisionLoading
+  // when the new content actually hits the DOM — never early, never late.
   _revisionLoadingPollId = setInterval(function() {
     fetch('/_loading').then(function(r) { return r.json(); }).then(function(data) {
       if (!data.loading) _stopRevisionLoadingPoll();
@@ -153,12 +171,23 @@ function _stopRevisionLoadingPoll() {
   if (_revisionLoadingPollId) { clearInterval(_revisionLoadingPollId); _revisionLoadingPollId = null; }
 }
 
+// Shared teardown: stop poll, cancel safety timeout, hide spinner.
+// Called from both performSwap (success path) and error/timeout paths.
+function _finalizeRevisionLoading() {
+  _stopRevisionLoadingPoll();
+  if (_revisionLoadingTimer) { clearTimeout(_revisionLoadingTimer); _revisionLoadingTimer = null; }
+  _setRevisionLoading(false);
+}
+
 // --- Revision badge in file header ---
 
-function updateRevisionBadges() {
-  // Called after content swap — reads data-revision on wrappers and updates header display
+// Called after every performSwap — adds revision badges to the header when a
+// revision is active, and finalizes loading state (stops poll, clears spinner).
+// Responsibilities: (1) badge insertion, (2) stop loading poll, (3) hide spinner.
+function finalizeRevisionLoading() {
   document.querySelectorAll('.code-file-wrapper[data-revision]').forEach(function(wrapper) {
     var hash = wrapper.getAttribute('data-revision');
+    if (!hash) return;
     var header = wrapper.querySelector('.code-file-header');
     if (!header) return;
     var fname = header.querySelector('.filename');
@@ -169,14 +198,12 @@ function updateRevisionBadges() {
       fname.appendChild(badge);
     }
   });
-  // Swap complete — stop poll, cancel safety timeout, clear spinner
-  _stopRevisionLoadingPoll();
-  if (_revisionLoadingTimer) { clearTimeout(_revisionLoadingTimer); _revisionLoadingTimer = null; }
-  _setRevisionLoading(false);
+  _finalizeRevisionLoading();
 }
 
-// Refresh panel when active file changes (tab switch)
-function onTabSwitchRefreshRevision() {
+// Closes the history panel when the user switches to a different file tab.
+// Named for what it does (close), not what it used to do (refresh).
+function onTabSwitchCloseRevisionPanel() {
   if (!fv.revisionPanelOpen) return;
   var fp = getActiveFilePath();
   if (fp && fp !== fv.revisionFilePath) {

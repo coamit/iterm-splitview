@@ -118,15 +118,24 @@ generate_file_body() {
           rev_tmpfile=$(mktemp "/tmp/fv-rev-XXXXXX.${ext}")
           if git -C "$git_root" show "${rev_hash}:${rel_path_rev}" > "$rev_tmpfile" 2>/dev/null; then
             rev_end_ref="$rev_hash"
-            # Empty tree hash — used as base for first commit (no parent)
+            # Git's well-known empty-tree SHA — used as diff base when the commit
+            # has no parent (i.e. the very first commit in the repo's history),
+            # so that all lines show as added in the revision diff view.
             local EMPTY_TREE="4b825dc642cb6eb9a060e54bf8d69288fbee4904"
             if git -C "$git_root" rev-parse --verify "${rev_hash}^" &>/dev/null; then
               diff_base="${rev_hash}^"
             else
               diff_base="$EMPTY_TREE"
             fi
-            diff_src_file="$src_file"  # original path for diff computation
-            src_file="$rev_tmpfile"    # tmpfile for content rendering
+            # Two separate paths are needed in revision mode:
+            #   diff_src_file — original on-disk path, used for git diff computation
+            #                   (git needs to resolve history relative to this path)
+            #   src_file      — points to the checked-out tmpfile for HTML rendering
+            #                   (downstream rendering reads content from this file)
+            # Keep src_file as the render source so all existing rendering logic works
+            # unchanged; diff_src_file carries the original identity.
+            diff_src_file="$src_file"
+            src_file="$rev_tmpfile"
             mode="diff"
           else
             rm -f "$rev_tmpfile"; rev_tmpfile=""; rev_hash=""
@@ -424,6 +433,10 @@ _generate_panels_for_group() {
     [ "$fp" = "$active_file" ] && active_class=" active"
     {
       printf '<div class="fv-tab-content%s" id="fv-tab-%s-%d">\n' "$active_class" "$group_id" "$idx"
+      # || true: prevent set -e from aborting the regen loop if one file fails to
+      # render (e.g. pandoc timeout, git error). Other tabs still render correctly.
+      # The content panel may be empty for the failing file, which is visible to the
+      # user — an acceptable trade-off over losing the entire regen.
       generate_file_body "$fp" "$mode" "$diff_base" "$git_root" || true
       printf '</div>\n'
     } >> "$body_tmp"
@@ -549,10 +562,13 @@ generate_tabbed_html() {
   local gen_hash
   gen_hash=$(md5 -q "$body_tmp" 2>/dev/null || md5sum "$body_tmp" 2>/dev/null | cut -d' ' -f1)
   # Append active revision state so live/revision always produce different hashes
-  # even when file content is identical (e.g. latest commit = current working copy)
-  for rf in "$_FV_SESSION_DIR"/rev.*; do
-    [ -f "$rf" ] && gen_hash="${gen_hash}_$(head -c 8 "$rf" 2>/dev/null)"
-  done
+  # even when file content is identical (e.g. latest commit = current working copy).
+  # Only run if revision files actually exist to avoid a no-op glob on every regen.
+  if ls "$_FV_SESSION_DIR"/rev.* &>/dev/null; then
+    for rf in "$_FV_SESSION_DIR"/rev.*; do
+      [ -f "$rf" ] && gen_hash="${gen_hash}_$(head -c 8 "$rf" 2>/dev/null)"
+    done
+  fi
   # Prepend the marker with the content hash
   local body_with_marker
   body_with_marker=$(mktemp)

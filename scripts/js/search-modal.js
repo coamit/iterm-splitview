@@ -433,7 +433,7 @@ function selectModalItem() {
   if (fv.modalMode === 'fs-text' || fv.modalMode === 'fs-files') {
     var filePath = item.file;
     closeSearchModal();
-    if (typeof closeRevisionPanel === 'function') closeRevisionPanel();
+    closeRevisionPanel();
     createLoadingTab(filePath);
     fv.lastOpenTriggered = Date.now();
     fetch('/_open?path=' + encodeURIComponent(filePath));

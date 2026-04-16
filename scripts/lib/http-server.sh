@@ -164,6 +164,18 @@ def run_piped_search(file_cmd, query, cwd, limit):
     except: pass
     return results
 
+def _is_open_tab(fp):
+    \"\"\"Return True only if fp is currently open in a fileview tab.\"\"\"\
+    for tabfile in _all_tab_files():
+        if os.path.exists(tabfile):
+            try:
+                with open(tabfile) as f:
+                    if fp in [l.strip() for l in f.readlines() if l.strip()]:
+                        return True
+            except Exception:
+                pass
+    return False
+
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
         super().__init__(*a, directory=DIR, **kw)
@@ -470,7 +482,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             qs = urllib.parse.parse_qs(parsed.query)
             fp = qs.get('path', [''])[0]
             commits = []
-            if fp and os.path.isfile(fp):
+            if fp and os.path.isfile(fp) and _is_open_tab(fp):
                 d = os.path.dirname(fp)
                 try:
                     r = subprocess.run(
@@ -492,26 +504,43 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         except Exception:
                             ago = date_str[:10]
                         commits.append({'hash': h[:7], 'full_hash': h, 'subject': subject[:80], 'ago': ago})
-                except Exception:
-                    pass
+                except Exception as e:
+                    import sys; print(f'[fileview] /_file-history error: {e}', file=sys.stderr)
             self._json_response(commits)
             return
         if parsed.path == '/_file-revision':
-            import hashlib
+            import hashlib, re
             qs = urllib.parse.parse_qs(parsed.query)
             fp = qs.get('path', [''])[0]
             commit = qs.get('commit', [''])[0]
-            if fp:
+            if fp and _is_open_tab(fp):
                 safe_key = hashlib.md5(fp.encode()).hexdigest()[:16]
                 rev_file = os.path.join(DIR, 'rev.' + safe_key)
                 if commit and commit != 'current':
-                    with open(rev_file, 'w') as f:
-                        f.write(commit)
+                    # Validate commit is a hex SHA (4-40 chars) before persisting
+                    if not re.match(r'^[0-9a-f]{4,40}$', commit):
+                        self.send_response(400)
+                        self.end_headers()
+                        return
+                    try:
+                        with open(rev_file, 'w') as f:
+                            f.write(commit)
+                    except OSError as e:
+                        import sys; print(f'[fileview] /_file-revision write error: {e}', file=sys.stderr)
+                        self.send_response(500)
+                        self.end_headers()
+                        return
                 else:
-                    if os.path.exists(rev_file):
+                    try:
                         os.remove(rev_file)
-                # Touch loading file so /_loading accurately reflects regen state
-                open(os.path.join(DIR, 'loading'), 'w').close()
+                    except FileNotFoundError:
+                        pass  # already gone — idempotent
+                    except OSError as e:
+                        import sys; print(f'[fileview] /_file-revision remove error: {e}', file=sys.stderr)
+                try:
+                    open(os.path.join(DIR, 'loading'), 'w').close()
+                except OSError:
+                    pass
                 if SCRIPT:
                     subprocess.Popen([SCRIPT, '_regen'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self.send_response(204)

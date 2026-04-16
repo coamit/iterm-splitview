@@ -154,14 +154,11 @@ function performSwap(newBodyHtml) {
   var newActive = document.querySelector('.fv-tab-content.active');
   if (newActive) newActive.classList.add('fv-reveal');
 
-  // 7b. Update revision badges; keep panel open only if it's for the current file
-  updateRevisionBadges();
-  if (fv.revisionPanelOpen) {
-    var fp = getActiveFilePath();
-    if (fp && fp !== fv.revisionFilePath) {
-      closeRevisionPanel();
-    }
-  }
+  // 7b. Finalize revision loading state and close panel if file switched.
+  // finalizeRevisionLoading: adds revision badges, stops loading poll, clears spinner.
+  // onTabSwitchCloseRevisionPanel: closes history panel when active file changed.
+  finalizeRevisionLoading();
+  onTabSwitchCloseRevisionPanel();
 
   // 8. Update metadata from new content
   var newMarker = container.querySelector('[data-fv-gen]');
