@@ -252,6 +252,11 @@ function pollReload() {
           fetchXhr.open('GET', '/index.html?t=' + Date.now(), true);
           fetchXhr.onload = function() {
             if (fetchXhr.status !== 200) return;
+            // Re-check the open-trigger guard: the user may have opened a file
+            // via Ctrl+O while this /index.html XHR was in-flight. The guard in
+            // pollReload only ran when /_gen responded — if lastOpenTriggered was
+            // set between then and now, abort this swap to protect the loading panel.
+            if (fv.lastOpenTriggered > 0 && (Date.now() - fv.lastOpenTriggered) < OPEN_TRIGGER_GUARD_MS) return;
             var parser = new DOMParser();
             var doc = parser.parseFromString(fetchXhr.responseText, 'text/html');
             var newContainer = doc.getElementById('fv-body-container');
